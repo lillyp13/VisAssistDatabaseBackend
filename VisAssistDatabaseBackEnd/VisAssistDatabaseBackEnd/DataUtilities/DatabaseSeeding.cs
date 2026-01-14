@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Linq;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
 using System.Threading.Tasks;
 using static VisAssistDatabaseBackEnd.DataUtilities.ConnectionsUtilities;
@@ -12,15 +13,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
     {
         public static void SeedProjects()
         {
+            //create a new sqlite connection
             using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
             {
+                //open the connection
                 connection.Open();
 
-
+                //this is the practice data sql...
                 string sInsert = GetProjectSeedData();
 
+                //create a new command using the sql statement (sInsert) and the open connection
+                using (SQLiteCommand cmd = new SQLiteCommand(sInsert, connection))
+                {
+                    //execute the command (in this case it is an INSERT)
+                    cmd.ExecuteNonQuery();
 
-                new SQLiteCommand(sInsert, connection).ExecuteNonQuery();
+                }
             }
         }
 
@@ -55,23 +63,41 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         public static void SeedFiles()
         {
+            //create a new sqlite connection
             using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
             {
+                //open the connection
                 connection.Open();
+                //this is the practice data sql...
                 string sInsert = GetFileSeedData();
 
-                new SQLiteCommand(sInsert, connection).ExecuteNonQuery();
+                //create a new command using the sql statement (sInsert) and the open connection
+                using (SQLiteCommand cmd = new SQLiteCommand(sInsert, connection))
+                {
+                    //execute the command line (in this case it is an INSERT)
+                    cmd.ExecuteNonQuery();
+
+                }
             }
         }
 
         public static void SeedPages()
         {
+            //create a new sqlite connection
             using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
             {
+                //open the connection
                 connection.Open();
+                //this is the practice data sql...
                 string sInsert = GetPagesSeedData();
 
-                new SQLiteCommand(sInsert, connection).ExecuteNonQuery();
+                //create a new command using the sql statement (sInsert) and the open connection
+                using (SQLiteCommand cmd = new SQLiteCommand(sInsert, connection))
+                {
+                    //execute the command line (in this case it is an INSERT)
+                    cmd.ExecuteNonQuery();
+
+                }
             }
         }
 
@@ -102,89 +128,100 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return sData;
         }
 
-        internal static void ModifyProjectInfoWithSeedData()
+        internal static void UpdateProjectInfoWithSeedData()
         {
+            //create a new sqlite connection
             using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
             {
+                //open the connection
                 connection.Open();
 
-                //get the seed fake data to update the project
+                //this is the practice data sql..
                 string sUpdate = GetProjectSeedChange();
 
-                //run the sql statement
-                new SQLiteCommand(sUpdate, connection).ExecuteNonQuery();
+                //create a new command using the sql statment (sUpdate) and the open connection
+                using (SQLiteCommand cmd = new SQLiteCommand(sUpdate, connection))
+                {
+                    //execute the command line (in this case it is an UPDATE)
+                    cmd.ExecuteNonQuery();
+
+                }
             }
         }
 
         private static string GetProjectSeedChange()
         {
-            string sData = @"
-UPDATE project_table
-SET 
-    CustomerName = 'Evergreen Health Systems',
-    CreatedDate = '2026-01-05',
-    ModifiedDate = '2026-01-10',
-    JobName = 'North Campus Mechanical Renovation',
-    JobNumber = 'EHS-24017',
-    JobCity = 'Denver',
-    JobState = 'CO',
-    JobStreetAddress1 = '1850 Clarkson St',
-    JobStreetAddress2 = 'Building C',
-    JobZipCode = '80218',
-    ControlContractorName = 'Rocky Mountain Controls',
-    ControlContractorCity = 'Denver',
-    ControlContractorState = 'CO',
-    ControlContractorStreetAddress1 = '720 W 10th Ave',
-    ControlContractorStreetAddress2 = 'Suite 400',
-    ControlContractorZipCode = '80204',
-    ControlContractorPhone = '303-555-9123',
-    ControlContractorEmail = 'projects@rmcontrols.com',
-    MechanicalEngineer = 'Morrison Engineering',
-    MechanicalContractor = 'Front Range Mechanical',
-    DesignedBy = 'J. McCartney',
-    ReviewedBy = 'Lilly',
-    FileCount = 18
-WHERE Id = 1;
-";
+            string sData = @"UPDATE project_table
+                            SET 
+                                ReviewedBy = 'Lilly'
+                            WHERE Id = 1;";
             return sData;
 
         }
 
-        internal static void SeedWireInfo()
+        
+        internal static void UpdatePageInfoWithSeedData()
         {
+            //crate a new sqlite connection
             using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
             {
+                //open the connection
                 connection.Open();
-                string sInsert = GetWireSeedInfo();
 
-                new SQLiteCommand(sInsert, connection).ExecuteNonQuery();
+               //this is the practice data sql...
+                string sUpdate = GetPageSeedChange();
+
+                //create a new command using the sql statement (sUpdate) and the open connection
+                using (SQLiteCommand cmd = new SQLiteCommand(sUpdate, connection))
+                {
+                    //execute the command line (in this case it is an UPDATE)
+                    cmd.ExecuteNonQuery();
+
+                }
             }
         }
 
-        private static string GetWireSeedInfo()
+        private static string GetPageSeedChange()
         {
-            string sInsert = @"
-INSERT INTO wire_shapes_table (
-    project_id, file_id, page_id, wire_pair_id,
-    wire_pair_role, tag, version, class,
-    wire_label, color, x_location, y_location,
-    auto_labeling, conductor_count, show_shield
-) VALUES
-(
-    1, 1, 1, 2,
-    'primary', 'TAG001', 'v1', 'Electrical',
-    'WireLabel1', 'Red', 100.0, 200.0,
-    1, 2, 1
-),
-(
-    1, 1, 2, 1,
-    'secondary', 'TAG002', 'v1', 'Electrical',
-    'WireLabel2', 'Blue', 150.0, 220.0,
-    1, 1, 0
-);";
+            //going to update a PageName
+            string sData = @"UPDATE pages_table
+                            SET
+                                PageName = 'Changed Page Name'
+                            WHERE PageID = 5;";
+            return sData;
+        }
 
-            return sInsert;
+        internal static string GetPageNameWithSeedData()
+        {
+           //create a new sqlite connection
+            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            {
+                //open the connection
+                connection.Open();
 
+                //this is the practice data sql...
+                string sGet = ReturnPageNameWithSeedData();
+
+                //create a new command using the sql statement (sGet) and the open connection
+                using (SQLiteCommand cmd = new SQLiteCommand(sGet, connection))
+                {
+                    //execute the query adn read the result
+                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    {
+                        //moves to the first row if it exists and get the first column (our pagename..)
+                        return reader.Read() ? reader.GetString(0) : null;
+                    }
+                }
+
+            }
+        }
+
+        private static string ReturnPageNameWithSeedData()
+        {
+            string sData = @"SELECT PageName 
+                            FROM pages_table
+                            WHERE PageID = 5;";
+            return sData;
         }
     }
 }

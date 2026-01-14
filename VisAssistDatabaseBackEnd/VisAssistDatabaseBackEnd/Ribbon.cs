@@ -28,22 +28,22 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnAddFileInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.AddFileInfo();
+            ConnectionsUtilities.AddFile();
         }
 
         private void btnAddPageInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.AddPageInfo();
+            ConnectionsUtilities.AddPage();
         }
 
         private void btnDeletePageInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.DeletePageInfo();
+            ConnectionsUtilities.DeletePage();
         }
 
         private void btnDeleteFileInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.DeleteFileInfo();
+            ConnectionsUtilities.DeleteFile();
         }
 
         private void btnDeleteProjectInfo_Click(object sender, RibbonControlEventArgs e)
@@ -53,7 +53,7 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnModifyProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.ModifyProjectInfo();
+            ConnectionsUtilities.UpdateProjectInfo();
         }
 
         private void btnModifyFile_Click(object sender, RibbonControlEventArgs e)
@@ -63,7 +63,19 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnAddWireInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.AddWireInfo();
+           // ConnectionsUtilities.AddWireInfo();
+        }
+
+        private void btnModifyPage_Click(object sender, RibbonControlEventArgs e)
+        {
+            ConnectionsUtilities.UpdatePage();
+        }
+
+        private void btnGetPageName_Click(object sender, RibbonControlEventArgs e)
+        {
+            //we want to retrieve a page name based on the PageID
+            //for now we will hardcode a random page...
+            ConnectionsUtilities.GetPageName();
         }
     }
 }

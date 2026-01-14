@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using static VisAssistDatabaseBackEnd.ThisAddIn;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
@@ -17,8 +18,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
-
-
         internal class SQLiteConnectionFactory
         {
 
@@ -27,7 +26,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 return new SQLiteConnection(DatabaseConfig.ConnectionString);
             }
         }
-
 
         //just to get where to save the database
         internal static class DatabaseConfig
@@ -47,7 +45,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             public static string ConnectionString =>
                 $"Data Source={DatabasePath};Version=3;";
         }
-
 
 
         internal static class DatabaseInitializer
@@ -121,7 +118,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     IgnoreWireColor INTEGER DEFAULT 0,
                     AllowDuplicateTags INTEGER DEFAULT 0,
                     ShowPointData INTEGER DEFAULT 0,
-                    FOREIGN KEY(ProjectID) REFERENCES Projects(Id)
+                    FOREIGN KEY(ProjectID) REFERENCES project_table(Id)
                 );
                 ";
                         using (SQLiteCommand cmd = new SQLiteCommand(sFileTableCommand, connection))
@@ -149,8 +146,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     Class TEXT,
                     Orientation TEXT,
                     Scale TEXT,
-                    FOREIGN KEY(ProjectID) REFERENCES Projects(Id),
-                    FOREIGN KEY(FileID) REFERENCES Files(FileID)
+                    FOREIGN KEY(ProjectID) REFERENCES project_table(Id),
+                    FOREIGN KEY(FileID) REFERENCES files_table(FileID)
                 );
                 ";
 
@@ -162,102 +159,102 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
 
 
-                    //create the wire_shapes_table
-                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
-                    {
-                        connection.Open();
-                        string sWireTableCommand = @"
-CREATE TABLE IF NOT EXISTS wire_shapes_table(
-    wire_id INTEGER NOT NULL,
-    project_id INTEGER NOT NULL,
-    file_id INTEGER NOT NULL,
-    page_id INTEGER NOT NULL,
-    wire_pair_id INTEGER NOT NULL,
-    system_id INTEGER,
-    connection_id INTEGER,
-    wire_pair_role TEXT NOT NULL,
-    tag TEXT,
-    version TEXT,
-    class TEXT,
-    wire_label TEXT,
-    color TEXT,
-    x_location REAL NOT NULL,
-    y_location REAL NOT NULL,
-    auto_labeling INTEGER NOT NULL,
-    conductor_count INTEGER NOT NULL,
-    conductor_1_label TEXT,
-    conductor_2_label TEXT,
-    conductor_3_label TEXT,
-    conductor_4_label TEXT,
-    conductor_5_label TEXT,
-    conductor_6_label TEXT,
-    conductor_7_label TEXT,
-    conductor_8_label TEXT,
-    conductor_9_label TEXT,
-    conductor_10_label TEXT,
-    conductor_11_label TEXT,
-    conductor_12_label TEXT,
-    show_shield INTEGER NOT NULL,
-    shield_top INTEGER,
-    shield_bottom INTEGER,
-    PRIMARY KEY(wire_id),
-    CONSTRAINT wire_pairs_wire_shapes
-        FOREIGN KEY (wire_pair_id) REFERENCES wire_pairs (wire_pair_id),
-    CONSTRAINT project_info_wire_shapes
-        FOREIGN KEY (project_id) REFERENCES project_info (project_id),
-    CONSTRAINT pages_wire_shapes
-        FOREIGN KEY (page_id) REFERENCES pages (page_id),
-    CONSTRAINT visio_files_wire_shapes
-        FOREIGN KEY (file_id) REFERENCES visio_files (file_id),
-    CONSTRAINT connections_wire_shapes
-        FOREIGN KEY (connection_id) REFERENCES connections (connection_id)
-);";
+//                    //create the wire_shapes_table
+//                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+//                    {
+//                        connection.Open();
+//                        string sWireTableCommand = @"
+//CREATE TABLE IF NOT EXISTS wire_shapes_table(
+//    wire_id INTEGER NOT NULL,
+//    project_id INTEGER NOT NULL,
+//    file_id INTEGER NOT NULL,
+//    page_id INTEGER NOT NULL,
+//    wire_pair_id INTEGER NOT NULL,
+//    system_id INTEGER,
+//    connection_id INTEGER,
+//    wire_pair_role TEXT NOT NULL,
+//    tag TEXT,
+//    version TEXT,
+//    class TEXT,
+//    wire_label TEXT,
+//    color TEXT,
+//    x_location REAL NOT NULL,
+//    y_location REAL NOT NULL,
+//    auto_labeling INTEGER NOT NULL,
+//    conductor_count INTEGER NOT NULL,
+//    conductor_1_label TEXT,
+//    conductor_2_label TEXT,
+//    conductor_3_label TEXT,
+//    conductor_4_label TEXT,
+//    conductor_5_label TEXT,
+//    conductor_6_label TEXT,
+//    conductor_7_label TEXT,
+//    conductor_8_label TEXT,
+//    conductor_9_label TEXT,
+//    conductor_10_label TEXT,
+//    conductor_11_label TEXT,
+//    conductor_12_label TEXT,
+//    show_shield INTEGER NOT NULL,
+//    shield_top INTEGER,
+//    shield_bottom INTEGER,
+//    PRIMARY KEY(wire_id),
+//    CONSTRAINT wire_pairs_wire_shapes
+//        FOREIGN KEY (wire_pair_id) REFERENCES wire_pairs_table (wire_pair_id),
+//    CONSTRAINT project_info_wire_shapes
+//        FOREIGN KEY (project_id) REFERENCES project_table (project_id),
+//    CONSTRAINT pages_wire_shapes
+//        FOREIGN KEY (page_id) REFERENCES pages_table (page_id),
+//    CONSTRAINT visio_files_wire_shapes
+//        FOREIGN KEY (file_id) REFERENCES files_table (file_id),
+//    CONSTRAINT connections_wire_shapes
+//        FOREIGN KEY (connection_id) REFERENCES connections_table (connection_id)
+//);";
 
-                        using (SQLiteCommand cmd = new SQLiteCommand(sWireTableCommand, connection))
-                        {
-                            cmd.ExecuteNonQuery();
+//                        using (SQLiteCommand cmd = new SQLiteCommand(sWireTableCommand, connection))
+//                        {
+//                            cmd.ExecuteNonQuery();
 
-                        }
-                    }
+//                        }
+//                    }
 
-                    //create the connections_table
-                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
-                    {
-                        connection.Open();
-                        string sConnectionsTableCommand = @"
-            CREATE TABLE IF NOT EXISTS connections_table (
-                connection_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                fromshape_id INTEGER NOT NULL,
-                to_shape_id INTEGER,
-                from_shape_class TEXT NOT NULL,
-                to_shape_class TEXT
-            );";
-                        using (SQLiteCommand cmd = new SQLiteCommand(sConnectionsTableCommand, connection))
-                        {
-                            cmd.ExecuteNonQuery();
+//                    //create the connections_table
+//                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+//                    {
+//                        connection.Open();
+//                        string sConnectionsTableCommand = @"
+//            CREATE TABLE IF NOT EXISTS connections_table (
+//                connection_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+//                fromshape_id INTEGER NOT NULL,
+//                to_shape_id INTEGER,
+//                from_shape_class TEXT NOT NULL,
+//                to_shape_class TEXT
+//            );";
+//                        using (SQLiteCommand cmd = new SQLiteCommand(sConnectionsTableCommand, connection))
+//                        {
+//                            cmd.ExecuteNonQuery();
 
-                        }
-                    }
+//                        }
+//                    }
 
-                    //create the wire_pairs_table
-                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
-                    {
-                        connection.Open();
-                        string sWirePairsTableCommand = @"
-            CREATE TABLE IF NOT EXISTS wire_pairs_table (
-                wire_pair_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                primary_wire_id INTEGER NOT NULL,
-                secondary_wire_id INTEGER NOT NULL,
-                CONSTRAINT fk_primary_wire FOREIGN KEY (primary_wire_id) REFERENCES wire_shapes_table(wire_id),
-                CONSTRAINT fk_secondary_wire FOREIGN KEY (secondary_wire_id) REFERENCES wire_shapes_table(wire_id)
-            );";
-                        using (SQLiteCommand cmd = new SQLiteCommand(sWirePairsTableCommand, connection))
-                        {
-                            cmd.ExecuteNonQuery();
+//                    //create the wire_pairs_table
+//                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+//                    {
+//                        connection.Open();
+//                        string sWirePairsTableCommand = @"
+//            CREATE TABLE IF NOT EXISTS wire_pairs_table (
+//                wire_pair_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+//                primary_wire_id INTEGER NOT NULL,
+//                secondary_wire_id INTEGER NOT NULL,
+//                CONSTRAINT fk_primary_wire FOREIGN KEY (primary_wire_id) REFERENCES wire_shapes_table(wire_id),
+//                CONSTRAINT fk_secondary_wire FOREIGN KEY (secondary_wire_id) REFERENCES wire_shapes_table(wire_id)
+//            );";
+//                        using (SQLiteCommand cmd = new SQLiteCommand(sWirePairsTableCommand, connection))
+//                        {
+//                            cmd.ExecuteNonQuery();
 
-                        }
+//                        }
 
-                    }
+//                    }
 
                 }
             }
@@ -267,11 +264,11 @@ CREATE TABLE IF NOT EXISTS wire_shapes_table(
         private static bool InitializeDatabaseFolder()
         {
             bool bFolderAlreadyExists = false;
-            string folder = Path.GetDirectoryName(DatabaseConfig.DatabasePath);
-            if (!Directory.Exists(folder))
+            string sFolder = Path.GetDirectoryName(DatabaseConfig.DatabasePath);
+            if (!Directory.Exists(sFolder))
             {
                 //the folder didn't exist
-                Directory.CreateDirectory(folder);
+                Directory.CreateDirectory(sFolder);
             }
             else
             {
@@ -284,59 +281,17 @@ CREATE TABLE IF NOT EXISTS wire_shapes_table(
         }
 
 
+        //Project Actions
         internal static void AddProjectInfo()
         {
             //use the seed data and push that to the database
             //thhis adds the project info seed data
             DatabaseSeeding.SeedProjects();
         }
-        internal static void ModifyProjectInfo()
+        internal static void UpdateProjectInfo()
         {
-            DatabaseSeeding.ModifyProjectInfoWithSeedData();
+            DatabaseSeeding.UpdateProjectInfoWithSeedData();
         }
-
-        internal static void AddFileInfo()
-        {
-            DatabaseSeeding.SeedFiles();
-        }
-
-        internal static void AddPageInfo()
-        {
-            DatabaseSeeding.SeedPages();
-        }
-
-        internal static void DeletePageInfo()
-        {
-            //delete all the records in the pages_table
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
-            {
-                connection.Open();
-                string sDelete = "DELETE FROM pages_table;";
-
-                new SQLiteCommand(sDelete, connection).ExecuteNonQuery();
-
-                //reset the auto-increment counter
-                string sReset = "DELETE FROM sqlite_sequence WHERE name = 'pages_table';";
-                new SQLiteCommand(sReset, connection).ExecuteNonQuery();
-            }
-        }
-
-        internal static void DeleteFileInfo()
-        {
-            //delete all the records in the files_table
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
-            {
-                connection.Open();
-                string sDelete = "DELETE FROM files_table;";
-
-                new SQLiteCommand(sDelete, connection).ExecuteNonQuery();
-
-                //reset the auto-increment counter
-                string sReset = "DELETE FROM sqlite_sequence WHERE name = 'files_table';";
-                new SQLiteCommand(sReset, connection).ExecuteNonQuery();
-            }
-        }
-
         internal static void DeleteProjectInfo()
         {
             //delete all the records in the project_table
@@ -353,10 +308,63 @@ CREATE TABLE IF NOT EXISTS wire_shapes_table(
             }
         }
 
-        internal static void AddWireInfo()
+
+        //File Actions
+        internal static void AddFile()
         {
-           // DatabaseSeeding.SeedWireInfo();
+            DatabaseSeeding.SeedFiles();
         }
+        internal static void DeleteFile()
+        {
+            //delete all the records in the files_table
+            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            {
+                connection.Open();
+                string sDelete = "DELETE FROM files_table;";
+
+                new SQLiteCommand(sDelete, connection).ExecuteNonQuery();
+
+                //reset the auto-increment counter
+                string sReset = "DELETE FROM sqlite_sequence WHERE name = 'files_table';";
+                new SQLiteCommand(sReset, connection).ExecuteNonQuery();
+            }
+        }
+
+        //Page Actions
+        internal static void AddPage()
+        {
+            DatabaseSeeding.SeedPages();
+        }
+        internal static void UpdatePage()
+        {
+            DatabaseSeeding.UpdatePageInfoWithSeedData();
+        }
+        internal static void DeletePage()
+        {
+            //delete all the records in the pages_table
+            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            {
+                connection.Open();
+                string sDelete = "DELETE FROM pages_table;";
+
+                new SQLiteCommand(sDelete, connection).ExecuteNonQuery();
+
+                //reset the auto-increment counter
+                string sReset = "DELETE FROM sqlite_sequence WHERE name = 'pages_table';";
+                new SQLiteCommand(sReset, connection).ExecuteNonQuery();
+            }
+        }
+        internal static void GetPageName()
+        {
+            string sPageName = DatabaseSeeding.GetPageNameWithSeedData();
+            MessageBox.Show("Got the page " + sPageName);
+
+        }
+
+
+
+        
+        
     }
 
 }
