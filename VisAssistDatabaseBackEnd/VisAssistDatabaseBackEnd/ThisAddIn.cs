@@ -5,6 +5,9 @@ using System.Text;
 using System.Xml.Linq;
 using Visio = Microsoft.Office.Interop.Visio;
 using Office = Microsoft.Office.Core;
+using System.Data.SQLite;
+using System.IO;
+using VisAssistDatabaseBackEnd.DataUtilities;
 
 namespace VisAssistDatabaseBackEnd
 {
@@ -12,7 +15,9 @@ namespace VisAssistDatabaseBackEnd
     {
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
+           
         }
+
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {

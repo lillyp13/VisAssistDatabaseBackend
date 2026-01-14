@@ -3,8 +3,44 @@
   "WorkspaceRootPath": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\datautilities\\databaseseeding.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\datautilities\\databaseseeding.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\datautilities\\connectionsutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\datautilities\\connectionsutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\ribbon.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\ribbon.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\ribbon.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\ribbon.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\ribbon.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\ribbon.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\datautilities\\pageutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\datautilities\\pageutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\datautilities\\fileutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\datautilities\\fileutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\datautilities\\projectutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\datautilities\\projectutilities.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\thisaddin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\thisaddin.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|c:\\adconcepts\\visassistdatbasebackend\\visassistdatabasebackend\\visassistdatabasebackend\\packages.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{DF8B2F51-E888-4DE5-B07D-01E745BF7AE9}|VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd.csproj|solutionrelative:visassistdatabasebackend\\packages.config||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
     }
   ],
   "DocumentGroupContainers": [
@@ -14,28 +50,144 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{eefa5220-e298-11d0-8f78-00a0c9110057}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{e5c86464-96be-4d7c-9a8b-abcb3bbf5f92}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Ribbon.Designer.cs",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\Ribbon.Designer.cs",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\Ribbon.Designer.cs",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\Ribbon.Designer.cs",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\Ribbon.Designer.cs",
+              "ViewState": "AgIAAKcAAAAAAAAAAAAqwL0AAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-14T20:23:47.287Z",
+              "EditorCaption": ""
+            },
+            {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "DatabaseSeeding.cs",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\DatabaseSeeding.cs",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\DataUtilities\\DatabaseSeeding.cs",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\DatabaseSeeding.cs",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\DataUtilities\\DatabaseSeeding.cs",
+              "ViewState": "AgIAAJwAAAAAAAAAAAAIwLYAAAALAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-14T18:44:54.654Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Ribbon.cs",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\Ribbon.cs",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\Ribbon.cs",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\Ribbon.cs",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\Ribbon.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvxMAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-14T18:22:01.321Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "ProjectUtilities.cs",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\ProjectUtilities.cs",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\DataUtilities\\ProjectUtilities.cs",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\ProjectUtilities.cs",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\DataUtilities\\ProjectUtilities.cs",
+              "ViewState": "AgIAAB0AAAAAAAAAAAAQwDoAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-14T16:49:56.69Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ConnectionsUtilities.cs",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\ConnectionsUtilities.cs",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\DataUtilities\\ConnectionsUtilities.cs",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\ConnectionsUtilities.cs",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\DataUtilities\\ConnectionsUtilities.cs",
+              "ViewState": "AgIAACYBAAAAAAAAAAASwGUBAAAkAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-14T17:07:00.176Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Ribbon.cs [Design]",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\Ribbon.cs",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\Ribbon.cs",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\Ribbon.cs [Design]",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\Ribbon.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-14T18:20:24.789Z",
+              "EditorCaption": " [Design]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "packages.config",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\packages.config",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\packages.config",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\packages.config",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\packages.config",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000601|",
+              "WhenOpened": "2026-01-14T17:09:35.695Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "PageUtilities.cs",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\PageUtilities.cs",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\DataUtilities\\PageUtilities.cs",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\PageUtilities.cs",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\DataUtilities\\PageUtilities.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAcAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-14T17:03:18.824Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "FileUtilities.cs",
+              "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\FileUtilities.cs",
+              "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\DataUtilities\\FileUtilities.cs",
+              "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\DataUtilities\\FileUtilities.cs",
+              "RelativeToolTip": "VisAssistDatabaseBackEnd\\DataUtilities\\FileUtilities.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-14T16:58:04.925Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
               "Title": "ThisAddIn.cs",
               "DocumentMoniker": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\ThisAddIn.cs",
               "RelativeDocumentMoniker": "VisAssistDatabaseBackEnd\\ThisAddIn.cs",
               "ToolTip": "C:\\ADConcepts\\VisAssistDatbaseBackEnd\\VisAssistDatabaseBackEnd\\VisAssistDatabaseBackEnd\\ThisAddIn.cs",
               "RelativeToolTip": "VisAssistDatabaseBackEnd\\ThisAddIn.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAxwAAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAAABEAAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-01-13T18:32:25.6Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{e5c86464-96be-4d7c-9a8b-abcb3bbf5f92}"
             }
           ]
         }
