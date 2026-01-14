@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
 {
-    internal class DatabaseConnection
+    internal class PageUtilities
     {
     }
 }

@@ -182,7 +182,11 @@
     can be found.
   -->
   <ItemGroup>
-    <Compile Include="DataUtilities\DatabaseConnection.cs" />
+    <Compile Include="DataUtilities\ConnectionsUtilities.cs" />
+    <Compile Include="DataUtilities\FileUtilities.cs" />
+    <Compile Include="DataUtilities\PageUtilities.cs" />
+    <Compile Include="DataUtilities\ProjectUtilities.cs" />
+    <Compile Include="DataUtilities\ShapesUtilities.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
