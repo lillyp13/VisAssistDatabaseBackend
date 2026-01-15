@@ -1,0 +1,23 @@
+# Visual Studio temporary files
+.vs/
+bin/
+obj/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Backup and log files
+*.bak
+*.backup
+*.log
+
+# Ignore VS index files
+*.vsidx
+
+# Ignore compiled database/assemblies
+*.dll
+*.pdb
+*.vsto
