@@ -36,6 +36,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         string sDesignedBy;
         string sReviewedBy;
         int iFileCount;
+        static SQLiteConnection Connection = ConnectionsUtilities.Connection;
 
         string sFileNumberFormat;
         string sPageNumberFormat;
@@ -53,10 +54,36 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
+        //Project Actions
+        internal static void AddProjectInfo()
+        {
+            //use the seed data and push that to the database
+            //this adds the project info seed data
+            DatabaseSeeding.seedProjectTable();
+        }
+        internal static void UpdateProjectInfo()
+        {
+            throw new NotImplementedException();
+            //DatabaseSeeding.UpdateProjectInfoWithSeedData();
+        }
+        internal static void DeleteProjectInfo()
+        {
+            //delete all the records in the project_table
+            using (SQLiteConnection connection = new SQLiteConnection(Connection))
+            {
+                connection.Open();
+                string sDelete = "DELETE FROM project_table;";
+
+                new SQLiteCommand(sDelete, connection).ExecuteNonQuery();
+
+                //reset the auto-increment counter
+                string sReset = "DELETE FROM sqlite_sequence WHERE name = 'project_table';";
+                new SQLiteCommand(sReset, connection).ExecuteNonQuery();
+            }
+        }
 
 
 
-        
     }
 }
 

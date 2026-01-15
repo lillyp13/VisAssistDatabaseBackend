@@ -11,60 +11,36 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 {
     internal class DatabaseSeeding
     {
-        public static void SeedProjects()
+        public static void seedProjectTable() 
         {
-            //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
             {
-                //open the connection
                 connection.Open();
+                string sProjectSeedData = @"
+                                        INSERT INTO project_table (
+                                        ProjectName, CustomerName, CreatedDate, ModifiedDate, JobName, JobNumber, JobCity, JobState,
+                                        JobStreetAddress1, JobStreetAddress2, JobZipCode, ControlContractorName, ControlContractorCity, ControlContractorState,
+                                        ControlContractorStreetAddress1, ControlContractorStreetAddress2, ControlContractorZipCode,
+                                        ControlContractorPhone, ControlContractorEmail,
+                                        MechanicalEngineer, MechanicalContractor,
+                                        DesignedBy, ReviewedBy, FileCount)
+                                        VALUES('North Campus BAS Upgrade', 'Evergreen Health Systems', '2026-01-05', '2026-01-10',
+                                        'North Campus Mechanical Renovation', 'EHS-24017', 'Denver', 'CO', '1850 Clarkson St', 'Building C', '80218',
+                                        'Rocky Mountain Controls', 'Denver', 'CO', '720 W 10th Ave', 'Suite 400', '80204',
+                                        '303-555-9123', 'projects@rmcontrols.com', 'Morrison Engineering', 'Front Range Mechanical',
+                                        'J. McCartney', 'A. Simmons', 18);";
 
-                //this is the practice data sql...
-                string sInsert = GetProjectSeedData();
-
-                //create a new command using the sql statement (sInsert) and the open connection
-                using (SQLiteCommand cmd = new SQLiteCommand(sInsert, connection))
+                using (SQLiteCommand command = new SQLiteCommand(sProjectSeedData, connection))
                 {
-                    //execute the command (in this case it is an INSERT)
-                    cmd.ExecuteNonQuery();
-
+                    command.ExecuteNonQuery();
                 }
             }
-        }
-
-        private static string GetProjectSeedData()
-        {
-            string sData = @"
-        INSERT INTO project_table (
-            ProjectName, CustomerName, CreatedDate, ModifiedDate,
-            JobName, JobNumber, JobCity, JobState,
-            JobStreetAddress1, JobStreetAddress2, JobZipCode,
-            ControlContractorName, ControlContractorCity, ControlContractorState,
-            ControlContractorStreetAddress1, ControlContractorStreetAddress2, ControlContractorZipCode,
-            ControlContractorPhone, ControlContractorEmail,
-            MechanicalEngineer, MechanicalContractor,
-            DesignedBy, ReviewedBy, FileCount
-        ) VALUES
-        (
-            'North Campus BAS Upgrade', 'Evergreen Health Systems',
-            '2026-01-05', '2026-01-10',
-            'North Campus Mechanical Renovation', 'EHS-24017',
-            'Denver', 'CO',
-            '1850 Clarkson St', 'Building C', '80218',
-            'Rocky Mountain Controls', 'Denver', 'CO',
-            '720 W 10th Ave', 'Suite 400', '80204',
-            '303-555-9123', 'projects@rmcontrols.com',
-            'Morrison Engineering', 'Front Range Mechanical',
-            'J. McCartney', 'A. Simmons',
-            18
-        );";
-            return sData;
         }
 
         public static void SeedFiles()
         {
             //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(Connection))
             {
                 //open the connection
                 connection.Open();
@@ -84,7 +60,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static void SeedPages()
         {
             //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(Connection))
             {
                 //open the connection
                 connection.Open();
@@ -103,22 +79,20 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         private static string GetFileSeedData()
         {
-            string sData = @"INSERT INTO files_Table (ProjectID, RevisionID, FileName, FilePath, CreatedDate, LastModifiedDate,
-                           Version, Class, DrawingType, WirePrefix, IgnoreWireColor, AllowDuplicateTags, ShowPointData) 
-            VALUES
-                (1, 1, 'NorthCampus_BAS.dwg', 'C:\\Projects\\NorthCampus\\BAS', '2026-01-05 08:30:00', '2026-01-10 17:00:00',
-                'v1.0', 'A', 'Mechanical', 'WP-', 0, 0, 1),(1, 2, 'NorthCampus_HVAC.pdf', 'C:\\Projects\\NorthCampus\\HVAC', '2026-01-06 09:00:00', '2026-01-10 16:45:00',
-                'v1.1', 'B', 'HVAC', '', 1, 0, 0),(1, 1, 'CentralLibrary_HVAC.dwg', 'C:\\Projects\\CentralLibrary\\HVAC', '2025-11-18 08:00:00', '2026-01-02 15:30:00',
-                'v2.0', 'A', 'Electrical', 'CL-', 0, 1, 1),(1, 1, 'DataCenterCooling_Layout.dwg', 'C:\\Projects\\DataCenter\\Cooling', '2025-12-01 10:00:00', '2026-01-11 14:00:00',
-                'v1.0', 'C', 'Mechanical', 'DC-', 0, 0, 0),(1, 2, 'DataCenterCooling_PLC.pdf', 'C:\\Projects\\DataCenter\\Cooling', '2025-12-02 09:15:00', '2026-01-11 13:45:00',
-                'v1.1', 'C', 'Electrical', '', 1, 0, 1);";
+            string sData = @"
+                            INSERT INTO files_Table (ProjectID, RevisionID, FileName, FilePath, CreatedDate, LastModifiedDate, Version, Class, DrawingType, WirePrefix, IgnoreWireColor, AllowDuplicateTags, ShowPointData) 
+                            VALUES(1, 1, 'NorthCampus_BAS.dwg', 'C:\\Projects\\NorthCampus\\BAS', '2026-01-05 08:30:00', '2026-01-10 17:00:00',
+                            'v1.0', 'A', 'Mechanical', 'WP-', 0, 0, 1),(1, 2, 'NorthCampus_HVAC.pdf', 'C:\\Projects\\NorthCampus\\HVAC', '2026-01-06 09:00:00', '2026-01-10 16:45:00',
+                            'v1.1', 'B', 'HVAC', '', 1, 0, 0),(1, 1, 'CentralLibrary_HVAC.dwg', 'C:\\Projects\\CentralLibrary\\HVAC', '2025-11-18 08:00:00', '2026-01-02 15:30:00',
+                            'v2.0', 'A', 'Electrical', 'CL-', 0, 1, 1),(1, 1, 'DataCenterCooling_Layout.dwg', 'C:\\Projects\\DataCenter\\Cooling', '2025-12-01 10:00:00', '2026-01-11 14:00:00',
+                            'v1.0', 'C', 'Mechanical', 'DC-', 0, 0, 0),(1, 2, 'DataCenterCooling_PLC.pdf', 'C:\\Projects\\DataCenter\\Cooling', '2025-12-02 09:15:00', '2026-01-11 13:45:00',
+                            'v1.1', 'C', 'Electrical', '', 1, 0, 1);";
             return sData;
         }
 
         private static string GetPagesSeedData()
         {
-            string sData = @"INSERT INTO pages_Table (PageName, ProjectID, FileID, PageIndex, CreatedDate, LastModifiedDate,
-                                Version, Class, Orientation, Scale) 
+            string sData = @"INSERT INTO pages_Table (PageName, ProjectID, FileID, PageIndex, CreatedDate, LastModifiedDate, Version, Class, Orientation, Scale) 
                             VALUES('North Campus BAS Sheet 1', 1, 1, 1, '2026-01-05 08:30:00', '2026-01-10 17:00:00','v1.0', 'A', 'Landscape', '1:50'),
                                 ('North Campus BAS Sheet 2', 1, 1, 2, '2026-01-05 08:45:00', '2026-01-10 17:00:00','v1.0', 'A', 'Portrait', '1:50'),
                                 ('Central Library HVAC Sheet 1', 1, 3, 1, '2025-11-18 08:00:00', '2026-01-02 15:30:00','v2.0', 'B', 'Landscape', '1:100'),
@@ -131,7 +105,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void UpdateProjectInfoWithSeedData()
         {
             //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(Connection))
             {
                 //open the connection
                 connection.Open();
@@ -159,16 +133,16 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        
+
         internal static void UpdatePageInfoWithSeedData()
         {
             //crate a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(Connection))
             {
                 //open the connection
                 connection.Open();
 
-               //this is the practice data sql...
+                //this is the practice data sql...
                 string sUpdate = GetPageSeedChange();
 
                 //create a new command using the sql statement (sUpdate) and the open connection
@@ -193,8 +167,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static string GetPageNameWithSeedData()
         {
-           //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            //create a new sqlite connection
+            using (SQLiteConnection connection = new SQLiteConnection(Connection))
             {
                 //open the connection
                 connection.Open();
