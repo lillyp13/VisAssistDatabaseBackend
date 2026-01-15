@@ -193,9 +193,18 @@
     <Compile Include="DataUtilities\PageUtilities.cs" />
     <Compile Include="DataUtilities\ProjectUtilities.cs" />
     <Compile Include="DataUtilities\ShapesUtilities.cs" />
+    <Compile Include="Forms\ProjectPropertiesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\ProjectPropertiesForm.Designer.cs">
+      <DependentUpon>ProjectPropertiesForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="Forms\ProjectPropertiesForm.resx">
+      <DependentUpon>ProjectPropertiesForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
@@ -235,9 +244,7 @@
     <AppDesigner Include="Properties\" />
     <None Include="VisAssistDatabaseBackEnd_TemporaryKey.pfx" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Forms\" />
-  </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

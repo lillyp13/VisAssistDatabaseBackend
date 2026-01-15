@@ -14,7 +14,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static void SeedProjects()
         {
             //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
             {
                 //open the connection
                 connection.Open();
@@ -64,7 +64,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static void SeedFiles()
         {
             //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
             {
                 //open the connection
                 connection.Open();
@@ -84,7 +84,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static void SeedPages()
         {
             //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
             {
                 //open the connection
                 connection.Open();
@@ -131,7 +131,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void UpdateProjectInfoWithSeedData()
         {
             //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
             {
                 //open the connection
                 connection.Open();
@@ -163,7 +163,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void UpdatePageInfoWithSeedData()
         {
             //crate a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
             {
                 //open the connection
                 connection.Open();
@@ -194,7 +194,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static string GetPageNameWithSeedData()
         {
            //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
+            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
             {
                 //open the connection
                 connection.Open();

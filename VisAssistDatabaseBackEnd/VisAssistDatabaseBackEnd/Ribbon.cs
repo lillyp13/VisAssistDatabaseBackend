@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using VisAssistDatabaseBackEnd.DataUtilities;
 
@@ -23,37 +24,37 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.AddProjectInfo();
+            ProjectUtilities.AddProjectInfo();
         }
 
         private void btnAddFileInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.AddFile();
+            FileUtilities.AddFile();
         }
 
         private void btnAddPageInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.AddPage();
+            PageUtilities.AddPage();
         }
 
         private void btnDeletePageInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.DeletePage();
+            PageUtilities.DeletePage();
         }
 
         private void btnDeleteFileInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.DeleteFile();
+            FileUtilities.DeleteFile();
         }
 
         private void btnDeleteProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.DeleteProjectInfo();
+            ProjectUtilities.DeleteProjectInfo();
         }
 
         private void btnModifyProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.UpdateProjectInfo();
+            ProjectUtilities.UpdateProjectInfo();
         }
 
         private void btnModifyFile_Click(object sender, RibbonControlEventArgs e)
@@ -68,14 +69,24 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnModifyPage_Click(object sender, RibbonControlEventArgs e)
         {
-            ConnectionsUtilities.UpdatePage();
+            PageUtilities.UpdatePage();
         }
 
         private void btnGetPageName_Click(object sender, RibbonControlEventArgs e)
         {
             //we want to retrieve a page name based on the PageID
             //for now we will hardcode a random page...
-            ConnectionsUtilities.GetPageName();
+            PageUtilities.GetPageName();
+        }
+
+        private void btnDeleteDatabase_Click(object sender, RibbonControlEventArgs e)
+        {
+            ProjectUtilities.DeleteDatabase();
+        }
+
+        private void btnGetProjectInfo_Click(object sender, RibbonControlEventArgs e)
+        {
+            ProjectUtilities.GetProjectInfo();
         }
     }
 }
