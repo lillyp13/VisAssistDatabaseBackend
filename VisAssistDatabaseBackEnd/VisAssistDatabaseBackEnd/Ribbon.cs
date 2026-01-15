@@ -54,7 +54,7 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnModifyProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ProjectUtilities.UpdateProjectInfo();
+            //ProjectUtilities.BuildUpdateSql();
         }
 
         private void btnModifyFile_Click(object sender, RibbonControlEventArgs e)
@@ -76,7 +76,7 @@ namespace VisAssistDatabaseBackEnd
         {
             //we want to retrieve a page name based on the PageID
             //for now we will hardcode a random page...
-            PageUtilities.GetPageName();
+            ///PageUtilities.GetPageName();
         }
 
         private void btnDeleteDatabase_Click(object sender, RibbonControlEventArgs e)
@@ -86,7 +86,8 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnGetProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ProjectUtilities.GetProjectInfo();
+            ProjectUtilities.OpenProjectForm();
+           // ProjectUtilities.GetProjectInfo();
         }
     }
 }

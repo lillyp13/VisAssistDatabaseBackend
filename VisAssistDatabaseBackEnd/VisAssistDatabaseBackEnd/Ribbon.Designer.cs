@@ -42,6 +42,7 @@
             this.btnProjectInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteProjectInfo = this.Factory.CreateRibbonButton();
             this.btnModifyProjectInfo = this.Factory.CreateRibbonButton();
+            this.btnGetProjectInfo = this.Factory.CreateRibbonButton();
             this.grpFile = this.Factory.CreateRibbonGroup();
             this.btnAddFileInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteFileInfo = this.Factory.CreateRibbonButton();
@@ -57,7 +58,6 @@
             this.grpWireInfo = this.Factory.CreateRibbonGroup();
             this.btnAddWireInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteWireInfo = this.Factory.CreateRibbonButton();
-            this.btnGetProjectInfo = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.grpInitialize.SuspendLayout();
             this.grpProjectInfo.SuspendLayout();
@@ -124,6 +124,12 @@
             this.btnModifyProjectInfo.Label = "Modify Project Info";
             this.btnModifyProjectInfo.Name = "btnModifyProjectInfo";
             this.btnModifyProjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnModifyProjectInfo_Click);
+            // 
+            // btnGetProjectInfo
+            // 
+            this.btnGetProjectInfo.Label = "Get";
+            this.btnGetProjectInfo.Name = "btnGetProjectInfo";
+            this.btnGetProjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnGetProjectInfo_Click);
             // 
             // grpFile
             // 
@@ -218,12 +224,6 @@
             // 
             this.btnDeleteWireInfo.Label = "Delete Wire Info";
             this.btnDeleteWireInfo.Name = "btnDeleteWireInfo";
-            // 
-            // btnGetProjectInfo
-            // 
-            this.btnGetProjectInfo.Label = "Get";
-            this.btnGetProjectInfo.Name = "btnGetProjectInfo";
-            this.btnGetProjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnGetProjectInfo_Click);
             // 
             // Ribbon
             // 
