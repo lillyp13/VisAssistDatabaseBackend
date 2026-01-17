@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Data.SQLite;
 using Microsoft.Office.Interop.Visio;
 using static VisAssistDatabaseBackEnd.DataUtilities.ConnectionsUtilities;
+using static VisAssistDatabaseBackEnd.DataUtilities.DataProcessingUtilities;
 using System.Diagnostics;
 using VisAssistDatabaseBackEnd.Forms;
 using System.Windows.Forms;
@@ -65,209 +66,309 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             //use the seed data and push that to the database
             //thhis adds the project info seed data
-            DatabaseSeeding.SeedProjects();
+            string sProjectTableName = "project_table";
+            //first check if the database file exists and then can continue 
+            bool bFolderAlreadyExists = ConnectionsUtilities.CheckForDatabaseDirectory();
+
+            if (bFolderAlreadyExists)
+            {
+                bool bDatabaseFileExists = System.IO.File.Exists(DatabaseConfig.DatabasePath);
+                if (bDatabaseFileExists)
+                {
+                    bool bTableExists = DoesTableExist(sProjectTableName);
+                    if (bTableExists)
+                    {
+                        //only add the data if the project_table exists...
+                        DatabaseSeeding.SeedProjects();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Please add the database first: the table " + sProjectTableName + " does not exist");
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Please add the database first: " + DatabaseConfig.DatabasePath + " path does not exist");
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please add the directory first: " + DatabaseConfig.DatabasePath);
+            }
+                    
+            
         }
         
 
 
         internal static void DeleteProjectInfo()
         {
-            //delete all the records in the project_table
-            using (SQLiteConnection connection = new SQLiteConnection(Connection))
+            try
             {
-                connection.Open();
-                string sDelete = "DELETE FROM project_table;";
+                //delete all the records in the project_table
+                using (SQLiteConnection sqliteConnection = new SQLiteConnection(Connection))
+                {
+                    sqliteConnection.Open();
+                    string sDelete = "DELETE FROM project_table;";
 
-                new SQLiteCommand(sDelete, connection).ExecuteNonQuery();
+                    using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
 
-                //reset the auto-increment counter
-                string sReset = "DELETE FROM sqlite_sequence WHERE name = 'project_table';";
-                new SQLiteCommand(sReset, connection).ExecuteNonQuery();
+                    //reset the auto-increment counter
+                    string sReset = "DELETE FROM sqlite_sequence WHERE name = 'project_table';";
+                    using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                        
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in DeleteProjectInfo " + ex.Message, "VisAssist");
             }
         }
 
         internal static void PopulatePropertiesForm(ProjectPropertiesForm projectPropertiesForm)
         {
-            m_dictProjectInfoToCompare.Clear();
-            //we have m_lstProjectInfo 
-            //get the txtId textbox on the projectpropertiesform
-            projectPropertiesForm.txtID.Text = m_dictProjectInfoBase["Id"].ToString();
-            projectPropertiesForm.txtProjectName.Text = m_dictProjectInfoBase["ProjectName"].ToString();
-            projectPropertiesForm.txtCustomerName.Text = m_dictProjectInfoBase["CustomerName"].ToString();
-            projectPropertiesForm.txtCreatedDate.Text = m_dictProjectInfoBase["CreatedDate"].ToString();
-            projectPropertiesForm.txtModifiedDate.Text = m_dictProjectInfoBase["ModifiedDate"].ToString();
-            projectPropertiesForm.txtJobName.Text = m_dictProjectInfoBase["JobName"].ToString();
-            projectPropertiesForm.txtJobNumber.Text = m_dictProjectInfoBase["JobNumber"].ToString();
-            projectPropertiesForm.txtJobCity.Text = m_dictProjectInfoBase["JobCity"].ToString();
-            projectPropertiesForm.txtJobState.Text = m_dictProjectInfoBase["JobState"].ToString();
-            projectPropertiesForm.txtJobStreetAddress1.Text = m_dictProjectInfoBase["JobStreetAddress1"].ToString();
-            projectPropertiesForm.txtJobStreetAddress2.Text = m_dictProjectInfoBase["JobStreetAddress2"].ToString();
-            projectPropertiesForm.txtJobZipCode.Text = m_dictProjectInfoBase["JobZipCode"].ToString();
-            projectPropertiesForm.txtControlContractorName.Text = m_dictProjectInfoBase["ControlContractorName"].ToString();
-            projectPropertiesForm.txtControlContractorCity.Text = m_dictProjectInfoBase["ControlContractorCity"].ToString();
-            projectPropertiesForm.txtControlContractorState.Text = m_dictProjectInfoBase["ControlContractorState"].ToString();
-            projectPropertiesForm.txtControlContractorStreetAddress1.Text = m_dictProjectInfoBase["ControlContractorStreetAddress1"].ToString();
-            projectPropertiesForm.txtControlContractorStreetAddress2.Text = m_dictProjectInfoBase["ControlContractorStreetAddress2"].ToString();
-            projectPropertiesForm.txtControlContractorZipCode.Text = m_dictProjectInfoBase["ControlContractorZipCode"].ToString();
-            projectPropertiesForm.txtControlContractorPhone.Text = m_dictProjectInfoBase["ControlContractorPhone"].ToString();
-            projectPropertiesForm.txtControlContractorEmail.Text = m_dictProjectInfoBase["ControlContractorEmail"].ToString();
-            projectPropertiesForm.txtMechanicalEngineer.Text = m_dictProjectInfoBase["MechanicalEngineer"].ToString();
-            projectPropertiesForm.txtMechanicalContractor.Text = m_dictProjectInfoBase["MechanicalContractor"].ToString();
-            projectPropertiesForm.txtDesignedBy.Text = m_dictProjectInfoBase["DesignedBy"].ToString();
-            projectPropertiesForm.txtReviewBy.Text = m_dictProjectInfoBase["ReviewedBy"].ToString();
-            projectPropertiesForm.txtFileCount.Text = m_dictProjectInfoBase["FileCount"].ToString();
+            try
+            {
 
+
+                m_dictProjectInfoToCompare.Clear();
+                //we have m_lstProjectInfo 
+                //get the txtId textbox on the projectpropertiesform
+                if (m_dictProjectInfoBase.Count > 0)
+                {
+                    projectPropertiesForm.txtID.Text = m_dictProjectInfoBase["Id"].ToString();
+                    projectPropertiesForm.txtProjectName.Text = m_dictProjectInfoBase["ProjectName"].ToString();
+                    projectPropertiesForm.txtCustomerName.Text = m_dictProjectInfoBase["CustomerName"].ToString();
+                    projectPropertiesForm.txtCreatedDate.Text = m_dictProjectInfoBase["CreatedDate"].ToString();
+                    projectPropertiesForm.txtModifiedDate.Text = m_dictProjectInfoBase["ModifiedDate"].ToString();
+                    projectPropertiesForm.txtJobName.Text = m_dictProjectInfoBase["JobName"].ToString();
+                    projectPropertiesForm.txtJobNumber.Text = m_dictProjectInfoBase["JobNumber"].ToString();
+                    projectPropertiesForm.txtJobCity.Text = m_dictProjectInfoBase["JobCity"].ToString();
+                    projectPropertiesForm.txtJobState.Text = m_dictProjectInfoBase["JobState"].ToString();
+                    projectPropertiesForm.txtJobStreetAddress1.Text = m_dictProjectInfoBase["JobStreetAddress1"].ToString();
+                    projectPropertiesForm.txtJobStreetAddress2.Text = m_dictProjectInfoBase["JobStreetAddress2"].ToString();
+                    projectPropertiesForm.txtJobZipCode.Text = m_dictProjectInfoBase["JobZipCode"].ToString();
+                    projectPropertiesForm.txtControlContractorName.Text = m_dictProjectInfoBase["ControlContractorName"].ToString();
+                    projectPropertiesForm.txtControlContractorCity.Text = m_dictProjectInfoBase["ControlContractorCity"].ToString();
+                    projectPropertiesForm.txtControlContractorState.Text = m_dictProjectInfoBase["ControlContractorState"].ToString();
+                    projectPropertiesForm.txtControlContractorStreetAddress1.Text = m_dictProjectInfoBase["ControlContractorStreetAddress1"].ToString();
+                    projectPropertiesForm.txtControlContractorStreetAddress2.Text = m_dictProjectInfoBase["ControlContractorStreetAddress2"].ToString();
+                    projectPropertiesForm.txtControlContractorZipCode.Text = m_dictProjectInfoBase["ControlContractorZipCode"].ToString();
+                    projectPropertiesForm.txtControlContractorPhone.Text = m_dictProjectInfoBase["ControlContractorPhone"].ToString();
+                    projectPropertiesForm.txtControlContractorEmail.Text = m_dictProjectInfoBase["ControlContractorEmail"].ToString();
+                    projectPropertiesForm.txtMechanicalEngineer.Text = m_dictProjectInfoBase["MechanicalEngineer"].ToString();
+                    projectPropertiesForm.txtMechanicalContractor.Text = m_dictProjectInfoBase["MechanicalContractor"].ToString();
+                    projectPropertiesForm.txtDesignedBy.Text = m_dictProjectInfoBase["DesignedBy"].ToString();
+                    projectPropertiesForm.txtReviewBy.Text = m_dictProjectInfoBase["ReviewedBy"].ToString();
+                    projectPropertiesForm.txtFileCount.Text = m_dictProjectInfoBase["FileCount"].ToString();
+                }
+                else
+                {
+                    MessageBox.Show("There are no records in the project_table");
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in PopulatePropertiesForm " + ex.Message, "VisAssist");
+            }
             
         }
 
         internal static void GetProjectInfoFromDatabase()
         {
-            m_dictProjectInfoBase.Clear();//this should be cleared because you build this when the user presses update
-            m_dictProjectInfoToUpdate.Clear();//this should be cleared because you build this when the user presses update
-
-            string sSQl = @"SELECT * FROM project_table WHERE Id = 1";
-            using (SQLiteConnection connection = new SQLiteConnection(Connection))
+            try
             {
-                connection.Open();
-                using (SQLiteCommand cmd = new SQLiteCommand(sSQl, connection))
+                //logging statement placeholder
+
+                m_dictProjectInfoBase.Clear();//this should be cleared because you build this when the user presses update
+                m_dictProjectInfoToUpdate.Clear();//this should be cleared because you build this when the user presses update
+
+                string sSQl = @"SELECT * FROM project_table WHERE Id = 1";
+                //logging statement placeholder
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(Connection))
                 {
-                    //execute the query and read the result
-                    using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    //logging statement placeholder
+                    sqliteconConnection.Open();
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSQl, sqliteconConnection))
                     {
-                        while(reader.Read())
+                        //logging here
+                        //execute the query and read the result
+                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
                         {
-                            string sRowData = "";
-                            string sColumnName = "";
-                            for (int i = 0; i < reader.FieldCount; i++)
+                            while (sqlitereadReader.Read())
                             {
-                                sColumnName = reader.GetName(i).ToString(); // column name
-                                sRowData = reader.GetValue(i).ToString(); //actual value we care about
-                                m_dictProjectInfoBase.Add(sColumnName, sRowData); //build up the dictionary so the column is the key and the value is the value in the cell...
+                                string sRowData = "";
+                                string sColumnName = "";
+                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                                {
+                                    sColumnName = sqlitereadReader.GetName(i).ToString(); // column name
+                                    sRowData = sqlitereadReader.GetValue(i).ToString(); //actual value we care about
+                                    m_dictProjectInfoBase.Add(sColumnName, sRowData); //build up the dictionary so the column is the key and the value is the value in the cell...
+                                    //logging statement placeholder
+                                }
+
                             }
-                            
+
+
                         }
-                        
-                        
                     }
                 }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in GetProjectInfoFromDatabase " + ex.Message, "ViAssist");
             }
             
         }
 
         internal static void DeleteDatabase()
         {
-            string sFilePath = DatabaseConfig.DatabasePath;
-            if(System.IO.File.Exists(sFilePath))
+            try
             {
-               System.IO.File.Delete(sFilePath);
+                string sFilePath = DatabaseConfig.DatabasePath;
+                if (System.IO.File.Exists(sFilePath))
+                {
+                    System.IO.File.Delete(sFilePath);
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in DeleteDatabase " + ex.Message, "VisAssist");
             }
         }
 
         internal static void OpenProjectForm()
         {
-            ProjectPropertiesForm oNewForm = new ProjectPropertiesForm();
-            oNewForm.Display();
-            oNewForm.ShowDialog();
+            try
+            {
+                ProjectPropertiesForm oNewForm = new ProjectPropertiesForm();
+                oNewForm.Display();
+                oNewForm.ShowDialog();
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in OpenProjectForm " + ex.Message, "VisAssist");
+            }
         }
 
 
         //this just goes through each text box on the form and builds up a dictionary based on the values on the form currently (so that we can compare with the values in the db)
         private static void GatherProjectPropertiesInfo(ProjectPropertiesForm projectPropertiesForm)
         {
-            string sID = projectPropertiesForm.txtID.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("Id", sID);
+            try
+            {
+                string sID = projectPropertiesForm.txtID.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("Id", sID);
 
-            string sProjectName = projectPropertiesForm.txtProjectName.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ProjectName", sProjectName);
+                string sProjectName = projectPropertiesForm.txtProjectName.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ProjectName", sProjectName);
 
-            string sCustomerName = projectPropertiesForm.txtCustomerName.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("CustomerName", sCustomerName);
+                string sCustomerName = projectPropertiesForm.txtCustomerName.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("CustomerName", sCustomerName);
 
-            string sCreatedDate = projectPropertiesForm.txtCreatedDate.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("CreatedDate", sCreatedDate);
+                string sCreatedDate = projectPropertiesForm.txtCreatedDate.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("CreatedDate", sCreatedDate);
 
-            string sModifiedDate = projectPropertiesForm.txtModifiedDate.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ModifiedDate", sModifiedDate);
+                string sModifiedDate = projectPropertiesForm.txtModifiedDate.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ModifiedDate", sModifiedDate);
 
-            string sJobName = projectPropertiesForm.txtJobName.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("JobName", sJobName);
+                string sJobName = projectPropertiesForm.txtJobName.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobName", sJobName);
 
-            string sJobNumber = projectPropertiesForm.txtJobNumber.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("JobNumber", sJobNumber);
+                string sJobNumber = projectPropertiesForm.txtJobNumber.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobNumber", sJobNumber);
 
-            string sJobCity = projectPropertiesForm.txtJobCity.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("JobCity", sJobCity);
+                string sJobCity = projectPropertiesForm.txtJobCity.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobCity", sJobCity);
 
-            string sJobState = projectPropertiesForm.txtJobState.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("JobState", sJobState);
+                string sJobState = projectPropertiesForm.txtJobState.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobState", sJobState);
 
-            string sJobStreetAddress1 = projectPropertiesForm.txtJobStreetAddress1.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("JobStreetAddress1", sJobStreetAddress1);
+                string sJobStreetAddress1 = projectPropertiesForm.txtJobStreetAddress1.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobStreetAddress1", sJobStreetAddress1);
 
-            string sJobStreetAddress2 = projectPropertiesForm.txtJobStreetAddress2.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("JobStreetAddress2", sJobStreetAddress2);
+                string sJobStreetAddress2 = projectPropertiesForm.txtJobStreetAddress2.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobStreetAddress2", sJobStreetAddress2);
 
-            string sJobZipCode = projectPropertiesForm.txtJobZipCode.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("JobZipCode", sJobZipCode);
+                string sJobZipCode = projectPropertiesForm.txtJobZipCode.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobZipCode", sJobZipCode);
 
-            string sControlContractorName = projectPropertiesForm.txtControlContractorName.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ControlContractorName", sControlContractorName);
+                string sControlContractorName = projectPropertiesForm.txtControlContractorName.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorName", sControlContractorName);
 
-            string sControlContractorCity = projectPropertiesForm.txtControlContractorCity.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ControlContractorCity", sControlContractorCity);
+                string sControlContractorCity = projectPropertiesForm.txtControlContractorCity.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorCity", sControlContractorCity);
 
-            string sControlContractorState = projectPropertiesForm.txtControlContractorState.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ControlContractorState", sControlContractorState);
+                string sControlContractorState = projectPropertiesForm.txtControlContractorState.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorState", sControlContractorState);
 
-            string sControlContractorStreetAdress1 = projectPropertiesForm.txtControlContractorStreetAddress1.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ControlContractorStreetAddress1", sControlContractorStreetAdress1);
+                string sControlContractorStreetAdress1 = projectPropertiesForm.txtControlContractorStreetAddress1.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorStreetAddress1", sControlContractorStreetAdress1);
 
-            string sControlContractorStreetAddress2 = projectPropertiesForm.txtControlContractorStreetAddress2.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ControlContractorStreetAddress2", sControlContractorStreetAddress2);
+                string sControlContractorStreetAddress2 = projectPropertiesForm.txtControlContractorStreetAddress2.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorStreetAddress2", sControlContractorStreetAddress2);
 
-            string sControlContractorZipCode = projectPropertiesForm.txtControlContractorZipCode.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ControlContractorZipCode", sControlContractorZipCode);
+                string sControlContractorZipCode = projectPropertiesForm.txtControlContractorZipCode.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorZipCode", sControlContractorZipCode);
 
-            string sControlContractorPhone = projectPropertiesForm.txtControlContractorPhone.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ControlContractorPhone", sControlContractorPhone);
+                string sControlContractorPhone = projectPropertiesForm.txtControlContractorPhone.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorPhone", sControlContractorPhone);
 
-            string sControlContractorEmail = projectPropertiesForm.txtControlContractorEmail.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ControlContractorEmail", sControlContractorEmail);
+                string sControlContractorEmail = projectPropertiesForm.txtControlContractorEmail.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorEmail", sControlContractorEmail);
 
-            string sMechanicalEngineer = projectPropertiesForm.txtMechanicalEngineer.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("MechanicalEngineer", sMechanicalEngineer);
+                string sMechanicalEngineer = projectPropertiesForm.txtMechanicalEngineer.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("MechanicalEngineer", sMechanicalEngineer);
 
-            string sMechanicalContractor = projectPropertiesForm.txtMechanicalContractor.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("MechanicalContractor", sMechanicalContractor);
+                string sMechanicalContractor = projectPropertiesForm.txtMechanicalContractor.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("MechanicalContractor", sMechanicalContractor);
 
-            string sDesignedBy = projectPropertiesForm.txtDesignedBy.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("DesignedBy", sDesignedBy);
+                string sDesignedBy = projectPropertiesForm.txtDesignedBy.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("DesignedBy", sDesignedBy);
 
-            string sReviwedBy = projectPropertiesForm.txtReviewBy.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("ReviewedBy", sReviwedBy);
+                string sReviwedBy = projectPropertiesForm.txtReviewBy.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ReviewedBy", sReviwedBy);
 
-            string sFileCount = projectPropertiesForm.txtFileCount.Text.TrimEnd();
-            m_dictProjectInfoToCompare.Add("FileCount", sFileCount);
+                string sFileCount = projectPropertiesForm.txtFileCount.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("FileCount", sFileCount);
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in GatherProjectPropertiesInfo " + ex.Message, "VisAssist");
+            }
         }
 
 
 
         internal static void UpdateProjectInfo(ProjectPropertiesForm projectPropertiesForm)
         {
-            m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
-            ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm);
-
-            m_dictProjectInfoToUpdate = ConnectionsUtilities.CompareData(m_dictProjectInfoBase, m_dictProjectInfoToCompare);
-
-
-            if (m_dictProjectInfoToUpdate.Count > 0)
+            try
             {
-                string sTable = "project_table";
+                m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
+                ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm);
 
-                ConnectionsUtilities.BuildUpdateSqlForOneRecord(sTable, m_dictProjectInfoToUpdate);
+                m_dictProjectInfoToUpdate = DataProcessingUtilities.CompareDataDictionaries(m_dictProjectInfoBase, m_dictProjectInfoToCompare);
 
-                
 
+                if (m_dictProjectInfoToUpdate.Count > 0)
+                {
+                    string sTable = "project_table";
+
+                    DataProcessingUtilities.BuildUpdateSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate, "UPDATE");
+
+                    ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
+
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in UpdateProjectInfo " + ex.Message, "VisAssist");
             }
         }
     }

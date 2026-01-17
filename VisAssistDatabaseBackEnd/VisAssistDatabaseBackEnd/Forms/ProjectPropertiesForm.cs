@@ -24,6 +24,7 @@ namespace VisAssistDatabaseBackEnd.Forms
         }
         public void Display()
         {
+           
             ProjectUtilities.GetProjectInfoFromDatabase();
             ProjectUtilities.PopulatePropertiesForm(this);
         }

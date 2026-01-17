@@ -189,10 +189,17 @@
   <ItemGroup>
     <Compile Include="DataUtilities\ConnectionsUtilities.cs" />
     <Compile Include="DataUtilities\DatabaseSeeding.cs" />
+    <Compile Include="DataUtilities\DataProcessingUtilities.cs" />
     <Compile Include="DataUtilities\FileUtilities.cs" />
     <Compile Include="DataUtilities\PageUtilities.cs" />
     <Compile Include="DataUtilities\ProjectUtilities.cs" />
     <Compile Include="DataUtilities\ShapesUtilities.cs" />
+    <Compile Include="Forms\FilePropertiesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\FilePropertiesForm.Designer.cs">
+      <DependentUpon>FilePropertiesForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\ProjectPropertiesForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -202,6 +209,9 @@
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>
+    <EmbeddedResource Include="Forms\FilePropertiesForm.resx">
+      <DependentUpon>FilePropertiesForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\ProjectPropertiesForm.resx">
       <DependentUpon>ProjectPropertiesForm.cs</DependentUpon>
     </EmbeddedResource>

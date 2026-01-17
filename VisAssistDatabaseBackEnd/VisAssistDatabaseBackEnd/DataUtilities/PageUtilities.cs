@@ -41,16 +41,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void DeletePage()
         {
             //delete all the records in the pages_table
-            using (SQLiteConnection connection = new SQLiteConnection(Connection))
+            using (SQLiteConnection sqliteConnection = new SQLiteConnection(Connection))
             {
-                connection.Open();
+                sqliteConnection.Open();
                 string sDelete = "DELETE FROM pages_table;";
 
-                new SQLiteCommand(sDelete, connection).ExecuteNonQuery();
+                using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
+                {
+                    cmd.ExecuteNonQuery();
+                }
 
                 //reset the auto-increment counter
                 string sReset = "DELETE FROM sqlite_sequence WHERE name = 'pages_table';";
-                new SQLiteCommand(sReset, connection).ExecuteNonQuery();
+                using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
+                {
+                    cmd.ExecuteNonQuery();
+                }
             }
         }
         internal static void GetPageName()

@@ -58,6 +58,7 @@
             this.grpWireInfo = this.Factory.CreateRibbonGroup();
             this.btnAddWireInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteWireInfo = this.Factory.CreateRibbonButton();
+            this.btnGetFileData = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.grpInitialize.SuspendLayout();
             this.grpProjectInfo.SuspendLayout();
@@ -136,6 +137,7 @@
             this.grpFile.Items.Add(this.btnAddFileInfo);
             this.grpFile.Items.Add(this.btnDeleteFileInfo);
             this.grpFile.Items.Add(this.btnModifyFile);
+            this.grpFile.Items.Add(this.btnGetFileData);
             this.grpFile.Label = "File Info";
             this.grpFile.Name = "grpFile";
             // 
@@ -225,6 +227,12 @@
             this.btnDeleteWireInfo.Label = "Delete Wire Info";
             this.btnDeleteWireInfo.Name = "btnDeleteWireInfo";
             // 
+            // btnGetFileData
+            // 
+            this.btnGetFileData.Label = "Get";
+            this.btnGetFileData.Name = "btnGetFileData";
+            this.btnGetFileData.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnGetFileData_Click);
+            // 
             // Ribbon
             // 
             this.Name = "Ribbon";
@@ -275,6 +283,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeleteWireInfo;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnGetPageName;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnGetProjectInfo;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnGetFileData;
     }
 
     partial class ThisRibbonCollection

@@ -29,7 +29,9 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnAddFileInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            FileUtilities.AddFile();
+            //this would get triggered basically right after add project info because when we create a new project and press ok we create a new file...
+            //idea that there would always be one file associated with the project UNLESS the user goes and disassociates all files in a project (but when initially creating a project there should always be at least one file)
+            FileUtilities.AddFirstFile();
         }
 
         private void btnAddPageInfo_Click(object sender, RibbonControlEventArgs e)
@@ -44,7 +46,7 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnDeleteFileInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            FileUtilities.DeleteFile();
+            FileUtilities.DeleteAllFiles();
         }
 
         private void btnDeleteProjectInfo_Click(object sender, RibbonControlEventArgs e)
@@ -88,6 +90,11 @@ namespace VisAssistDatabaseBackEnd
         {
             ProjectUtilities.OpenProjectForm();
            // ProjectUtilities.GetProjectInfo();
+        }
+
+        private void btnGetFileData_Click(object sender, RibbonControlEventArgs e)
+        {
+            FileUtilities.OpenFileForm();
         }
     }
 }
