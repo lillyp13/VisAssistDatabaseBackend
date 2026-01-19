@@ -47,6 +47,7 @@
             this.btnAddFileInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteFileInfo = this.Factory.CreateRibbonButton();
             this.btnModifyFile = this.Factory.CreateRibbonButton();
+            this.btnGetFileData = this.Factory.CreateRibbonButton();
             this.grpPages = this.Factory.CreateRibbonGroup();
             this.btnAddPageInfo = this.Factory.CreateRibbonButton();
             this.btnDeletePageInfo = this.Factory.CreateRibbonButton();
@@ -58,7 +59,6 @@
             this.grpWireInfo = this.Factory.CreateRibbonGroup();
             this.btnAddWireInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteWireInfo = this.Factory.CreateRibbonButton();
-            this.btnGetFileData = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.grpInitialize.SuspendLayout();
             this.grpProjectInfo.SuspendLayout();
@@ -159,6 +159,12 @@
             this.btnModifyFile.Name = "btnModifyFile";
             this.btnModifyFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnModifyFile_Click);
             // 
+            // btnGetFileData
+            // 
+            this.btnGetFileData.Label = "Get";
+            this.btnGetFileData.Name = "btnGetFileData";
+            this.btnGetFileData.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnGetFileData_Click);
+            // 
             // grpPages
             // 
             this.grpPages.Items.Add(this.btnAddPageInfo);
@@ -226,12 +232,6 @@
             // 
             this.btnDeleteWireInfo.Label = "Delete Wire Info";
             this.btnDeleteWireInfo.Name = "btnDeleteWireInfo";
-            // 
-            // btnGetFileData
-            // 
-            this.btnGetFileData.Label = "Get";
-            this.btnGetFileData.Name = "btnGetFileData";
-            this.btnGetFileData.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnGetFileData_Click);
             // 
             // Ribbon
             // 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using VisAssistDatabaseBackEnd.Forms;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
 {
@@ -27,6 +28,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         string sPageNumber; //for pageformat...
 
 
+        public static MultipleRecordUpdates m_mruRecordsBase = new MultipleRecordUpdates();
+        public static MultipleRecordUpdates m_mruRecordsToCompare = new MultipleRecordUpdates();
+        public static MultipleRecordUpdates m_mruRecordsToUpdate = new MultipleRecordUpdates();
 
 
         //Page Actions
@@ -34,16 +38,237 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             DatabaseSeeding.SeedPages();
         }
-        internal static void UpdatePage()
+       
+
+
+
+        
+        
+        internal static void OpenPagesForm()
         {
-            DatabaseSeeding.UpdatePageInfoWithSeedData();
+            try
+            {
+                PagesForm oNewForm = new PagesForm();
+                oNewForm.Display();
+                oNewForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in OpenPagesForm " + ex.Message, "VisAssist");
+            }
         }
-        internal static void DeletePage()
+
+        internal static void GetPagesForSpecificFile(int iFileID)
+        {
+            try
+            {
+                if(m_mruRecordsBase.ruRecords != null)
+                {
+                    m_mruRecordsBase.ruRecords.Clear();
+                }
+                string sPrimaryKeyColumn = "PageID"; // primary key for pages_table
+                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
+
+                string sSql = @"SELECT * FROM pages_table WHERE FileID = @FileID";
+
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(Connection))
+                {
+                    sqliteconConnection.Open();
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
+                    {
+                        // add parameter to avoid SQL injection
+                        sqlitecmdCommand.Parameters.AddWithValue("@FileID", iFileID);
+
+                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
+                        {
+                            while (sqlitereadReader.Read())
+                            {
+                                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
+                                int iID = 0;
+
+                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                                {
+                                    string sColumnName = sqlitereadReader.GetName(i);
+                                    string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
+                                    odictColumnValues.Add(sColumnName, sValue);
+
+                                    if (sColumnName == sPrimaryKeyColumn)
+                                        iID = Convert.ToInt32(sqlitereadReader.GetValue(i));
+                                }
+
+                                RecordUpdate ruRecordUpdate = new RecordUpdate();
+                                ruRecordUpdate.sPrimaryKeyColumn = sPrimaryKeyColumn;
+                                ruRecordUpdate.iId = iID;
+                                ruRecordUpdate.odictColumnValues = odictColumnValues;
+
+
+                                lstRecords.Add(ruRecordUpdate);
+                            }
+                        }
+                    }
+                }
+
+                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetPagesForFile: " + ex.Message, "VisAssist");
+                
+            }
+        }
+
+        internal static void PopulatePagesForm(PagesForm pagesForm)
+        {
+            //we have m_mruRecordsBase that contains each page go through it and populate the datagridview...
+            try
+            {
+                // Clear existing rows first
+                pagesForm.dgvPages.Rows.Clear();
+
+                if (m_mruRecordsBase.ruRecords == null || m_mruRecordsBase.ruRecords.Count == 0)
+                {
+                    MessageBox.Show("There are no pages for this file.");
+                    return; //nothing to populate
+                }
+                   
+
+                // Loop through each record
+                foreach (RecordUpdate ruRecord in m_mruRecordsBase.ruRecords)
+                {
+                    // Create a new row
+                    DataGridViewRow dgvRow = new DataGridViewRow();
+                    dgvRow.CreateCells(pagesForm.dgvPages);
+
+                    // Populate each cell by matching column names
+                    foreach (DataGridViewColumn dgvCol in pagesForm.dgvPages.Columns)
+                    {
+                        string sColName = dgvCol.Name;
+
+                        if (ruRecord.odictColumnValues.ContainsKey(sColName))
+                        {
+                            dgvRow.Cells[dgvCol.Index].Value = ruRecord.odictColumnValues[sColName];
+                        }
+                        else
+                        {
+                            dgvRow.Cells[dgvCol.Index].Value = null; // or string.Empty if preferred
+                        }
+                    }
+
+                    // Add the row to the DataGridView
+                    pagesForm.dgvPages.Rows.Add(dgvRow);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in PopulatePagesForm: " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static void GetAllPages()
+        {
+            //get all the pages in the pages_table
+            try
+            {
+                string sPrimaryKeyColumn = "PageID"; // primary key for pages_table
+                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
+
+                // Fetch all pages, no WHERE clause
+                string sSql = @"SELECT * FROM pages_table";
+
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(Connection))
+                {
+                    sqliteconConnection.Open();
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
+                    {
+                        // No parameter needed anymore
+
+                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
+                        {
+                            while (sqlitereadReader.Read())
+                            {
+                                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
+                                int iID = 0;
+
+                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                                {
+                                    string sColumnName = sqlitereadReader.GetName(i);
+                                    string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
+                                    odictColumnValues.Add(sColumnName, sValue);
+
+                                    if (sColumnName == sPrimaryKeyColumn)
+                                    {
+                                        iID = Convert.ToInt32(sqlitereadReader.GetValue(i));
+                                    }
+                                        
+                                }
+
+                                RecordUpdate ruRecordUpdate = new RecordUpdate();
+                                ruRecordUpdate.sPrimaryKeyColumn = sPrimaryKeyColumn;
+                                ruRecordUpdate.iId = iID;
+                                ruRecordUpdate.odictColumnValues = odictColumnValues;
+
+                                lstRecords.Add(ruRecordUpdate);
+                            }
+                        }
+                    }
+                }
+
+                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetPagesForFile: " + ex.Message, "VisAssist");
+            }
+
+        }
+
+        internal static void DeletePage(PagesForm pagesForm)
+        {
+            //get the selected row in the filePropertiesForm.dgvFileData to determine which file to delete
+            string sTableName = "pages_table";
+            // Get the selected row
+            DataGridViewSelectedRowCollection colSelectedRows = pagesForm.dgvPages.SelectedRows;
+            if (colSelectedRows == null || colSelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select at least one page to delete.");
+                return;
+            }
+
+            // Build a list of RecordUpdate objects for each selected row
+            List<RecordUpdate> lstRecordsToDelete = new List<RecordUpdate>();
+            foreach (DataGridViewRow dgvRow in colSelectedRows)
+            {
+                int iFileID = Convert.ToInt32(dgvRow.Cells["PageID"].Value);
+
+                RecordUpdate ruRecord = new RecordUpdate();
+                ruRecord.sPrimaryKeyColumn = "PageID";
+                ruRecord.iId = iFileID;
+
+                lstRecordsToDelete.Add(ruRecord);
+            }
+
+            MultipleRecordUpdates mru = new MultipleRecordUpdates(lstRecordsToDelete);
+
+            // Call delete
+            DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(sTableName, mru);
+
+            foreach (DataGridViewRow dgvRow in colSelectedRows)
+            {
+                pagesForm.dgvPages.Rows.Remove(dgvRow);
+            }
+        }
+
+        internal static void DeleteAllPages()
         {
             //delete all the records in the pages_table
             using (SQLiteConnection sqliteConnection = new SQLiteConnection(Connection))
             {
                 sqliteConnection.Open();
+                //enable foreign key enforcemnt for this connection
+                using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteConnection))
+                {
+                    sqlitcmdPragma.ExecuteNonQuery();
+                }
                 string sDelete = "DELETE FROM pages_table;";
 
                 using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
@@ -51,7 +276,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     cmd.ExecuteNonQuery();
                 }
 
-                //reset the auto-increment counter
+                //reset the auto-increment counter 
                 string sReset = "DELETE FROM sqlite_sequence WHERE name = 'pages_table';";
                 using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
                 {
@@ -59,11 +284,86 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
             }
         }
-        internal static void GetPageName()
+        internal static void UpdatePage(PagesForm pagesForm, bool bAllPages, int iFileID)
         {
-            string sPageName = DatabaseSeeding.GetPageNameWithSeedData();
-            MessageBox.Show("Got the page " + sPageName);
+            if (m_mruRecordsToCompare.ruRecords != null)
+            {
+                m_mruRecordsToCompare.ruRecords.Clear();
+            }
 
+            bool bIsNull = false;
+            List<RecordUpdate> lstRecordUpdate = new List<RecordUpdate>();
+            foreach (DataGridViewRow dgvRow in pagesForm.dgvPages.Rows)
+            {
+                Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
+                string sPriamryKey = "";
+                int iPrimaryKeyValue = 0;
+
+
+
+                for (int i = 0; i <= pagesForm.dgvPages.Columns.Count - 1; i++)
+                {
+                    DataGridViewColumn dgvColumn = pagesForm.dgvPages.Columns[i];
+                    string sColumnname = dgvColumn.Name;
+                    if (dgvRow.Cells[i].Value != null)
+                    {
+                        string sValue = dgvRow.Cells[i].Value.ToString();
+                        string sKey = dgvColumn.Name;
+
+                        if (sColumnname == "PageID")
+                        {
+                            //this is the our priamry key 
+                            sPriamryKey = sColumnname;
+                            iPrimaryKeyValue = Convert.ToInt32(sValue);
+                        }
+                        else
+                        {
+                            oDictColumnValues.Add(sColumnname, sValue);
+                        }
+                    }
+                    else
+                    {
+                        bIsNull = true;
+                    }
+                }
+
+
+                //create a recordupdate for this row only if it is not null
+                if (!bIsNull)
+                {
+                    RecordUpdate ruRecordUpdate = new RecordUpdate();
+                    ruRecordUpdate.sPrimaryKeyColumn = sPriamryKey;
+                    ruRecordUpdate.iId = iPrimaryKeyValue;
+                    ruRecordUpdate.odictColumnValues = oDictColumnValues;
+
+                    lstRecordUpdate.Add(ruRecordUpdate);
+                }
+
+            }
+
+            //wrap all the records into a multiple recorsupdates object
+            m_mruRecordsToCompare = new MultipleRecordUpdates(lstRecordUpdate);
+
+            m_mruRecordsToUpdate = DataProcessingUtilities.ComapreDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
+
+
+            if (m_mruRecordsToUpdate.ruRecords.Count > 0)
+            {
+                //there is something to update
+                string sTable = "pages_table";
+                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(sTable, m_mruRecordsToUpdate);
+                if (bAllPages)
+                {
+                    //get the pages for all the files
+                    PageUtilities.GetAllPages();
+                }
+                else
+                {
+                    //get the pages for a specific file
+                    PageUtilities.GetPagesForSpecificFile(iFileID);
+                }
+
+            }
         }
     }
 

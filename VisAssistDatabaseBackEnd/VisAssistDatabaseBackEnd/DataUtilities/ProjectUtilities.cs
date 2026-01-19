@@ -101,35 +101,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         
 
 
-        internal static void DeleteProjectInfo()
-        {
-            try
-            {
-                //delete all the records in the project_table
-                using (SQLiteConnection sqliteConnection = new SQLiteConnection(Connection))
-                {
-                    sqliteConnection.Open();
-                    string sDelete = "DELETE FROM project_table;";
-
-                    using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
-                    {
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    //reset the auto-increment counter
-                    string sReset = "DELETE FROM sqlite_sequence WHERE name = 'project_table';";
-                    using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
-                    {
-                        cmd.ExecuteNonQuery();
-                    }
-                        
-                }
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in DeleteProjectInfo " + ex.Message, "VisAssist");
-            }
-        }
 
         internal static void PopulatePropertiesForm(ProjectPropertiesForm projectPropertiesForm)
         {
@@ -225,22 +196,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 MessageBox.Show("Error in GetProjectInfoFromDatabase " + ex.Message, "ViAssist");
             }
             
-        }
-
-        internal static void DeleteDatabase()
-        {
-            try
-            {
-                string sFilePath = DatabaseConfig.DatabasePath;
-                if (System.IO.File.Exists(sFilePath))
-                {
-                    System.IO.File.Delete(sFilePath);
-                }
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in DeleteDatabase " + ex.Message, "VisAssist");
-            }
         }
 
         internal static void OpenProjectForm()
@@ -345,6 +300,62 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
+        internal static void DeleteProjectInfo()
+        {
+            try
+            {
+                //delete all the records in the project_table
+                using (SQLiteConnection sqliteConnection = new SQLiteConnection(Connection))
+                {
+                    sqliteConnection.Open();
+                    //enable foreign key enforcemnt for this connection
+                    using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteConnection))
+                    {
+                        sqlitcmdPragma.ExecuteNonQuery();
+                    }
+                    string sDelete = "DELETE FROM project_table;";
+
+                    using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    string[] saTablesToReset = { "project_table", "files_table", "pages_table" };
+                    foreach (string sTable in saTablesToReset)
+                    {
+                        //reset the auto-increment counter  //need to also reset the files_table and the pages_table and all other tables....
+                        string sReset = $"DELETE FROM sqlite_sequence WHERE name = '{sTable}';";
+                        using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+
+
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in DeleteProjectInfo " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static void DeleteDatabase()
+        {
+            try
+            {
+                string sFilePath = DatabaseConfig.DatabasePath;
+                if (System.IO.File.Exists(sFilePath))
+                {
+                    System.IO.File.Delete(sFilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in DeleteDatabase " + ex.Message, "VisAssist");
+            }
+        }
 
         internal static void UpdateProjectInfo(ProjectPropertiesForm projectPropertiesForm)
         {
@@ -360,7 +371,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     string sTable = "project_table";
 
-                    DataProcessingUtilities.BuildUpdateSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate, "UPDATE");
+                    DataProcessingUtilities.BuildUpdateSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate);
 
                     ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
 

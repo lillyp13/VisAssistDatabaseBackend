@@ -41,7 +41,7 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnDeletePageInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            PageUtilities.DeletePage();
+            PageUtilities.DeleteAllPages();
         }
 
         private void btnDeleteFileInfo_Click(object sender, RibbonControlEventArgs e)
@@ -71,14 +71,14 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnModifyPage_Click(object sender, RibbonControlEventArgs e)
         {
-            PageUtilities.UpdatePage();
+           // PageUtilities.UpdatePage();
         }
 
         private void btnGetPageName_Click(object sender, RibbonControlEventArgs e)
         {
-            //we want to retrieve a page name based on the PageID
-            //for now we will hardcode a random page...
-            ///PageUtilities.GetPageName();
+            //grab all the pages and put them in a datagridview 
+            //for now let's build a datagridview of all the pages in just one file...
+            PageUtilities.OpenPagesForm();
         }
 
         private void btnDeleteDatabase_Click(object sender, RibbonControlEventArgs e)

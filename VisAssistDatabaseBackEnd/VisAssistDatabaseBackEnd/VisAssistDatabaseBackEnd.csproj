@@ -200,6 +200,12 @@
     <Compile Include="Forms\FilePropertiesForm.Designer.cs">
       <DependentUpon>FilePropertiesForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Forms\PagesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\PagesForm.Designer.cs">
+      <DependentUpon>PagesForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Forms\ProjectPropertiesForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -211,6 +217,9 @@
     </Compile>
     <EmbeddedResource Include="Forms\FilePropertiesForm.resx">
       <DependentUpon>FilePropertiesForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\PagesForm.resx">
+      <DependentUpon>PagesForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\ProjectPropertiesForm.resx">
       <DependentUpon>ProjectPropertiesForm.cs</DependentUpon>

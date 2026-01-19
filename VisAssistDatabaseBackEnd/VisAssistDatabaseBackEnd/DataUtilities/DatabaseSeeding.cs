@@ -54,11 +54,15 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //open the connection
                 sqliteconConnection.Open();
                 //this is the practice data sql...adds one file 
-                string sInsert = @"INSERT INTO files_Table (ProjectID, RevisionID, FileName, FilePath, CreatedDate, LastModifiedDate,
-                                    Version, Class, DrawingType, WirePrefix, IgnoreWireColor, AllowDuplicateTags, ShowPointData) 
-                                    VALUES (1, 1, 'NorthCampus_BAS.dwg', 'C:\\Projects\\NorthCampus\\BAS', '2026-01-05 08:30:00', '2026-01-10 17:00:00',
-                                    '1.2.1', 'VisAssistDocument', 'Mechanical', 'WP-', FALSE, TRUE, FALSE);";
-
+                //create a new command using the sql statement (sInsert) and the open connection
+                string sInsert = @"INSERT INTO files_table
+                                (ProjectID, RevisionID, FileName, FilePath, CreatedDate, LastModifiedDate, Version, Class,
+                                DrawingType, WirePrefix, IgnoreWireColor, AllowDuplicateTags, ShowPointData)
+                                VALUES
+                                (1, 1, 'NorthCampus_BAS.dwg', 'C:\\Projects\\NorthCampus\\BAS', '2026-01-05 08:30:00', 
+                                '2026-01-10 17:00:00', '1.2.1', 'VisAssistDocument', 'Mechanical', 'WP-', FALSE, TRUE, FALSE),
+                                (1, 1, 'NorthCampus_ELEC.dwg', 'C:\\Projects\\NorthCampus\\Electrical',
+                                '2026-01-06 09:15:00', '2026-01-11 16:45:00','1.0.0', 'VisAssistDocument', 'Electrical', 'EL-', TRUE, FALSE, TRUE);";
                 //create a new command using the sql statement (sInsert) and the open connection
                 using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sInsert, sqliteconConnection))
                 {
@@ -82,10 +86,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 Version, Class, Orientation, Scale) 
                                 VALUES('North Campus BAS Sheet 1', 1, 1, 1, '2026-01-05 08:30:00', '2026-01-10 17:00:00','v1.0', 'A', 'Landscape', '1:50'),
                                 ('North Campus BAS Sheet 2', 1, 1, 2, '2026-01-05 08:45:00', '2026-01-10 17:00:00','v1.0', 'A', 'Portrait', '1:50'),
-                                ('Central Library HVAC Sheet 1', 1, 3, 1, '2025-11-18 08:00:00', '2026-01-02 15:30:00','v2.0', 'B', 'Landscape', '1:100'),
-                                ('Central Library HVAC Sheet 2', 1, 3, 2, '2025-11-18 08:15:00', '2026-01-02 15:30:00','v2.0', 'B', 'Portrait', '1:100'),
-                                ('Data Center Cooling Sheet 1', 1, 4, 1, '2025-12-01 10:00:00', '2026-01-11 14:00:00','v1.0', 'C', 'Landscape', '1:75'),
-                                ('Data Center Cooling Sheet 2', 1, 5, 2, '2025-12-02 09:15:00', '2026-01-11 13:45:00','v1.1', 'C', 'Portrait', '1:75');";
+                                ('Central Library HVAC Sheet 1', 1, 1, 3, '2025-11-18 08:00:00', '2026-01-02 15:30:00','v2.0', 'B', 'Landscape', '1:100'),
+                                ('Central Library HVAC Sheet 2', 1, 2, 1, '2025-11-18 08:15:00', '2026-01-02 15:30:00','v2.0', 'B', 'Portrait', '1:100'),
+                                ('Data Center Cooling Sheet 1', 1, 2, 2, '2025-12-01 10:00:00', '2026-01-11 14:00:00','v1.0', 'C', 'Landscape', '1:75'),
+                                ('Data Center Cooling Sheet 2', 1, 2, 3, '2025-12-02 09:15:00', '2026-01-11 13:45:00','v1.1', 'C', 'Portrait', '1:75');";
 
                 //create a new command using the sql statement (sInsert) and the open connection
                 using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sInsert, sqliteconConnection))
@@ -99,47 +103,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-        private static string GetProjectSeedChange()
-        {
-            string sData = @"UPDATE project_table
-                            SET 
-                                ReviewedBy = 'Lilly'
-                            WHERE Id = 1;";
-            return sData;
 
-        }
-
-
-        internal static void UpdatePageInfoWithSeedData()
-        {
-            //crate a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-            {
-                //open the connection
-                connection.Open();
-
-                //this is the practice data sql...
-                string sUpdate = GetPageSeedChange();
-
-                //create a new command using the sql statement (sUpdate) and the open connection
-                using (SQLiteCommand cmd = new SQLiteCommand(sUpdate, connection))
-                {
-                    //execute the command line (in this case it is an UPDATE)
-                    cmd.ExecuteNonQuery();
-
-                }
-            }
-        }
-
-        private static string GetPageSeedChange()
-        {
-            //going to update a PageName
-            string sData = @"UPDATE pages_table
-                            SET
-                                PageName = 'Changed Page Name'
-                            WHERE PageID = 5;";
-            return sData;
-        }
+      
 
         internal static string GetPageNameWithSeedData()
         {

@@ -82,21 +82,20 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     // find matching record by primary key value
 
                     RecordUpdate ruCompare = new RecordUpdate();
-                    foreach(RecordUpdate ruUpdate in mruRecordsToCompare.ruRecords)
+                    foreach (RecordUpdate ruUpdate in mruRecordsToCompare.ruRecords)
                     {
-                        if(ruUpdate.iId == ruBase.iId && ruUpdate.sPrimaryKeyColumn == ruBase.sPrimaryKeyColumn)
+                        if (ruUpdate.iId == ruBase.iId && ruUpdate.sPrimaryKeyColumn == ruBase.sPrimaryKeyColumn)
                         {
                             //we found the matching record in the multiplerecords udpate  in the mruRecordsToCompare that matches the record in the mruRecordsBase
                             ruCompare = ruUpdate;
                             break;
                         }
                     }
-                    
+
 
                     Dictionary<string, string> odictChanges = new Dictionary<string, string>();
 
-                    // always include primary key first
-                    odictChanges.Add(ruBase.sPrimaryKeyColumn,ruBase.iId.ToString());
+                    
 
                     foreach (KeyValuePair<string, string> sBaseItem in ruBase.odictColumnValues)
                     {
@@ -116,8 +115,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
 
                     // if only primary key exists, nothing changed
-                    if (odictChanges.Count > 1)
+                    if (odictChanges.Count > 0)
                     {
+                        // always include primary key first
+                        odictChanges.Add(ruBase.sPrimaryKeyColumn, ruBase.iId.ToString());
+
                         RecordUpdate ruUpdate = new RecordUpdate();
                         ruUpdate.sPrimaryKeyColumn = ruBase.sPrimaryKeyColumn;
                         ruUpdate.iId = ruBase.iId;
@@ -143,7 +145,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-
+        //I THINK THESE ONES DEALING WITHA  DICTIONARY WILL BECOME OBSOLETE
         /// <summary>
         ///  given the table name and a dictionary of what to update (this includes all the primary keys and the key values) build an update sql statement 
         ///  this assumes that in the dictionary there is only one ID (for the where clause) (this function does not update multiple records 
@@ -155,7 +157,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         /// <param name="sTableName"></param>
         /// <param name="oDictInfoToUpdate"></param>
 
-        internal static void BuildUpdateSqlForRecordDictionary(string sTableName, Dictionary<string, string> oDictInfoToUpdate, string sAction)
+        internal static void BuildUpdateSqlForRecordDictionary(string sTableName, Dictionary<string, string> oDictInfoToUpdate)
         {
             try
             {
@@ -178,87 +180,113 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         //logging here
                         bool bSkipFirst = false;
 
-                        switch (sAction)
+
+                        sSql = "UPDATE " + sTableName + " SET ";
+                        //loop through the dictionary of items to update and build up the sql based on the key (colum name)
+                        foreach (KeyValuePair<string, string> sItem in oDictInfoToUpdate)
                         {
-                            case "UPDATE":
-                                {
+                            if (!bSkipFirst)
+                            {
+                                //this is the first entry which means it is the primary key so get that column name and value to determine which entry in the table to update...
+                                bSkipFirst = true;
 
-                                    sSql = "UPDATE " + sTableName + " SET ";
-                                    //loop through the dictionary of items to update and build up the sql based on the key (colum name)
-                                    foreach (KeyValuePair<string, string> sItem in oDictInfoToUpdate)
-                                    {
-                                        if (!bSkipFirst)
-                                        {
-                                            //this is the first entry which means it is the primary key so get that column name and value to determine which entry in the table to update...
-                                            bSkipFirst = true;
+                                // first entry is primary key
+                                sID = sItem.Key; //this is our primary key
+                                iID = int.Parse(sItem.Value); //this is our key value
+                                continue;
+                            }
 
-                                            // first entry is primary key
-                                            sID = sItem.Key; //this is our primary key
-                                            iID = int.Parse(sItem.Value); //this is our key value
-                                            continue;
-                                        }
+                            // build the SQL
+                            sSql += sItem.Key + " = @" + sItem.Key;
 
-                                        // build the SQL
-                                        sSql += sItem.Key + " = @" + sItem.Key;
-
-                                        if (iIndex < oDictInfoToUpdate.Count - 2) // minus 2 because first is skipped then add a comma so we can add another change.. otherwise this was the last update so we don't need a comma at the end of it
-                                        {
-                                            sSql += ", ";
-                                        }
+                            if (iIndex < oDictInfoToUpdate.Count - 2) // minus 2 because first is skipped then add a comma so we can add another change.. otherwise this was the last update so we don't need a comma at the end of it
+                            {
+                                sSql += ", ";
+                            }
 
 
-                                        iIndex++;
+                            iIndex++;
 
-                                        // add parameter immediately
-                                        sqlitecmdCommand.Parameters.AddWithValue("@" + sItem.Key, sItem.Value); //automatically match sql placeholder with the dictionary value 
-                                    }
-
-                                    // add WHERE clause and its parameter
-                                    sSql += " WHERE " + sID + " = @" + sID;
-                                    sqlitecmdCommand.Parameters.AddWithValue("@" + sID, iID);
-
-                                    // assign SQL to the command
-                                    sqlitecmdCommand.CommandText = sSql;
-                                    break;
-                                }
-
-                            case "INSERT":
-                                {
-                                    break;
-                                }
-                            case "DELETE":
-                                {
-                                    // Start the DELETE statement
-                                    sSql = "DELETE FROM " + sTableName;
-
-                                    // Only the first item in the dictionary (assumed primary key) is needed for WHERE
-
-                                    foreach (KeyValuePair<string, string> sItem in oDictInfoToUpdate)
-                                    {
-                                        if (!bSkipFirst)
-                                        {
-                                            bSkipFirst = true;
-
-                                            // first entry is primary key
-                                            sID = sItem.Key;              // column name of primary key
-                                            iID = int.Parse(sItem.Value); // value of primary key
-
-                                            // add WHERE clause for primary key
-                                            sSql += " WHERE " + sID + " = @" + sID;
-
-                                            // add parameter
-                                            sqlitecmdCommand.Parameters.AddWithValue("@" + sID, iID);
-
-                                            break; // no need to process other columns
-                                        }
-                                    }
-
-                                    // assign SQL to the command
-                                    sqlitecmdCommand.CommandText = sSql;
-                                    break;
-                                }
-
+                            // add parameter immediately
+                            sqlitecmdCommand.Parameters.AddWithValue("@" + sItem.Key, sItem.Value); //automatically match sql placeholder with the dictionary value 
                         }
+
+                        // add WHERE clause and its parameter
+                        sSql += " WHERE " + sID + " = @" + sID;
+                        sqlitecmdCommand.Parameters.AddWithValue("@" + sID, iID);
+
+                        // assign SQL to the command
+                        sqlitecmdCommand.CommandText = sSql;
+
+
+
+                        // execute the update
+                        sqlitecmdCommand.ExecuteNonQuery();
+                        //logging here
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in BuildUpdateSqlForOneRecord " + ex.Message, "VisAssist");
+            }
+        }
+
+
+
+        internal static void BuildDeleteSqlForRecordDictionary(string sTableName, Dictionary<string, string> oDictInfoToUpdate)
+        {
+            try
+            {
+                string sID = ""; // primary key column
+                int iID = 0;     // primary key value
+
+                //string sSqlUpdate = sAction + " " + sTableName + " SET ";
+                int iIndex = 0;
+                string sSql = "";
+
+                //logging here
+                // open connection first so we can add parameters as we go
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    //logging here
+                    sqliteconConnection.Open();
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sqliteconConnection))
+                    {
+                        //logging here
+                        bool bSkipFirst = false;
+
+
+                        // Start the DELETE statement
+                        sSql = "DELETE FROM " + sTableName;
+
+                        // Only the first item in the dictionary (assumed primary key) is needed for WHERE
+
+                        foreach (KeyValuePair<string, string> sItem in oDictInfoToUpdate)
+                        {
+                            if (!bSkipFirst)
+                            {
+                                bSkipFirst = true;
+
+                                // first entry is primary key
+                                sID = sItem.Key;              // column name of primary key
+                                iID = int.Parse(sItem.Value); // value of primary key
+
+                                // add WHERE clause for primary key
+                                sSql += " WHERE " + sID + " = @" + sID;
+
+                                // add parameter
+                                sqlitecmdCommand.Parameters.AddWithValue("@" + sID, iID);
+
+                                break; // no need to process other columns
+                            }
+                        }
+
+                        // assign SQL to the command
+                        sqlitecmdCommand.CommandText = sSql;
+
+
 
 
 
@@ -276,6 +304,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+        internal static void BuildInsertSqlForRecordDictionary(string sTable, Dictionary<string, string> oDictFileToAdd)
+        {
+            throw new NotImplementedException();
+        }
 
 
 
@@ -375,6 +407,132 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
+        internal static void BuildDeleteSqlForMultipleRecords(string sTableName, MultipleRecordUpdates mruRecords)
+        {
+            try
+            {
+
+
+                // All records must share the same primary key column
+                string sWhereColumn = mruRecords.ruRecords[0].sPrimaryKeyColumn;
+
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+
+                    //enable foreign key enforcemnt for this connection
+                    using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteconConnection))
+                    {
+                        sqlitcmdPragma.ExecuteNonQuery();
+                    }
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sqliteconConnection))
+                    {
+                        // Build parameterized IN clause using RecordUpdate.iId
+                        List<string> lstParameterNames = new List<string>();
+
+                        for (int i = 0; i < mruRecords.ruRecords.Count; i++)
+                        {
+                            string sParameterName = $"@id{i}";
+                            lstParameterNames.Add(sParameterName);
+
+                            sqlitecmdCommand.Parameters.AddWithValue(
+                                sParameterName,
+                                mruRecords.ruRecords[i].iId
+                            );
+                        }
+
+                        string sSqlDelete =
+                            $"DELETE FROM {sTableName} " +
+                            $"WHERE {sWhereColumn} IN ({string.Join(",", lstParameterNames)})";
+
+                        sqlitecmdCommand.CommandText = sSqlDelete;
+                        sqlitecmdCommand.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in BuildDeleteSqlForMultipleRecords: " + ex.Message, "VisAssist");
+            }
+
+        }
+
+
+        internal static void BuildInsertSqlForMultipleRecords(string sTableName, MultipleRecordUpdates mruRecords)
+        {
+            try
+            {
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sqliteconConnection))
+                    {
+                        // Collect all unique columns across all records
+                        HashSet<string> hsAllColumns = new HashSet<string>();
+                        
+                        foreach (RecordUpdate ruRecord in mruRecords.ruRecords)
+                        {
+                            bool bPrimaryKey = true;
+                            foreach (string sColumn in ruRecord.odictColumnValues.Keys)
+                            {
+                                //don't add the first entry (that is the primary key)
+                                if(bPrimaryKey)
+                                {
+                                    bPrimaryKey = false;
+                                    continue;
+                                    //skip this is the priamry key...
+                                }
+                                hsAllColumns.Add(sColumn);
+                            }
+                                
+                        }
+
+                        // Build parameterized INSERT statement
+                        string sSqlInsert = $"INSERT INTO {sTableName} ({string.Join(", ", hsAllColumns)}) VALUES ";
+
+                        List<string> lstValues = new List<string>();
+                        int iRecordIndex = 0;
+
+                        foreach (RecordUpdate ruRecord in mruRecords.ruRecords)
+                        {
+                            List<string> lstParameterNames = new List<string>();
+
+                            foreach (string sColumn in hsAllColumns)
+                            {
+                                string sParameterName = $"@{sColumn}_{iRecordIndex}";
+
+                                // If this record has a value, use it; otherwise, NULL
+                                if (ruRecord.odictColumnValues != null && ruRecord.odictColumnValues.ContainsKey(sColumn))
+                                {
+                                    sqlitecmdCommand.Parameters.Add(new SQLiteParameter(sParameterName, ruRecord.odictColumnValues[sColumn]));
+                                }
+                                else
+                                {
+                                    sqlitecmdCommand.Parameters.Add(new SQLiteParameter(sParameterName, DBNull.Value));
+                                }
+
+                                lstParameterNames.Add(sParameterName);
+                            }
+
+                            lstValues.Add("(" + string.Join(", ", lstParameterNames) + ")");
+                            iRecordIndex++;
+                        }
+
+                        sSqlInsert += string.Join(", ", lstValues);
+
+                        sqlitecmdCommand.CommandText = sSqlInsert;
+                        sqlitecmdCommand.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in BuildInsertSqlForMultipleRecords: " + ex.Message, "VisAssist");
+            }
+        }
+
         //checks to make sure that the given table exists in the database (not sure if this is even needed but it is a safeguard...)
         internal static bool DoesTableExist(string sTableName)
         {
@@ -406,7 +564,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             return false;
         }
-
 
     }
 

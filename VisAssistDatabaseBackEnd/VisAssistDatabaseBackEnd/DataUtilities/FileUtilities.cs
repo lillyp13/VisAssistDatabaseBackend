@@ -49,21 +49,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             DatabaseSeeding.SeedFiles();
         }
-        internal static void DeleteAllFiles()
-        {
-            //delete all the records in the files_table
-            using (SQLiteConnection connection = new SQLiteConnection(Connection))
-            {
-                connection.Open();
-                string sDelete = "DELETE FROM files_table;";
-
-                new SQLiteCommand(sDelete, connection).ExecuteNonQuery();
-
-                //reset the auto-increment counter
-                string sReset = "DELETE FROM sqlite_sequence WHERE name = 'files_table';";
-                new SQLiteCommand(sReset, connection).ExecuteNonQuery();
-            }
-        }
+        
 
         internal static void OpenFileForm()
         {
@@ -116,17 +102,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     }
                                    
 
-
-                                    //string sRowData = "";
-                                    //string sColumnName = "";
-                                    //for (int i = 0; i < sqlitereadReader.FieldCount; i++)
-                                    //{
-                                    //    sColumnName = sqlitereadReader.GetName(i).ToString(); // column name
-                                    //    sRowData = sqlitereadReader.GetValue(i).ToString(); //actual value we care about
-
-                                    //    m_dictFileDataInfoBase.Add(sColumnName, sRowData); //build up the dictionary so the column is the key and the value is the value in the cell...
-                                    //                                                       //logging statement placeholder
-                                    //}
                                 }
                                 //create a recordupdate for this specfic record (row)
                                 RecordUpdate ruRecordUpdate = new RecordUpdate();
@@ -212,50 +187,72 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //write the data that you know...the user pressed a SIMILAR button to add new project, add new file->creates a new visio document and adds it to the database (for now the data should be the same as the first file)
             //file properties change in a few different places...file name change, drawing type, ignorewirecolor, allowduplicates, showpointdata...
             //in the new row add the exact data that is in the first row except increase the number for ifileID and make sure that the created date and the modified date are the current date as the process is happening
-            DataGridViewRow dgvFirstRow = filePropertiesForm.dgvFileData.Rows[0];
-
-            //create a new row 
-            DataGridViewRow dgvNewRow = new DataGridViewRow();
-            dgvNewRow.CreateCells(filePropertiesForm.dgvFileData);
-
-            for(int i = 0; i < dgvFirstRow.Cells.Count; i++)
+            //check if there are any rows in the datagridview first 
+            if (filePropertiesForm.dgvFileData.Rows.Count > 0)
             {
-                string sColumnName = filePropertiesForm.dgvFileData.Columns[i].Name;
-                switch(sColumnName)
+                DataGridViewRow dgvFirstRow = filePropertiesForm.dgvFileData.Rows[0];
+                int iRowCount = filePropertiesForm.dgvFileData.Rows.Count - 1;
+                DataGridViewRow dgvLastRow = filePropertiesForm.dgvFileData.Rows[iRowCount];
+
+                int iNewFileID = Convert.ToInt32(dgvLastRow.Cells["FileID"].Value) + 1;
+                //create a new row 
+                DataGridViewRow dgvNewRow = new DataGridViewRow();
+                dgvNewRow.CreateCells(filePropertiesForm.dgvFileData);
+
+                for (int i = 0; i < dgvFirstRow.Cells.Count; i++)
                 {
-                    case "FileID":
-                        {
-                            int iFirstFileID = Convert.ToInt32(dgvFirstRow.Cells[i].Value); //will need to get the last file id to make this more general but for now let's start with one...
-                            dgvNewRow.Cells[i].Value = iFirstFileID + 1;
-                            break;
-                        }
-                    case "CreatedDate":
-                    case "LastModifiedDate":
-                        {
-                            dgvNewRow.Cells[i].Value = DateTime.Now.ToString("yyyy-MM-dd");
-                            break;
-                        }
-                    default:
-                        {
-                            //copy this information over
-                            dgvNewRow.Cells[i].Value = dgvFirstRow.Cells[i].Value;
-                            break;
-                        }
+                    string sColumnName = filePropertiesForm.dgvFileData.Columns[i].Name;
+                    switch (sColumnName)
+                    {
+                        case "FileID":
+                            {
+                                dgvNewRow.Cells[i].Value = iNewFileID;
+                                break;
+                            }
+                        case "CreatedDate":
+                        case "LastModifiedDate":
+                            {
+                                dgvNewRow.Cells[i].Value = DateTime.Now.ToString("yyyy-MM-dd");
+                                break;
+                            }
+                        default:
+                            {
+                                //copy this information over
+                                dgvNewRow.Cells[i].Value = dgvFirstRow.Cells[i].Value;
+                                break;
+                            }
 
+                    }
+                    oDictFileToAdd.Add(sColumnName, dgvFirstRow.Cells[i].Value.ToString());
                 }
-                oDictFileToAdd.Add(sColumnName, dgvFirstRow.Cells[i].Value.ToString());
+
+                // Create a RecordUpdate for the new row
+                RecordUpdate ruRecord = new RecordUpdate();
+                ruRecord.sPrimaryKeyColumn = "FileID";
+                ruRecord.iId = iNewFileID;
+                ruRecord.odictColumnValues = oDictFileToAdd;
+
+                // Wrap it in a MultipleRecordUpdates
+                MultipleRecordUpdates mruRecordsToInsert = new MultipleRecordUpdates();
+                mruRecordsToInsert.ruRecords = new List<RecordUpdate> { ruRecord };
 
 
+                //for (int i = 0; i < dgvFirstRow.Cells.Count; i++)
+                //{
+                //    string sColumnName = filePropertiesForm.dgvFileData.Columns[i].Name;
+                //    dgvNewRow.Cells[i].Value = oDictFileToAdd[sColumnName];
+                //}
 
+                int iInsertIndex = filePropertiesForm.dgvFileData.Rows.Count;
+                //add the new row to the datagridviewrow
+                filePropertiesForm.dgvFileData.Rows.Insert(iInsertIndex, dgvNewRow);
+
+                //now we need to write this to sql and add a new entry in the files_table
+                string sTable = "files_table";
+                //DataProcessingUtilities.BuildInsertSqlForRecordDictionary(sTable, oDictFileToAdd);
+
+                DataProcessingUtilities.BuildInsertSqlForMultipleRecords(sTable, mruRecordsToInsert);
             }
-
-            int iInsertIndex = filePropertiesForm.dgvFileData.Rows.Count - 1;
-            //add the new row to the datagridviewrow
-            filePropertiesForm.dgvFileData.Rows.Insert(iInsertIndex, dgvNewRow);
-
-            //now we need to write this to sql and add a new entry in the files_table
-            string sTable = "files_table";
-            DataProcessingUtilities.BuildUpdateSqlForRecordDictionary(sTable, oDictFileToAdd, "INSERT INTO");
         }
 
         internal static void UpdateFile(FilePropertiesForm filePropertiesForm)
@@ -267,7 +264,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //--when the file name or file path is changed, when the user changes the drawing type, wire prefix, ignroewirecolor, allow duplicate tags, show point data (some from the settings, another from the project properties form)
             //modified date? when do i update this
             //project_id will only change once we give the user the ability to associte and disassociate files with a project...
-            m_dictFileDataInfoToCompare.Clear();
+            //m_dictFileDataInfoToCompare.Clear();
             if(m_mruRecordsToCompare.ruRecords != null)
             {
                 m_mruRecordsToCompare.ruRecords.Clear();
@@ -353,24 +350,73 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void DeleteFile(FilePropertiesForm filePropertiesForm)
         {
             //get the selected row in the filePropertiesForm.dgvFileData to determine which file to delete
-            DataGridViewRow dgvSelectedRow = filePropertiesForm.dgvFileData.SelectedRows[0];
-            Dictionary<string, string> oDictFileToDelete = new Dictionary<string, string>();
-            string sTable = "files_table";
-
-            if(dgvSelectedRow != null)
+            string sTableName = "files_table";
+            // Get the selected row
+            DataGridViewSelectedRowCollection colSelectedRows = filePropertiesForm.dgvFileData.SelectedRows;
+            if (colSelectedRows == null || colSelectedRows.Count == 0)
             {
-                int iFileID = Convert.ToInt32(dgvSelectedRow.Cells["FileID"].Value);
-
-                //loop through each column in the selectec row and add the values the oDictFileToDelete
-                foreach(DataGridViewCell dgvCell in dgvSelectedRow.Cells)
-                {
-                    string sColumnName = dgvSelectedRow.DataGridView.Columns[dgvCell.ColumnIndex].Name;
-                    string sValue = dgvCell.Value.ToString();
-
-                    oDictFileToDelete.Add(sColumnName, sValue);
-                }
+                MessageBox.Show("Please select at least one file to delete.");
+                return;
             }
-            DataProcessingUtilities.BuildUpdateSqlForRecordDictionary(sTable, oDictFileToDelete, "DELETE");
+
+            // Build a list of RecordUpdate objects for each selected row
+            List<RecordUpdate> lstRecordsToDelete = new List<RecordUpdate>();
+            foreach (DataGridViewRow dgvRow in colSelectedRows)
+            {
+                int iFileID = Convert.ToInt32(dgvRow.Cells["FileID"].Value);
+
+                RecordUpdate ruRecord = new RecordUpdate();
+                ruRecord.sPrimaryKeyColumn = "FileID";
+                ruRecord.iId = iFileID;
+
+                lstRecordsToDelete.Add(ruRecord);
+            }
+
+            MultipleRecordUpdates mru = new MultipleRecordUpdates(lstRecordsToDelete);
+
+            // Call delete
+            DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(sTableName,mru);
+
+            foreach(DataGridViewRow dgvRow in colSelectedRows)
+            {
+                filePropertiesForm.dgvFileData.Rows.Remove(dgvRow);
+            }
+        }
+        internal static void DeleteAllFiles()
+        {
+            //delete all the records in the files_table
+            using (SQLiteConnection sqliteConnection = new SQLiteConnection(Connection))
+            {
+                sqliteConnection.Open();
+
+                //enable foreign key enforcemnt for this connection
+                using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteConnection))
+                {
+                    sqlitcmdPragma.ExecuteNonQuery();
+                }
+
+                string sDelete = "DELETE FROM files_table;";
+
+                using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
+                {
+                    //logging here 
+                    cmd.ExecuteNonQuery();
+
+                }
+                //reset the auto-increment counter, also need to delete the pages_table...
+                string[] saTablesToReset = { "files_table", "pages_table" };
+                foreach (string sTable in saTablesToReset)
+                {
+                    //reset the auto-increment counter  //need to also reset the files_table and the pages_table and all other tables....
+                    string sReset = $"DELETE FROM sqlite_sequence WHERE name = '{sTable}';";
+                    using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+
+            }
         }
     }
 }

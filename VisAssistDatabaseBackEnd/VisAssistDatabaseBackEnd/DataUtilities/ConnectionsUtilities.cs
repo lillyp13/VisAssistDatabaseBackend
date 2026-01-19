@@ -70,6 +70,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     using (SQLiteConnection connection = new SQLiteConnection(Connection))
                     {
                         connection.Open();
+                        //enable foreign key enforcemnt for this connection
+                        using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                        {
+                            sqlitcmdPragma.ExecuteNonQuery();
+                        }
                         string sFileTableCommand = @"
                 CREATE TABLE IF NOT EXISTS files_table (
                     FileID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,7 +91,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     IgnoreWireColor INTEGER DEFAULT 0,
                     AllowDuplicateTags INTEGER DEFAULT 0,
                     ShowPointData INTEGER DEFAULT 0,
-                    FOREIGN KEY(ProjectID) REFERENCES project_table(Id)
+                    FOREIGN KEY(ProjectID) REFERENCES project_table(Id) ON DELETE CASCADE
                 );
                 ";
                         using (SQLiteCommand cmd = new SQLiteCommand(sFileTableCommand, connection))
@@ -103,6 +108,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     using (SQLiteConnection connection = new SQLiteConnection(Connection))
                     {
                         connection.Open();
+
+                        //enable foreign key enforcemnt for this connection
+                        using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                        {
+                            sqlitcmdPragma.ExecuteNonQuery();
+                        }
                         string sPageTableCommand = @"
                 CREATE TABLE IF NOT EXISTS pages_table (
                     PageID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -116,8 +127,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     Class TEXT,
                     Orientation TEXT,
                     Scale TEXT,
-                    FOREIGN KEY(ProjectID) REFERENCES project_table(Id),
-                    FOREIGN KEY(FileID) REFERENCES files_table(FileID)
+                    FOREIGN KEY(ProjectID) REFERENCES project_table(Id) ON DELETE CASCADE,
+                    FOREIGN KEY(FileID) REFERENCES files_table(FileID) ON DELETE CASCADE
                 );
                 ";
 
@@ -133,6 +144,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
                     //                    {
                     //                        connection.Open();
+
+                    ////enable foreign key enforcemnt for this connection
+                    //using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                    //{
+                    //    sqlitcmdPragma.ExecuteNonQuery();
+                    //}
                     //                        string sWireTableCommand = @"
                     //CREATE TABLE IF NOT EXISTS wire_shapes_table(
                     //    wire_id INTEGER NOT NULL,
@@ -169,15 +186,15 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //    shield_bottom INTEGER,
                     //    PRIMARY KEY(wire_id),
                     //    CONSTRAINT wire_pairs_wire_shapes
-                    //        FOREIGN KEY (wire_pair_id) REFERENCES wire_pairs_table (wire_pair_id),
+                    //        FOREIGN KEY (wire_pair_id) REFERENCES wire_pairs_table (wire_pair_id) ON DELETE CASCADE,
                     //    CONSTRAINT project_info_wire_shapes
-                    //        FOREIGN KEY (project_id) REFERENCES project_table (project_id),
+                    //        FOREIGN KEY (project_id) REFERENCES project_table (project_id) ON DELETE CASCADE,
                     //    CONSTRAINT pages_wire_shapes
-                    //        FOREIGN KEY (page_id) REFERENCES pages_table (page_id),
+                    //        FOREIGN KEY (page_id) REFERENCES pages_table (page_id) ON DELETE CASCADE,
                     //    CONSTRAINT visio_files_wire_shapes
-                    //        FOREIGN KEY (file_id) REFERENCES files_table (file_id),
+                    //        FOREIGN KEY (file_id) REFERENCES files_table (file_id) ON DELETE CASCADE,
                     //    CONSTRAINT connections_wire_shapes
-                    //        FOREIGN KEY (connection_id) REFERENCES connections_table (connection_id)
+                    //        FOREIGN KEY (connection_id) REFERENCES connections_table (connection_id) ON DELETE CASCADE
                     //);";
 
                     //                        using (SQLiteCommand cmd = new SQLiteCommand(sWireTableCommand, connection))
@@ -191,6 +208,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
                     //                    {
                     //                        connection.Open();
+                    ////enable foreign key enforcemnt for this connection
+                    //using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                    //{
+                    //    sqlitcmdPragma.ExecuteNonQuery();
+                    //}
                     //                        string sConnectionsTableCommand = @"
                     //            CREATE TABLE IF NOT EXISTS connections_table (
                     //                connection_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -210,13 +232,18 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
                     //                    {
                     //                        connection.Open();
+                    ////enable foreign key enforcemnt for this connection
+                    //using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                    //{
+                    //    sqlitcmdPragma.ExecuteNonQuery();
+                    //}
                     //                        string sWirePairsTableCommand = @"
                     //            CREATE TABLE IF NOT EXISTS wire_pairs_table (
                     //                wire_pair_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     //                primary_wire_id INTEGER NOT NULL,
                     //                secondary_wire_id INTEGER NOT NULL,
-                    //                CONSTRAINT fk_primary_wire FOREIGN KEY (primary_wire_id) REFERENCES wire_shapes_table(wire_id),
-                    //                CONSTRAINT fk_secondary_wire FOREIGN KEY (secondary_wire_id) REFERENCES wire_shapes_table(wire_id)
+                    //                CONSTRAINT fk_primary_wire FOREIGN KEY (primary_wire_id) REFERENCES wire_shapes_table(wire_id) ON DELETE CASCADE,
+                    //                CONSTRAINT fk_secondary_wire FOREIGN KEY (secondary_wire_id) REFERENCES wire_shapes_table(wire_id) ON DELETE CASCADE
                     //            );";
                     //                        using (SQLiteCommand cmd = new SQLiteCommand(sWirePairsTableCommand, connection))
                     //                        {
