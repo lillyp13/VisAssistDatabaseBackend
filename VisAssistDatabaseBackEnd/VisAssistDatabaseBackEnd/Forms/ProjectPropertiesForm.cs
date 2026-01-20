@@ -22,11 +22,21 @@ namespace VisAssistDatabaseBackEnd.Forms
         {
 
         }
-        public void Display()
+        public void Display(bool bDoesProjectExist)
         {
-           
-            ProjectUtilities.GetProjectInfoFromDatabase();
-            ProjectUtilities.PopulatePropertiesForm(this);
+           if(bDoesProjectExist)
+            {
+                //the project already exists
+                ProjectUtilities.GetProjectInfoFromDatabase();
+                ProjectUtilities.PopulatePropertiesForm(this);
+            }
+           else
+            {
+                //the project doesn't exist so we will be adding a new project to the db...
+
+            }
+            
+            
         }
 
         private void btnUpdate_Click(object sender, EventArgs e)

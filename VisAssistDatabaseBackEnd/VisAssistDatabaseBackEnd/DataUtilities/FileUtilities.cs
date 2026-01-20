@@ -47,7 +47,18 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         //File Actions
         internal static void AddFirstFile()
         {
-            DatabaseSeeding.SeedFiles();
+            //make sure there is a project in the project_table...
+            string sTableName = "files_Table";
+            bool bDoesTableExist = DataProcessingUtilities.DoesParentTableHaveRecord(sTableName);
+            if(bDoesTableExist)
+            {
+                DatabaseSeeding.SeedFiles();
+            }
+            else
+            {
+                MessageBox.Show("Please add a record to the project_Table.");
+            }
+           
         }
         
 

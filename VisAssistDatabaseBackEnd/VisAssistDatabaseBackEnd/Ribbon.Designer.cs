@@ -59,6 +59,7 @@
             this.grpWireInfo = this.Factory.CreateRibbonGroup();
             this.btnAddWireInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteWireInfo = this.Factory.CreateRibbonButton();
+            this.btnAddProjectWithVisio = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.grpInitialize.SuspendLayout();
             this.grpProjectInfo.SuspendLayout();
@@ -105,6 +106,7 @@
             this.grpProjectInfo.Items.Add(this.btnDeleteProjectInfo);
             this.grpProjectInfo.Items.Add(this.btnModifyProjectInfo);
             this.grpProjectInfo.Items.Add(this.btnGetProjectInfo);
+            this.grpProjectInfo.Items.Add(this.btnAddProjectWithVisio);
             this.grpProjectInfo.Label = "Project Info";
             this.grpProjectInfo.Name = "grpProjectInfo";
             // 
@@ -233,6 +235,12 @@
             this.btnDeleteWireInfo.Label = "Delete Wire Info";
             this.btnDeleteWireInfo.Name = "btnDeleteWireInfo";
             // 
+            // btnAddProjectWithVisio
+            // 
+            this.btnAddProjectWithVisio.Label = "Add Visio Project";
+            this.btnAddProjectWithVisio.Name = "btnAddProjectWithVisio";
+            this.btnAddProjectWithVisio.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAddProjectWithVisio_Click);
+            // 
             // Ribbon
             // 
             this.Name = "Ribbon";
@@ -284,6 +292,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnGetPageName;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnGetProjectInfo;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnGetFileData;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAddProjectWithVisio;
     }
 
     partial class ThisRibbonCollection

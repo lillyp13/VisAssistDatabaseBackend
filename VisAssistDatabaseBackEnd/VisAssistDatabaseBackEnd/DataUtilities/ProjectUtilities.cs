@@ -11,6 +11,7 @@ using System.Diagnostics;
 using VisAssistDatabaseBackEnd.Forms;
 using System.Windows.Forms;
 using System.Security.Cryptography;
+using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
 {
@@ -198,12 +199,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             
         }
 
-        internal static void OpenProjectForm()
+        internal static void OpenProjectForm(bool bDoesProjectExist)
         {
             try
             {
                 ProjectPropertiesForm oNewForm = new ProjectPropertiesForm();
-                oNewForm.Display();
+                oNewForm.Display(bDoesProjectExist);
                 oNewForm.ShowDialog();
             }
             catch(Exception ex)
@@ -380,6 +381,40 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             catch(Exception ex)
             {
                 MessageBox.Show("Error in UpdateProjectInfo " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static void AddProject()
+        {
+            //open a save file dialog to ask user where they want to save the visio document that will be creatd 
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Title = "Save Visio Document";
+                saveFileDialog.Filter = "Visio Files (*.vsdx)|*.vsdx|All Files (*.*)|*.*";
+                saveFileDialog.DefaultExt = "vsdx";
+                saveFileDialog.AddExtension = true;
+
+                DialogResult result = saveFileDialog.ShowDialog();
+
+                if (result == DialogResult.OK)
+                {
+                    string sFilePath = saveFileDialog.FileName;
+
+                    // TODO: create and save the Visio document at filePath
+                    //using the result create a new visio file...
+                    Visio.Application ovVisioApp = Globals.ThisAddIn.Application;
+                    Visio.Document ovDoc = ovVisioApp.Documents.Add("");
+
+                    ovDoc.SaveAs(sFilePath);
+
+
+                    
+                }
+                else
+                {
+                    // User cancelled the dialog
+                    MessageBox.Show("Save operation cancelled.");
+                }
             }
         }
     }

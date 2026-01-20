@@ -565,7 +565,64 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return false;
         }
 
+        
+        //we want to know if there is at least one record given a table..
+        internal static bool DoesRecordExist()
+        {
+            return true;
+        }
+
+
+
+        /// <summary>
+        /// given a table we want to know if the parent table has at least one record...
+        /// Our array goes project_table, files_table, pages_table, wire_shapes_table 
+        /// </summary>
+        /// <param name="sTableName"></param>
+        internal static bool DoesParentTableHaveRecord(string sTableName)
+        {
+            Dictionary<string, string> parentMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            parentMap.Add("files_table", "project_table");
+            parentMap.Add("pages_table", "files_table");
+            parentMap.Add("wire_shapes_table", "pages_table");
+
+
+            // If the table has a parent
+            if (parentMap.TryGetValue(sTableName, out string parentTable))
+            {
+                // Check the parent table first
+                if (!DoesTableHaveAnyRecords(parentTable))
+                    return false; // fail immediately if parent is empty
+
+                // Recurse upward to see if its parent has records
+                return DoesParentTableHaveRecord(parentTable);
+            }
+
+            // No parent (top-level table)
+            return true; // nothing else to check
+        }
+
+        internal static bool DoesTableHaveAnyRecords(string tableName)
+        {
+            string sql = $"SELECT 1 FROM {tableName} LIMIT 1;";
+
+            using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+            {
+                sqliteconConnection.Open();
+
+                using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sql, sqliteconConnection))
+                {
+                    using (SQLiteDataReader reader = sqlitecmdCommand.ExecuteReader())
+                    {
+                        return reader.Read(); // true if at least one row exists
+                    }
+                }
+            }
+        }
+
     }
+
+
 
 
     public struct RecordUpdate

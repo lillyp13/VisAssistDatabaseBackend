@@ -36,7 +36,18 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         //Page Actions
         internal static void AddPage()
         {
-            DatabaseSeeding.SeedPages();
+            //make sure there is a file in the files_table and a project in the project_table
+            string sTableName = "pages_Table";
+            bool bDoesTableExist = DataProcessingUtilities.DoesParentTableHaveRecord(sTableName);
+            if (bDoesTableExist)
+            {
+                DatabaseSeeding.SeedPages();
+            }
+            else
+            {
+                MessageBox.Show("Please add a record to the files_Table.");
+            }
+            
         }
        
 

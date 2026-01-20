@@ -24,6 +24,7 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
+            //this is the seed data
             ProjectUtilities.AddProjectInfo();
         }
 
@@ -78,6 +79,7 @@ namespace VisAssistDatabaseBackEnd
         {
             //grab all the pages and put them in a datagridview 
             //for now let's build a datagridview of all the pages in just one file...
+            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords("pages_Table");
             PageUtilities.OpenPagesForm();
         }
 
@@ -88,13 +90,27 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnGetProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ProjectUtilities.OpenProjectForm();
+            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords("project_Table"); 
+            ProjectUtilities.OpenProjectForm(bDoesTableExist);
            // ProjectUtilities.GetProjectInfo();
         }
 
         private void btnGetFileData_Click(object sender, RibbonControlEventArgs e)
         {
+            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords("files_Table");
             FileUtilities.OpenFileForm();
+        }
+
+        private void btnAddProjectWithVisio_Click(object sender, RibbonControlEventArgs e)
+        {
+            ConnectionsUtilities.InitializeDatabase();
+            ProjectUtilities.AddProject();
+           
+            
+                ProjectUtilities.OpenProjectForm(false);
+
+           
+
         }
     }
 }
