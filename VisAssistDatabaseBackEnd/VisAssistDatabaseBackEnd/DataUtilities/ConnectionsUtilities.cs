@@ -4,6 +4,7 @@ using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
 {
@@ -11,11 +12,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
     {
 
         public static SQLiteConnection Connection => new SQLiteConnection(DatabaseConfig.ConnectionString);
-        internal static void InitializeDatabase()
+        internal static void InitializeDatabase(string sFilePath)
         {
             
             //ensure the folder exists and if not create it
-            bool bFolderAlreadyExists = CheckForDatabaseDirectory();
+            bool bFolderAlreadyExists = CheckForDatabaseDirectory(sFilePath);
 
             if (bFolderAlreadyExists)
             {
@@ -26,7 +27,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     //logging here 
                     //create the project_table
-                    using (SQLiteConnection connection = new SQLiteConnection(Connection))
+                    using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                     {
                         connection.Open();
                         string sProjectTableCommand = @"
@@ -35,7 +36,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     ProjectName TEXT NOT NULL,
                     CustomerName TEXT,
                     CreatedDate TEXT NOT NULL,
-                    ModifiedDate TEXT NOT NULL,
+                    LastModifiedDate TEXT NOT NULL,
                     JobName TEXT,
                     JobNumber TEXT,
                     JobCity TEXT,
@@ -67,7 +68,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     //logging here 
                     //create the files_table
-                    using (SQLiteConnection connection = new SQLiteConnection(Connection))
+                    using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                     {
                         connection.Open();
                         //enable foreign key enforcemnt for this connection
@@ -105,7 +106,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     //logging here
                     //create the pages_table
-                    using (SQLiteConnection connection = new SQLiteConnection(Connection))
+                    using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                     {
                         connection.Open();
 
@@ -268,8 +269,23 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
+        internal static void DeleteDatabase()
+        {
+            try
+            {
+                string sFilePath = DatabaseConfig.DatabasePath;
+                if (System.IO.File.Exists(sFilePath))
+                {
+                    System.IO.File.Delete(sFilePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in DeleteDatabase " + ex.Message, "VisAssist");
+            }
+        }
 
-        public static bool CheckForDatabaseDirectory()
+        public static bool CheckForDatabaseDirectory(string sFilePath)
         {
             bool bFolderAlreadyExists = false;
             string sFolder = Path.GetDirectoryName(DatabaseConfig.DatabasePath);
@@ -294,22 +310,99 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
     //just to get where to save the database
+    //internal static class DatabaseConfig
+    //{
+    //    private static string m_databasePath;
+
+    //    public static string DatabasePath
+    //    {
+    //        get
+    //        {
+    //            if (string.IsNullOrEmpty(m_databasePath))
+    //            {
+    //                //throw new InvalidOperationException("Database path has not been set.");
+    //                //populate this by getting the curernt document and seeing where that document is saved
+    //                Visio.Application ovApp = Globals.ThisAddIn.Application;
+    //                if(ovApp.Documents.Count == 0 || ovApp.ActiveDocument == null)
+    //                {
+    //                    return null;// no document open 
+    //                }
+    //                Visio.Document ovDoc = ovApp.ActiveDocument;
+    //                string sFolderPath = FileUtilities.ReturnFileStructurePath();
+
+    //                m_databasePath = sFolderPath + "VisAssistBackEnd.db";
+
+
+    //            }
+
+    //            return m_databasePath;
+    //        }
+    //        set
+    //        {
+    //            m_databasePath = value;
+    //        }
+    //        ///HARDCODED TO THE DESKTOP
+    //        //get
+    //        //{
+    //        //    // Save the database on the desktop for now
+    //        //    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+    //        //    // Put the DB in a VisAssist folder on the desktop
+    //        //    return Path.Combine(desktopPath, "VisAssist", "VisAssistBackEnd.db");
+    //        //}
+    //    }
+
+    //    public static string ConnectionString =>
+    //        $"Data Source={DatabasePath};Version=3;";
+    //}
+
     internal static class DatabaseConfig
     {
+        private static string m_databasePath;
+
         public static string DatabasePath
+        {
+            get => m_databasePath;
+            set => m_databasePath = value;
+        }
+
+        public static string ConnectionString
         {
             get
             {
-                // Save the database on the desktop for now
-                string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                if (string.IsNullOrEmpty(m_databasePath))
+                    throw new InvalidOperationException(
+                        "DatabaseConfig has not been bound to an active document.");
 
-                // Put the DB in a VisAssist folder on the desktop
-                return Path.Combine(desktopPath, "VisAssist", "VisAssistBackEnd.db");
+                return $"Data Source={m_databasePath};Version=3;";
             }
         }
 
-        public static string ConnectionString =>
-            $"Data Source={DatabasePath};Version=3;";
+        /// <summary>
+        /// Binds the database path to the currently active Visio document.
+        /// Call this before any DB access to ensure that we are using the correct connection string...
+        /// </summary>
+        public static bool BindToActiveDocument()
+        {
+            Visio.Application app = Globals.ThisAddIn.Application;
+
+            if (app.Documents.Count == 0 || app.ActiveDocument == null)
+                return false;
+
+            Visio.Document doc = app.ActiveDocument;
+
+            // Unsaved document → no filesystem location yet
+            if (string.IsNullOrEmpty(doc.FullName))
+                return false;
+
+            string sFolderPath = FileUtilities.ReturnFileStructurePath();
+
+            sFolderPath = Path.GetDirectoryName(sFolderPath);
+
+            DatabasePath = Path.Combine(sFolderPath, "VisAssistBackEnd.db");
+            return true;
+        }
     }
+
 
 }

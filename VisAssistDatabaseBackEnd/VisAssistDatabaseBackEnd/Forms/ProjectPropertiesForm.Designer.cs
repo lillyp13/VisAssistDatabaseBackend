@@ -30,7 +30,7 @@
         {
             this.txtProjectName = new System.Windows.Forms.TextBox();
             this.txtCreatedDate = new System.Windows.Forms.TextBox();
-            this.txtModifiedDate = new System.Windows.Forms.TextBox();
+            this.txtLastModifiedDate = new System.Windows.Forms.TextBox();
             this.txtCustomerName = new System.Windows.Forms.TextBox();
             this.txtJobName = new System.Windows.Forms.TextBox();
             this.txtJobNumber = new System.Windows.Forms.TextBox();
@@ -95,12 +95,12 @@
             this.txtCreatedDate.Size = new System.Drawing.Size(167, 20);
             this.txtCreatedDate.TabIndex = 0;
             // 
-            // txtModifiedDate
+            // txtLastModifiedDate
             // 
-            this.txtModifiedDate.Location = new System.Drawing.Point(141, 147);
-            this.txtModifiedDate.Name = "txtModifiedDate";
-            this.txtModifiedDate.Size = new System.Drawing.Size(167, 20);
-            this.txtModifiedDate.TabIndex = 0;
+            this.txtLastModifiedDate.Location = new System.Drawing.Point(141, 147);
+            this.txtLastModifiedDate.Name = "txtLastModifiedDate";
+            this.txtLastModifiedDate.Size = new System.Drawing.Size(167, 20);
+            this.txtLastModifiedDate.TabIndex = 0;
             // 
             // txtCustomerName
             // 
@@ -288,9 +288,9 @@
             this.label4.AutoSize = true;
             this.label4.Location = new System.Drawing.Point(66, 154);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(68, 13);
+            this.label4.Size = new System.Drawing.Size(87, 13);
             this.label4.TabIndex = 5;
-            this.label4.Text = "modifed date";
+            this.label4.Text = "last modifed date";
             // 
             // label5
             // 
@@ -530,7 +530,7 @@
             this.Controls.Add(this.txtJobNumber);
             this.Controls.Add(this.txtJobName);
             this.Controls.Add(this.txtCustomerName);
-            this.Controls.Add(this.txtModifiedDate);
+            this.Controls.Add(this.txtLastModifiedDate);
             this.Controls.Add(this.txtFileCount);
             this.Controls.Add(this.txtReviewBy);
             this.Controls.Add(this.txtDesignedBy);
@@ -559,7 +559,7 @@
 
         public System.Windows.Forms.TextBox txtProjectName;
         public System.Windows.Forms.TextBox txtCreatedDate;
-        public System.Windows.Forms.TextBox txtModifiedDate;
+        public System.Windows.Forms.TextBox txtLastModifiedDate;
         public System.Windows.Forms.TextBox txtCustomerName;
         public System.Windows.Forms.TextBox txtJobName;
         public System.Windows.Forms.TextBox txtJobNumber;

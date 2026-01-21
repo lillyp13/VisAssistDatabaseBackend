@@ -31,7 +31,8 @@ namespace VisAssistDatabaseBackEnd.Forms
 
         private void btnAddFile_Click(object sender, EventArgs e)
         {
-            FileUtilities.AddFile(this);
+            //this just adds a practice add new file
+            //FileUtilities.AddFile(this);
             
         }
 

@@ -12,6 +12,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 {
     internal class DatabaseSeeding
     {
+        //SEEDING DATA
         public static void SeedProjects()
         {
             using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
@@ -20,7 +21,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 string sInsert = @"
                         INSERT INTO project_table (
-                            ProjectName, CustomerName, CreatedDate, ModifiedDate, 
+                            ProjectName, CustomerName, CreatedDate, LastModifiedDate, 
                             JobName, JobNumber, JobCity, JobState, JobStreetAddress1, JobStreetAddress2, JobZipCode,
                             ControlContractorName, ControlContractorCity, ControlContractorState, ControlContractorStreetAddress1, 
                             ControlContractorStreetAddress2, ControlContractorZipCode, ControlContractorPhone, ControlContractorEmail,
@@ -103,40 +104,5 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-
-      
-
-        internal static string GetPageNameWithSeedData()
-        {
-            //create a new sqlite connection
-            using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-            {
-                //open the connection
-                connection.Open();
-
-                //this is the practice data sql...
-                string sGet = ReturnPageNameWithSeedData();
-
-                //create a new command using the sql statement (sGet) and the open connection
-                using (SQLiteCommand cmd = new SQLiteCommand(sGet, connection))
-                {
-                    //execute the query adn read the result
-                    using (SQLiteDataReader reader = cmd.ExecuteReader())
-                    {
-                        //moves to the first row if it exists and get the first column (our pagename..)
-                        return reader.Read() ? reader.GetString(0) : null;
-                    }
-                }
-
-            }
-        }
-
-        private static string ReturnPageNameWithSeedData()
-        {
-            string sData = @"SELECT PageName 
-                            FROM pages_table
-                            WHERE PageID = 5;";
-            return sData;
-        }
     }
 }

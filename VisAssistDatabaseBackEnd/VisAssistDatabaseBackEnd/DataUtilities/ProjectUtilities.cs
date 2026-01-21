@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Data.SQLite;
-using Microsoft.Office.Interop.Visio;
-using static VisAssistDatabaseBackEnd.DataUtilities.ConnectionsUtilities;
-using static VisAssistDatabaseBackEnd.DataUtilities.DataProcessingUtilities;
-using System.Diagnostics;
-using VisAssistDatabaseBackEnd.Forms;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using System.Security.Cryptography;
+using VisAssistDatabaseBackEnd.Forms;
+using static VisAssistDatabaseBackEnd.DataUtilities.DataProcessingUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
@@ -42,7 +37,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         string sDesignedBy;
         string sReviewedBy;
         int iFileCount;
-        static SQLiteConnection Connection = ConnectionsUtilities.Connection;
+        //static SQLiteConnection Connection = ConnectionsUtilities.Connection;
 
         string sFileNumberFormat;
         string sPageNumberFormat;
@@ -62,21 +57,25 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static Dictionary<string, string> m_dictProjectInfoBase = new Dictionary<string, string>();  //key is the column name
         public static Dictionary<string,string> m_dictProjectInfoToCompare = new Dictionary<string, string>();
         public static Dictionary<string, string> m_dictProjectInfoToUpdate = new Dictionary<string, string>();
-        //Project Actions
-        internal static void AddProjectInfo()
+        public static MultipleRecordUpdates m_mruRecordsBase = new MultipleRecordUpdates();
+        public static MultipleRecordUpdates m_mruRecordsToCompare = new MultipleRecordUpdates();
+        public static MultipleRecordUpdates m_mruRecordsToUpdate = new MultipleRecordUpdates();
+
+
+        //SEEDING
+        internal static void AddProjectInfoSeeding()
         {
             //use the seed data and push that to the database
             //thhis adds the project info seed data
-            string sProjectTableName = "project_table";
             //first check if the database file exists and then can continue 
-            bool bFolderAlreadyExists = ConnectionsUtilities.CheckForDatabaseDirectory();
+            bool bFolderAlreadyExists = ConnectionsUtilities.CheckForDatabaseDirectory(DatabaseConfig.DatabasePath);
 
             if (bFolderAlreadyExists)
             {
                 bool bDatabaseFileExists = System.IO.File.Exists(DatabaseConfig.DatabasePath);
                 if (bDatabaseFileExists)
                 {
-                    bool bTableExists = DoesTableExist(sProjectTableName);
+                    bool bTableExists = DoesTableExist(DataProcessingUtilities.SqlTables.sProjectTable);
                     if (bTableExists)
                     {
                         //only add the data if the project_table exists...
@@ -84,7 +83,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                     else
                     {
-                        MessageBox.Show("Please add the database first: the table " + sProjectTableName + " does not exist");
+                        MessageBox.Show("Please add the database first: the table " + DataProcessingUtilities.SqlTables.sProjectTable + " does not exist");
                     }
                 }
                 else
@@ -96,50 +95,392 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 MessageBox.Show("Please add the directory first: " + DatabaseConfig.DatabasePath);
             }
-                    
-            
-        }
+
+
+        }//SEEDING
+         
         
+        
+        
+        //CRUD Actions
+        internal static void AddProjectInfo(ProjectPropertiesForm projectPropertiesForm)
+        {
+            //string sProjectTableName = "project_table";
+            
+
+            bool bFolderAlreadyExists = ConnectionsUtilities.CheckForDatabaseDirectory(DatabaseConfig.DatabasePath);
+            if(bFolderAlreadyExists)
+            {
+                bool bDataBaseFileExists = System.IO.File.Exists(DatabaseConfig.DatabasePath);
+                if(bDataBaseFileExists)
+                {
+                    bool bTableExists = DoesTableExist(DataProcessingUtilities.SqlTables.sProjectTable);
+
+                    if(bTableExists)
+                    {
+                        //the table exists let's go add the project
+                        bool bDoesProjectExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.sProjectTable);
+                        if (!bDoesProjectExist)
+                        {
+                            //there is no record in the project_Table yet so let's go add it...
+                            //we have the data the user wants to add in the projectPropertiesForm
+                            m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
+                            ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm);
+
+                            //m_mruRecordsToUpdate = DataProcessingUtilities.ComapreDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
+                            //m_dictProjectInfoToUpdate = DataProcessingUtilities.CompareDataDictionaries(m_dictProjectInfoBase, m_dictProjectInfoToCompare);
 
 
+                            //if (m_dictProjectInfoToUpdate.Count > 0)
+                            if(m_mruRecordsToCompare.ruRecords.Count > 0)
+                            {
+                               
+                                DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sProjectTable, m_mruRecordsToCompare);
+                                //DataProcessingUtilities.BuildInsertSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate);
+
+                                ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
+
+                            }
+                        }
+                    }
+                }
+            }
+        } //takes the information off the properties form to addd a new project
+        internal static void DeleteProjectInfo()
+        {
+            try
+            {
+                //delete all the records in the project_table
+                using (SQLiteConnection sqliteConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteConnection.Open();
+                    //enable foreign key enforcemnt for this connection
+                    using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteConnection))
+                    {
+                        sqlitcmdPragma.ExecuteNonQuery();
+                    }
+                    // string sDelete = "DELETE FROM project_table;";
+                    string sDelete = "DELETE FROM " + DataProcessingUtilities.SqlTables.sProjectTable + ";";
+                    using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    string[] saTablesToReset = { "project_table", "files_table", "pages_table" };
+                    foreach (string sTable in saTablesToReset)
+                    {
+                        //reset the auto-increment counter  //need to also reset the files_table and the pages_table and all other tables....
+                        string sReset = $"DELETE FROM sqlite_sequence WHERE name = '{sTable}';";
+                        using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+
+
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in DeleteProjectInfo " + ex.Message, "VisAssist");
+            }
+        }
+        internal static void UpdateProjectInfo(ProjectPropertiesForm projectPropertiesForm)
+        {
+            try
+            {
+                if(m_mruRecordsToCompare.ruRecords != null)
+                {
+                    m_mruRecordsToCompare.ruRecords.Clear();
+                }
+               
+
+                //m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
+                ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm);
+
+                m_mruRecordsToUpdate = DataProcessingUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
+
+               // m_dictProjectInfoToUpdate = DataProcessingUtilities.CompareDataDictionaries(m_dictProjectInfoBase, m_dictProjectInfoToCompare);
+
+
+                //if (m_dictProjectInfoToUpdate.Count > 0)
+                if(m_mruRecordsToUpdate.ruRecords.Count > 0)
+                {
+
+                    DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sProjectTable, m_mruRecordsToUpdate);
+                   // DataProcessingUtilities.BuildUpdateSqlForRecordDictionary(DataProcessingUtilities.SqlTables.sProjectTable, m_dictProjectInfoToUpdate);
+
+                    ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
+
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in UpdateProjectInfo " + ex.Message, "VisAssist");
+            }
+        }
+
+
+
+       
+
+        //Helper Functions
 
         internal static void PopulatePropertiesForm(ProjectPropertiesForm projectPropertiesForm)
         {
             try
             {
-
-
-                m_dictProjectInfoToCompare.Clear();
-                //we have m_lstProjectInfo 
-                //get the txtId textbox on the projectpropertiesform
-                if (m_dictProjectInfoBase.Count > 0)
+                //THIS IS USING MULTIPLE RECORD UPDATES
+                if(m_mruRecordsToCompare.ruRecords != null)
                 {
-                    projectPropertiesForm.txtID.Text = m_dictProjectInfoBase["Id"].ToString();
-                    projectPropertiesForm.txtProjectName.Text = m_dictProjectInfoBase["ProjectName"].ToString();
-                    projectPropertiesForm.txtCustomerName.Text = m_dictProjectInfoBase["CustomerName"].ToString();
-                    projectPropertiesForm.txtCreatedDate.Text = m_dictProjectInfoBase["CreatedDate"].ToString();
-                    projectPropertiesForm.txtModifiedDate.Text = m_dictProjectInfoBase["ModifiedDate"].ToString();
-                    projectPropertiesForm.txtJobName.Text = m_dictProjectInfoBase["JobName"].ToString();
-                    projectPropertiesForm.txtJobNumber.Text = m_dictProjectInfoBase["JobNumber"].ToString();
-                    projectPropertiesForm.txtJobCity.Text = m_dictProjectInfoBase["JobCity"].ToString();
-                    projectPropertiesForm.txtJobState.Text = m_dictProjectInfoBase["JobState"].ToString();
-                    projectPropertiesForm.txtJobStreetAddress1.Text = m_dictProjectInfoBase["JobStreetAddress1"].ToString();
-                    projectPropertiesForm.txtJobStreetAddress2.Text = m_dictProjectInfoBase["JobStreetAddress2"].ToString();
-                    projectPropertiesForm.txtJobZipCode.Text = m_dictProjectInfoBase["JobZipCode"].ToString();
-                    projectPropertiesForm.txtControlContractorName.Text = m_dictProjectInfoBase["ControlContractorName"].ToString();
-                    projectPropertiesForm.txtControlContractorCity.Text = m_dictProjectInfoBase["ControlContractorCity"].ToString();
-                    projectPropertiesForm.txtControlContractorState.Text = m_dictProjectInfoBase["ControlContractorState"].ToString();
-                    projectPropertiesForm.txtControlContractorStreetAddress1.Text = m_dictProjectInfoBase["ControlContractorStreetAddress1"].ToString();
-                    projectPropertiesForm.txtControlContractorStreetAddress2.Text = m_dictProjectInfoBase["ControlContractorStreetAddress2"].ToString();
-                    projectPropertiesForm.txtControlContractorZipCode.Text = m_dictProjectInfoBase["ControlContractorZipCode"].ToString();
-                    projectPropertiesForm.txtControlContractorPhone.Text = m_dictProjectInfoBase["ControlContractorPhone"].ToString();
-                    projectPropertiesForm.txtControlContractorEmail.Text = m_dictProjectInfoBase["ControlContractorEmail"].ToString();
-                    projectPropertiesForm.txtMechanicalEngineer.Text = m_dictProjectInfoBase["MechanicalEngineer"].ToString();
-                    projectPropertiesForm.txtMechanicalContractor.Text = m_dictProjectInfoBase["MechanicalContractor"].ToString();
-                    projectPropertiesForm.txtDesignedBy.Text = m_dictProjectInfoBase["DesignedBy"].ToString();
-                    projectPropertiesForm.txtReviewBy.Text = m_dictProjectInfoBase["ReviewedBy"].ToString();
-                    projectPropertiesForm.txtFileCount.Text = m_dictProjectInfoBase["FileCount"].ToString();
+                    m_mruRecordsToCompare.ruRecords.Clear();
                 }
+
+                Dictionary<string, string> odictProjectInfo = m_mruRecordsBase.ruRecords[0].odictColumnValues;
+                if (m_mruRecordsBase.ruRecords.Count > 0)
+                {
+
+                    //THIS IS USING A DICTIONARY
+
+                    m_dictProjectInfoToCompare.Clear();
+                    //we have m_lstProjectInfo 
+                    //get the txtId textbox on the projectpropertiesform
+                    //if (m_dictProjectInfoBase.Count > 0)
+                    //{
+                    //if(m_dictProjectInfoBase["Id"] != null)
+                    //{
+                    //    projectPropertiesForm.txtID.Text = m_dictProjectInfoBase["Id"].ToString();
+                    //}
+                    //else
+                    //{
+                    //    projectPropertiesForm.txtID.Text = "1"; //this will be the first and only record in the project
+                    //}
+                    //prefill the id with 1 because this will be our first project (this would not be on the form for the user to touch or mess with...)
+                    projectPropertiesForm.txtID.Text = "1";
+
+
+                    if (odictProjectInfo["ProjectName"] != "")
+                    {
+                        projectPropertiesForm.txtProjectName.Text = odictProjectInfo["ProjectName"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtProjectName.Text = "";
+                    }
+                    if (odictProjectInfo["CustomerName"] != null)
+                    {
+                        projectPropertiesForm.txtCustomerName.Text = odictProjectInfo["CustomerName"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtCustomerName.Text = "";
+                    }
+                    if (odictProjectInfo["CreatedDate"] != "")
+                    {
+                        projectPropertiesForm.txtCreatedDate.Text = odictProjectInfo["CreatedDate"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtCreatedDate.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                    }
+                    if (odictProjectInfo["LastModifiedDate"] != "")
+                    {
+                        projectPropertiesForm.txtLastModifiedDate.Text = odictProjectInfo["LastModifiedDate"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtLastModifiedDate.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                    }
+                    if (odictProjectInfo["JobName"] != null)
+                    {
+                        projectPropertiesForm.txtJobName.Text = odictProjectInfo["JobName"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtJobName.Text = "";
+                    }
+                    if (odictProjectInfo["JobNumber"] != null)
+                    {
+                        projectPropertiesForm.txtJobNumber.Text = odictProjectInfo["JobNumber"].ToString();
+
+                    }
+                    else
+                    {
+
+                        projectPropertiesForm.txtJobNumber.Text = "";
+                    }
+                    if (odictProjectInfo["JobCity"] != null)
+                    {
+                        projectPropertiesForm.txtJobCity.Text = odictProjectInfo["JobCity"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtJobCity.Text = "";
+                    }
+                    if (odictProjectInfo["JobState"] != null)
+                    {
+                        projectPropertiesForm.txtJobState.Text = odictProjectInfo["JobState"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtJobState.Text = "";
+                    }
+                    if (odictProjectInfo["JobStreetAddress1"] != null)
+                    {
+                        projectPropertiesForm.txtJobStreetAddress1.Text = odictProjectInfo["JobStreetAddress1"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtJobStreetAddress1.Text = "";
+                    }
+                    if (odictProjectInfo["JobStreetAddress2"] != null)
+                    {
+                        projectPropertiesForm.txtJobStreetAddress2.Text = odictProjectInfo["JobStreetAddress2"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtJobStreetAddress2.Text = "";
+                    }
+                    if (odictProjectInfo["JobZipCode"] != null)
+                    {
+                        projectPropertiesForm.txtJobZipCode.Text = odictProjectInfo["JobZipCode"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtJobZipCode.Text = "";
+                    }
+                    if (odictProjectInfo["ControlContractorName"] != null)
+                    {
+                        projectPropertiesForm.txtControlContractorName.Text = odictProjectInfo["ControlContractorName"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtControlContractorName.Text = "";
+                    }
+                    if (odictProjectInfo["ControlContractorCity"] != null)
+                    {
+                        projectPropertiesForm.txtControlContractorCity.Text = odictProjectInfo["ControlContractorCity"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtControlContractorCity.Text = "";
+                    }
+                    if (odictProjectInfo["ControlContractorState"] != null)
+                    {
+                        projectPropertiesForm.txtControlContractorState.Text = odictProjectInfo["ControlContractorState"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtControlContractorState.Text = "";
+                    }
+                    if (odictProjectInfo["ControlContractorStreetAddress1"] != null)
+                    {
+                        projectPropertiesForm.txtControlContractorStreetAddress1.Text = odictProjectInfo["ControlContractorStreetAddress1"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtControlContractorStreetAddress1.Text = "";
+                    }
+                    if (odictProjectInfo["ControlContractorStreetAddress2"] != null)
+                    {
+                        projectPropertiesForm.txtControlContractorStreetAddress2.Text = odictProjectInfo["ControlContractorStreetAddress2"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtControlContractorStreetAddress2.Text = "";
+                    }
+                    if (odictProjectInfo["ControlContractorZipCode"] != null)
+                    {
+                        projectPropertiesForm.txtControlContractorZipCode.Text = odictProjectInfo["ControlContractorZipCode"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtControlContractorZipCode.Text = "";
+                    }
+                    if (odictProjectInfo["ControlContractorPhone"] != null)
+                    {
+                        projectPropertiesForm.txtControlContractorPhone.Text = odictProjectInfo["ControlContractorPhone"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtControlContractorPhone.Text = "";
+                    }
+                    if (odictProjectInfo["ControlContractorEmail"] != null)
+                    {
+                        projectPropertiesForm.txtControlContractorEmail.Text = odictProjectInfo["ControlContractorEmail"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtControlContractorEmail.Text = "";
+                    }
+                    if (odictProjectInfo["MechanicalEngineer"] != null)
+                    {
+                        projectPropertiesForm.txtMechanicalEngineer.Text = odictProjectInfo["MechanicalEngineer"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtMechanicalEngineer.Text = "";
+                    }
+                    if (odictProjectInfo["MechanicalContractor"] != null)
+                    {
+                        projectPropertiesForm.txtMechanicalContractor.Text = odictProjectInfo["MechanicalContractor"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtMechanicalContractor.Text = "";
+                    }
+                    if (odictProjectInfo["DesignedBy"] != null)
+                    {
+                        projectPropertiesForm.txtDesignedBy.Text = odictProjectInfo["DesignedBy"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtDesignedBy.Text = "";
+                    }
+                    if (odictProjectInfo["ReviewedBy"] != null)
+                    {
+                        projectPropertiesForm.txtReviewBy.Text = odictProjectInfo["ReviewedBy"].ToString();
+
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtReviewBy.Text = "";
+                    }
+                    if (odictProjectInfo["FileCount"] != null)
+                    {
+                        projectPropertiesForm.txtFileCount.Text = odictProjectInfo["FileCount"].ToString();
+                    }
+                    else
+                    {
+                        projectPropertiesForm.txtFileCount.Text = "1"; //this will be the first file that gets added to the project when the user adds a project...
+                    }
+
+                }
+                //}
                 else
                 {
                     MessageBox.Show("There are no records in the project_table");
@@ -157,40 +498,117 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             try
             {
                 //logging statement placeholder
+                //RECORDS USING MUTLIPLE RECORD UPDATES
+                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
 
-                m_dictProjectInfoBase.Clear();//this should be cleared because you build this when the user presses update
-                m_dictProjectInfoToUpdate.Clear();//this should be cleared because you build this when the user presses update
+             
+                int iId = 1; // default for "new project"
+                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
 
-                string sSQl = @"SELECT * FROM project_table WHERE Id = 1";
-                //logging statement placeholder
-                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(Connection))
+                // string sSql = @"SELECT * FROM project_table LIMIT 1";
+                string sSql = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.sProjectTable + " LIMIT 1";
+
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                 {
-                    //logging statement placeholder
                     sqliteconConnection.Open();
-                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSQl, sqliteconConnection))
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
                     {
-                        //logging here
-                        //execute the query and read the result
+                        
                         using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
                         {
-                            while (sqlitereadReader.Read())
+                            if (sqlitereadReader.Read())
                             {
-                                string sRowData = "";
-                                string sColumnName = "";
+                                // Existing project
                                 for (int i = 0; i < sqlitereadReader.FieldCount; i++)
                                 {
-                                    sColumnName = sqlitereadReader.GetName(i).ToString(); // column name
-                                    sRowData = sqlitereadReader.GetValue(i).ToString(); //actual value we care about
-                                    m_dictProjectInfoBase.Add(sColumnName, sRowData); //build up the dictionary so the column is the key and the value is the value in the cell...
-                                    //logging statement placeholder
+                                    string sColumnName = sqlitereadReader.GetName(i);
+
+                                    if (sColumnName.Equals(DataProcessingUtilities.SqlTables.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        iId = sqlitereadReader.GetInt32(i);
+                                        continue; // PK not included in update dictionary
+                                    }
+
+                                    odictColumnValues[sColumnName] = sqlitereadReader.IsDBNull(i) ? null : sqlitereadReader.GetValue(i).ToString();
                                 }
-
                             }
+                            else
+                            {
+                                // No project exists → build empty record from schema
+                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                                {
+                                    string columnName = sqlitereadReader.GetName(i);
 
+                                    if (columnName.Equals(DataProcessingUtilities.SqlTables.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
+                                        continue;
 
+                                    odictColumnValues[columnName] = null;
+                                }
+                            }
                         }
                     }
                 }
+
+                // Build RecordUpdate
+                RecordUpdate ru = new RecordUpdate();
+                ru.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sProjectTablePK;
+                ru.iId = iId;
+                ru.odictColumnValues = odictColumnValues;
+
+                lstRecords.Add(ru);
+
+                // Store in MultipleRecordUpdates
+                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+
+
+
+
+                //RECORDS USING DICTIONARY
+                //m_dictProjectInfoBase.Clear();//this should be cleared because you build this when the user presses update
+                //m_dictProjectInfoToUpdate.Clear();//this should be cleared because you build this when the user presses update
+
+                //string sSQl = @"SELECT * FROM project_table WHERE Id = 1";
+                ////logging statement placeholder
+                //using (SQLiteConnection sqliteconConnection = new SQLiteConnection(Connection))
+                //{
+                //    //logging statement placeholder
+                //    sqliteconConnection.Open();
+                //    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSQl, sqliteconConnection))
+                //    {
+                //        //logging here
+                //        //execute the query and read the result
+                //        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
+                //        {
+                //            if (sqlitereadReader.Read())
+                //            {
+                //                string sRowData = "";
+                //                string sColumnName = "";
+                //                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                //                {
+                //                    sColumnName = sqlitereadReader.GetName(i).ToString(); // column name
+                //                    sRowData = sqlitereadReader.GetValue(i).ToString(); //actual value we care about
+                //                    m_dictProjectInfoBase.Add(sColumnName, sRowData); //build up the dictionary so the column is the key and the value is the value in the cell...
+                //                    //logging statement placeholder
+                //                }
+
+                //            }
+                //            else
+                //            {
+                //                //there are no records in the project_Table
+                //                for(int i = 0; i <sqlitereadReader.FieldCount; i++)
+                //                {
+                //                    string sColumnName = sqlitereadReader.GetName(i);
+                //                    m_dictProjectInfoBase.Add(sColumnName, null);
+                //                }
+                //            }
+
+
+                //        }
+                //    }
+                //}
+
+
             }
             catch(Exception ex)
             {
@@ -199,12 +617,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             
         }
 
-        internal static void OpenProjectForm(bool bDoesProjectExist)
+        internal static void OpenProjectForm(string sAction)
         {
             try
             {
                 ProjectPropertiesForm oNewForm = new ProjectPropertiesForm();
-                oNewForm.Display(bDoesProjectExist);
+                oNewForm.Display(sAction);
                 oNewForm.ShowDialog();
             }
             catch(Exception ex)
@@ -219,6 +637,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
+
+
+                //this just creates the dictionary to compare...
                 string sID = projectPropertiesForm.txtID.Text.TrimEnd();
                 m_dictProjectInfoToCompare.Add("Id", sID);
 
@@ -231,8 +652,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 string sCreatedDate = projectPropertiesForm.txtCreatedDate.Text.TrimEnd();
                 m_dictProjectInfoToCompare.Add("CreatedDate", sCreatedDate);
 
-                string sModifiedDate = projectPropertiesForm.txtModifiedDate.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ModifiedDate", sModifiedDate);
+                string sModifiedDate = projectPropertiesForm.txtLastModifiedDate.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("LastModifiedDate", sModifiedDate);
 
                 string sJobName = projectPropertiesForm.txtJobName.Text.TrimEnd();
                 m_dictProjectInfoToCompare.Add("JobName", sJobName);
@@ -293,6 +714,30 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 string sFileCount = projectPropertiesForm.txtFileCount.Text.TrimEnd();
                 m_dictProjectInfoToCompare.Add("FileCount", sFileCount);
+
+
+                string sPrimarykey = "Id";
+
+                // Build column dictionary (exclude Id)
+                Dictionary<string, string> oDictToUpdate = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (KeyValuePair<string, string> sBaseItem in m_dictProjectInfoToCompare)
+                {
+                    if (!sBaseItem.Key.Equals(sPrimarykey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        oDictToUpdate[sBaseItem.Key] = sBaseItem.Value;
+                    }
+                        
+                }
+
+                // Single project, always Id = 1
+                RecordUpdate record = new RecordUpdate();
+                record.sPrimaryKeyColumn = sPrimarykey;
+                record.iId = 1;
+                record.odictColumnValues = oDictToUpdate;
+
+                m_mruRecordsToCompare = new MultipleRecordUpdates(new List<RecordUpdate> { record });
+
             }
             catch(Exception ex)
             {
@@ -300,122 +745,41 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-
-        internal static void DeleteProjectInfo()
+        internal static void AddNewProject(ProjectPropertiesForm projectPropertiesForm)
         {
-            try
-            {
-                //delete all the records in the project_table
-                using (SQLiteConnection sqliteConnection = new SQLiteConnection(Connection))
-                {
-                    sqliteConnection.Open();
-                    //enable foreign key enforcemnt for this connection
-                    using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteConnection))
-                    {
-                        sqlitcmdPragma.ExecuteNonQuery();
-                    }
-                    string sDelete = "DELETE FROM project_table;";
+            MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
+            MultipleRecordUpdates oPageRecord = new MultipleRecordUpdates();
+            //get the active docuent 
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
 
-                    using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
-                    {
-                        cmd.ExecuteNonQuery();
-                    }
+            //we are adding a project for the first time create the database and the tables in it
+            ConnectionsUtilities.InitializeDatabase(DatabaseConfig.DatabasePath);
+            //gather the information from the properties form to fill out the project information 
+            ProjectUtilities.AddProjectInfo(projectPropertiesForm);
+            //i need a record for the file that was created in Add
+            oFileRecord = FileUtilities.BuildFileInformation();
+            DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sFilesTable, oFileRecord);
 
-                    string[] saTablesToReset = { "project_table", "files_table", "pages_table" };
-                    foreach (string sTable in saTablesToReset)
-                    {
-                        //reset the auto-increment counter  //need to also reset the files_table and the pages_table and all other tables....
-                        string sReset = $"DELETE FROM sqlite_sequence WHERE name = '{sTable}';";
-                        using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
-                    }
+            ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ProjectID", 0);
+            ovDoc.DocumentSheet.Cells["User.ProjectID"].ResultIU = 1; //the project id should always be 1 so do we need to do anything else? i need to add the fileID
 
+            ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "FileID", 0);
+            //add the fileid from the record we just added to this cell..
+            ovDoc.DocumentSheet.Cells["User.FileID"].Formula = oFileRecord.ruRecords[0].iId.ToString();
+            //need to add the user cells to the page too before adding to DB
+            //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
+            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Version", 0); //not quite sure what the value of this is...
+            ovPage.PageSheet.Cells["User.Version"].Formula = "\"v1\""; //might want to pull the format string for visio fromm VisAssist...
+            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Class", 0);
+            ovPage.PageSheet.Cells["User.Class"].Formula = "\"Working\"";//might want to pull the format string for visio fromm VisAssist...
+            oPageRecord = PageUtilities.BuildPageInformation(ovPage);
+            DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sPagesTable, oPageRecord);
+            
 
+            //this would build a Class A Visio file (using a template, has a coverpage, table of contents, symbols and divisions...) 
+            
 
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in DeleteProjectInfo " + ex.Message, "VisAssist");
-            }
-        }
-
-        internal static void DeleteDatabase()
-        {
-            try
-            {
-                string sFilePath = DatabaseConfig.DatabasePath;
-                if (System.IO.File.Exists(sFilePath))
-                {
-                    System.IO.File.Delete(sFilePath);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in DeleteDatabase " + ex.Message, "VisAssist");
-            }
-        }
-
-        internal static void UpdateProjectInfo(ProjectPropertiesForm projectPropertiesForm)
-        {
-            try
-            {
-                m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
-                ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm);
-
-                m_dictProjectInfoToUpdate = DataProcessingUtilities.CompareDataDictionaries(m_dictProjectInfoBase, m_dictProjectInfoToCompare);
-
-
-                if (m_dictProjectInfoToUpdate.Count > 0)
-                {
-                    string sTable = "project_table";
-
-                    DataProcessingUtilities.BuildUpdateSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate);
-
-                    ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
-
-                }
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in UpdateProjectInfo " + ex.Message, "VisAssist");
-            }
-        }
-
-        internal static void AddProject()
-        {
-            //open a save file dialog to ask user where they want to save the visio document that will be creatd 
-            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
-            {
-                saveFileDialog.Title = "Save Visio Document";
-                saveFileDialog.Filter = "Visio Files (*.vsdx)|*.vsdx|All Files (*.*)|*.*";
-                saveFileDialog.DefaultExt = "vsdx";
-                saveFileDialog.AddExtension = true;
-
-                DialogResult result = saveFileDialog.ShowDialog();
-
-                if (result == DialogResult.OK)
-                {
-                    string sFilePath = saveFileDialog.FileName;
-
-                    // TODO: create and save the Visio document at filePath
-                    //using the result create a new visio file...
-                    Visio.Application ovVisioApp = Globals.ThisAddIn.Application;
-                    Visio.Document ovDoc = ovVisioApp.Documents.Add("");
-
-                    ovDoc.SaveAs(sFilePath);
-
-
-                    
-                }
-                else
-                {
-                    // User cancelled the dialog
-                    MessageBox.Show("Save operation cancelled.");
-                }
-            }
         }
     }
 }

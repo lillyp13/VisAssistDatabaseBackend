@@ -43,6 +43,7 @@
             this.btnDeleteProjectInfo = this.Factory.CreateRibbonButton();
             this.btnModifyProjectInfo = this.Factory.CreateRibbonButton();
             this.btnGetProjectInfo = this.Factory.CreateRibbonButton();
+            this.btnAddProjectWithVisio = this.Factory.CreateRibbonButton();
             this.grpFile = this.Factory.CreateRibbonGroup();
             this.btnAddFileInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteFileInfo = this.Factory.CreateRibbonButton();
@@ -59,7 +60,8 @@
             this.grpWireInfo = this.Factory.CreateRibbonGroup();
             this.btnAddWireInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteWireInfo = this.Factory.CreateRibbonButton();
-            this.btnAddProjectWithVisio = this.Factory.CreateRibbonButton();
+            this.btnAddFile = this.Factory.CreateRibbonButton();
+            this.btnAssociateAnotherFile = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.grpInitialize.SuspendLayout();
             this.grpProjectInfo.SuspendLayout();
@@ -134,18 +136,26 @@
             this.btnGetProjectInfo.Name = "btnGetProjectInfo";
             this.btnGetProjectInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnGetProjectInfo_Click);
             // 
+            // btnAddProjectWithVisio
+            // 
+            this.btnAddProjectWithVisio.Label = "Add Visio Project";
+            this.btnAddProjectWithVisio.Name = "btnAddProjectWithVisio";
+            this.btnAddProjectWithVisio.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAddProjectWithVisio_Click);
+            // 
             // grpFile
             // 
             this.grpFile.Items.Add(this.btnAddFileInfo);
             this.grpFile.Items.Add(this.btnDeleteFileInfo);
             this.grpFile.Items.Add(this.btnModifyFile);
             this.grpFile.Items.Add(this.btnGetFileData);
+            this.grpFile.Items.Add(this.btnAddFile);
+            this.grpFile.Items.Add(this.btnAssociateAnotherFile);
             this.grpFile.Label = "File Info";
             this.grpFile.Name = "grpFile";
             // 
             // btnAddFileInfo
             // 
-            this.btnAddFileInfo.Label = "Add File Info";
+            this.btnAddFileInfo.Label = "Seed File Info";
             this.btnAddFileInfo.Name = "btnAddFileInfo";
             this.btnAddFileInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAddFileInfo_Click);
             // 
@@ -235,11 +245,16 @@
             this.btnDeleteWireInfo.Label = "Delete Wire Info";
             this.btnDeleteWireInfo.Name = "btnDeleteWireInfo";
             // 
-            // btnAddProjectWithVisio
+            // btnAddFile
             // 
-            this.btnAddProjectWithVisio.Label = "Add Visio Project";
-            this.btnAddProjectWithVisio.Name = "btnAddProjectWithVisio";
-            this.btnAddProjectWithVisio.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAddProjectWithVisio_Click);
+            this.btnAddFile.Label = "Add Another File";
+            this.btnAddFile.Name = "btnAddFile";
+            this.btnAddFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAddFile_Click);
+            // 
+            // btnAssociateAnotherFile
+            // 
+            this.btnAssociateAnotherFile.Label = "Associate Another File";
+            this.btnAssociateAnotherFile.Name = "btnAssociateAnotherFile";
             // 
             // Ribbon
             // 
@@ -293,6 +308,8 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnGetProjectInfo;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnGetFileData;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAddProjectWithVisio;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAddFile;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAssociateAnotherFile;
     }
 
     partial class ThisRibbonCollection

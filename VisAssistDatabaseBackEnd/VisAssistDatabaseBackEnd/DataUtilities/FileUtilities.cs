@@ -1,11 +1,15 @@
-﻿using System;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.Data.Odbc;
 using System.Data.SQLite;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
+using Visio = Microsoft.Office.Interop.Visio;
 
 
 
@@ -27,7 +31,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         bool bIgnoreWireColor;
         bool bAllowDuplicateTags;
         bool bShowPointData;
-        static SQLiteConnection Connection = ConnectionsUtilities.Connection;
+        //static SQLiteConnection Connection = ConnectionsUtilities.Connection;
 
 
 
@@ -44,13 +48,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static MultipleRecordUpdates m_mruRecordsToCompare = new MultipleRecordUpdates();
         public static MultipleRecordUpdates m_mruRecordsToUpdate = new MultipleRecordUpdates();
 
-        //File Actions
-        internal static void AddFirstFile()
+
+        //SEEDING
+        internal static void AddSeedFile()
         {
             //make sure there is a project in the project_table...
-            string sTableName = "files_Table";
-            bool bDoesTableExist = DataProcessingUtilities.DoesParentTableHaveRecord(sTableName);
-            if(bDoesTableExist)
+
+            bool bDoesTableExist = DataProcessingUtilities.DoesParentTableHaveRecord(DataProcessingUtilities.SqlTables.sFilesTable);
+            if (bDoesTableExist)
             {
                 DatabaseSeeding.SeedFiles();
             }
@@ -58,10 +63,187 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 MessageBox.Show("Please add a record to the project_Table.");
             }
-           
+
+        } //SEED DATA
+
+
+
+
+        //CRUD Actions
+        internal static void AddFile()
+        {
+
+            //create a new visio file (it will either be classified as a class a or b depedning on which one the user wants...
+            string sClass = "Secondary"; //this is dependent on which kind of file th user wants to add, but i believe in most cases this will be used to add a new secondary file to a project...
+            //it is possible that the user wants to add a Master file 
+            AddVisioDocument(sClass);
+            MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+
+            oFileRecord = FileUtilities.BuildFileInformation();
+            DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sFilesTable, oFileRecord);
+
+            ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ID", 0);
+            ovDoc.DocumentSheet.Cells["User.ProjectID"].ResultIU = Convert.ToInt32(oFileRecord.ruRecords[0].odictColumnValues["ProjectID"]);
+
+            ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "FileID", 0);
+            //add the fileid from the record we just added to this cell..
+            ovDoc.DocumentSheet.Cells["User.FileID"].Formula = oFileRecord.ruRecords[0].iId.ToString();
+
+
+
+        }
+        internal static void UpdateFile(FilePropertiesForm filePropertiesForm)
+        {
+            //will be ever be changing multiple files? 
+            //only if we give them the space --otherwise there is no spot for them to change something on two different files...  
+
+            //where would we need to call update file?
+            //--when the file name or file path is changed, when the user changes the drawing type, wire prefix, ignroewirecolor, allow duplicate tags, show point data (some from the settings, another from the project properties form)
+            //modified date? when do i update this
+            //project_id will only change once we give the user the ability to associte and disassociate files with a project...
+           ;
+            if (m_mruRecordsToCompare.ruRecords != null)
+            {
+                m_mruRecordsToCompare.ruRecords.Clear();
+            }
+
+
+
+            //this will be done a little bit differently because the wire prefix, ignore wirecolor, allow duplicate tags, and show point data is from the visassist settings,
+            //but the file name, file path and drawing type are from somewhere else..also revision id i think...so therefore when we update the file we will often only be looking to update one column...
+
+            List<RecordUpdate> lstRecordUpdate = new List<RecordUpdate>();
+            foreach (DataGridViewRow dgvRow in filePropertiesForm.dgvFileData.Rows)
+            {
+                Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
+
+                int iPrimaryKeyValue = 0;
+
+                for (int i = 0; i < filePropertiesForm.dgvFileData.Columns.Count; i++)
+                {
+                    DataGridViewColumn dgvColumn = filePropertiesForm.dgvFileData.Columns[i];
+                    string sColumnName = dgvColumn.Name;
+                    string sValue = dgvRow.Cells[i].Value.ToString();
+                    string sKey = dgvColumn.Name;
+
+                    if (sColumnName != DataProcessingUtilities.SqlTables.sFilesTablePK)
+                    {
+                        oDictColumnValues.Add(sColumnName, sValue);
+                    }
+                    else
+                    {
+                        //this is the PK
+                        iPrimaryKeyValue = Convert.ToInt32(sValue);
+                    }
+
+                }
+
+                //create a recordupdate for this row
+                RecordUpdate ruRecordUpdate = new RecordUpdate();
+                ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sFilesTablePK;
+                ruRecordUpdate.iId = iPrimaryKeyValue;
+                ruRecordUpdate.odictColumnValues = oDictColumnValues;
+
+                lstRecordUpdate.Add(ruRecordUpdate);
+            }
+
+            //wrap all the records into a multiple recorsupdates object
+            m_mruRecordsToCompare = new MultipleRecordUpdates(lstRecordUpdate);
+            
+            //compare the two record sets and build a new record set based on only the changes
+            m_mruRecordsToUpdate = DataProcessingUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
+
+
+            if (m_mruRecordsToUpdate.ruRecords.Count > 0)
+            {
+                //there is a change
+                //build the update sql for the files_table
+                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sFilesTable, m_mruRecordsToUpdate);
+                //reset the base record set
+                FileUtilities.GetFileDataFromDatabase(filePropertiesForm);
+            }
+        }
+        internal static void DeleteFile(FilePropertiesForm filePropertiesForm)
+        {
+            //get the selected row in the filePropertiesForm.dgvFileData to determine which file to delete
+
+            // Get the selected row
+            DataGridViewSelectedRowCollection colSelectedRows = filePropertiesForm.dgvFileData.SelectedRows;
+            if (colSelectedRows == null || colSelectedRows.Count == 0)
+            {
+                MessageBox.Show("Please select at least one file to delete.");
+                return;
+            }
+
+            // Build a list of RecordUpdate objects for each selected row
+            List<RecordUpdate> lstRecordsToDelete = new List<RecordUpdate>();
+            foreach (DataGridViewRow dgvRow in colSelectedRows)
+            {
+                int iFileID = Convert.ToInt32(dgvRow.Cells["FileID"].Value);
+
+                RecordUpdate ruRecord = new RecordUpdate();
+                ruRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sFilesTablePK;
+                ruRecord.iId = iFileID;
+
+                lstRecordsToDelete.Add(ruRecord);
+            }
+
+            MultipleRecordUpdates mru = new MultipleRecordUpdates(lstRecordsToDelete);
+
+            // Call delete
+            DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sFilesTable, mru);
+
+            foreach (DataGridViewRow dgvRow in colSelectedRows)
+            {
+                filePropertiesForm.dgvFileData.Rows.Remove(dgvRow);
+            }
+        }
+        internal static void DeleteAllFiles()
+        {
+            //delete all the records in the files_table
+            using (SQLiteConnection sqliteConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+            {
+                sqliteConnection.Open();
+
+                //enable foreign key enforcemnt for this connection
+                using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteConnection))
+                {
+                    sqlitcmdPragma.ExecuteNonQuery();
+                }
+
+                // string sDelete = "DELETE FROM files_table;";
+                string sDelete = "DELETE FROM " + DataProcessingUtilities.SqlTables.sFilesTable + ";";
+
+                using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sDelete, sqliteConnection))
+                {
+                    //logging here 
+                    sqlitecmdCommand.ExecuteNonQuery();
+
+                }
+                //reset the auto-increment counter, also need to delete the pages_table...
+                string[] saTablesToReset = { "files_table", "pages_table" };
+                foreach (string sTable in saTablesToReset)
+                {
+                    //reset the auto-increment counter  //need to also reset the files_table and the pages_table and all other tables....
+                    string sReset = $"DELETE FROM sqlite_sequence WHERE name = '{sTable}';";
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sReset, sqliteConnection))
+                    {
+                        sqlitecmdCommand.ExecuteNonQuery();
+                    }
+                }
+
+
+            }
         }
         
 
+
+       
+        
+
+
+        //Helper Functions
         internal static void OpenFileForm()
         {
             FilePropertiesForm oNewForm = new FilePropertiesForm();
@@ -79,14 +261,15 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     m_mruRecordsBase.ruRecords.Clear();
                 }
-                
+
 
                 //select all the files from the files_table
-                string sSQl = @"SELECT * FROM files_table";
+                //string sSQl = @"SELECT * FROM files_table";
+                string sSQl = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.sFilesTable;
                 List<RecordUpdate> lstRecords = new List<RecordUpdate>();
-                string sPrimaryKeyColumn = "FileID";
+                
                 //logging statement placeholder
-                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(Connection))
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                 {
                     //logging statement placeholder
                     sqliteconConnection.Open();
@@ -105,18 +288,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 {
                                     string sColumnName = sqlitereadReader.GetName(i);
                                     string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
-                                    odictColumnValues.Add(sColumnName, sValue);
 
-                                    if(sColumnName == sPrimaryKeyColumn)
+                                    if(sColumnName != DataProcessingUtilities.SqlTables.sFilesTablePK)
                                     {
-                                        iID = Convert.ToInt32(sqlitereadReader.GetValue(i));
+                                        odictColumnValues.Add(sColumnName, sValue);
                                     }
+                                    else
+                                    {
+                                        iID = Convert.ToInt32(sqlitereadReader.GetValue(i)); //this is the PK
+                                    }
+
                                    
 
                                 }
                                 //create a recordupdate for this specfic record (row)
                                 RecordUpdate ruRecordUpdate = new RecordUpdate();
-                                ruRecordUpdate.sPrimaryKeyColumn = sPrimaryKeyColumn;
+                                ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sFilesTablePK;
                                 ruRecordUpdate.iId = iID;
                                 ruRecordUpdate.odictColumnValues = odictColumnValues;
 
@@ -175,12 +362,21 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 // Fill cells by matching column names
                 for (int i = 0; i < filePropertiesForm.dgvFileData.Columns.Count; i++)
                 {
-                    string sColumnName = filePropertiesForm.dgvFileData.Columns[i].Name;
-
-                    if (ruRecord.odictColumnValues.ContainsKey(sColumnName))
+                    if(i == 0)
                     {
-                        dgvRow.Cells[i].Value = ruRecord.odictColumnValues[sColumnName];
+                        //this is the first row get the PK
+                        dgvRow.Cells[i].Value = ruRecord.iId;
                     }
+                    else
+                    {
+                        string sColumnName = filePropertiesForm.dgvFileData.Columns[i].Name;
+
+                        if (ruRecord.odictColumnValues.ContainsKey(sColumnName))
+                        {
+                            dgvRow.Cells[i].Value = ruRecord.odictColumnValues[sColumnName];
+                        }
+                    }
+                    
                 }
 
                 // Add the populated row
@@ -190,244 +386,269 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        internal static void AddFile(FilePropertiesForm filePropertiesForm)
+        internal static MultipleRecordUpdates BuildFileInformation()
         {
-            //add a new row to datagridview 
-            Dictionary<string, string> oDictFileToAdd = new Dictionary<string, string>();
-            //this is to simulate the user addding a file to a project
-            //write the data that you know...the user pressed a SIMILAR button to add new project, add new file->creates a new visio document and adds it to the database (for now the data should be the same as the first file)
-            //file properties change in a few different places...file name change, drawing type, ignorewirecolor, allowduplicates, showpointdata...
-            //in the new row add the exact data that is in the first row except increase the number for ifileID and make sure that the created date and the modified date are the current date as the process is happening
-            //check if there are any rows in the datagridview first 
-            if (filePropertiesForm.dgvFileData.Rows.Count > 0)
+            //this should build a multiple record update of the file...
+            //we have the projectID from the project we just added, file name is in the file path, we have the filepath, created date and last modified date should be todays date, version should be 1, class should be VisAssistDocument, and the reset we can leave empty...
+            //get the active document 
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            string sFileName = ovDoc.Name;
+            string sFilePath = ReturnFileStructurePath();
+
+            sFilePath = sFilePath + sFileName;
+            
+
+            Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
+            oDictFileValues.Add("ProjectID", "1");
+            oDictFileValues.Add("FileName", sFileName);
+            oDictFileValues.Add("FilePath", sFilePath);
+            oDictFileValues.Add("CreatedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            oDictFileValues.Add("LastModifiedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            oDictFileValues.Add("Version", "1.0.0");
+            oDictFileValues.Add("Class", "VisAssistDocument");
+
+            RecordUpdate ruFileRecord = new RecordUpdate();
+            ruFileRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sFilesTablePK;
+            ruFileRecord.iId = DataProcessingUtilities.GetNextIdForTable(DataProcessingUtilities.SqlTables.sFilesTable);
+            ruFileRecord.odictColumnValues = oDictFileValues;
+
+            return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
+
+        }
+       /// <summary>
+       /// this adds the visio file itself after opening a save file dialog box and saves it to where the user specifies
+       /// this should be adpated to create the file based off of a template... builds the Master document
+       /// I will also build another routine AddVisioSecondaryDocument that will do the same thing except will not have the cover pages....
+       /// </summary>
+       /// <param name="sClass"></param>
+        internal static void AddVisioDocument(string sClass)
+        {
+            //open a save file dialog to ask user where they want to save the visio document that will be creatd 
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
             {
-                DataGridViewRow dgvFirstRow = filePropertiesForm.dgvFileData.Rows[0];
-                int iRowCount = filePropertiesForm.dgvFileData.Rows.Count - 1;
-                DataGridViewRow dgvLastRow = filePropertiesForm.dgvFileData.Rows[iRowCount];
+                saveFileDialog.Title = "Save Visio Document";
+                saveFileDialog.Filter = "Visio Files (*.vsdx)|*.vsdx|All Files (*.*)|*.*";
+                saveFileDialog.DefaultExt = "vsdx";
+                saveFileDialog.AddExtension = true;
 
-                int iNewFileID = Convert.ToInt32(dgvLastRow.Cells["FileID"].Value) + 1;
-                //create a new row 
-                DataGridViewRow dgvNewRow = new DataGridViewRow();
-                dgvNewRow.CreateCells(filePropertiesForm.dgvFileData);
+                DialogResult result = saveFileDialog.ShowDialog();
 
-                for (int i = 0; i < dgvFirstRow.Cells.Count; i++)
+                if (result == DialogResult.OK)
                 {
-                    string sColumnName = filePropertiesForm.dgvFileData.Columns[i].Name;
-                    switch (sColumnName)
+                    string sFilePath = saveFileDialog.FileName;
+
+                    // TODO: create and save the Visio document at filePath
+                    //using the result create a new visio file...
+                    Visio.Application ovVisioApp = Globals.ThisAddIn.Application;
+                    Visio.Document ovDoc = ovVisioApp.Documents.Add("");
+
+                    //save it, close it and reopen so that the file doesn't end up in a dirty state
+                    //we won't need to do this once we add the templates because we do a file.copy and then open the new file...
+                    //we want to design wehre user chooses the template and we'll grab it from access (i think)
+                    ovDoc.SaveAs(sFilePath);
+
+                    ovDoc.Close();
+
+                    ovDoc = ovVisioApp.Documents.Open(sFilePath);
+
+                    //get the file name and set that to the database path...
+                    string sDirectoryPath = Path.GetDirectoryName(sFilePath);
+                    DatabaseConfig.DatabasePath = Path.Combine(sDirectoryPath, "VisAssistBackEnd.db");
+
+
+                }
+                else
+                {
+                    // User cancelled the dialog
+                    MessageBox.Show("Save operation cancelled.");
+                }
+            }
+        } //this creates the  new visio file and saves it where the user specified...
+
+
+
+        //FILE STRUCTURE HELPER FUNCTIONS
+        public static string ReturnFileStructurePath()
+        {
+            try
+            {
+                // *** CHANGED: removed unused sLocalFolder and sFileStructureToReturn ***
+
+                string sToFilePath = Globals.ThisAddIn.Application.ActiveDocument.Path;
+                Visio.Document ovThisVisioDocument = Globals.ThisAddIn.Application.ActiveDocument;
+
+                //now if we are given a url (by having http in it) we need to get the tofilepath another way 
+                if (sToFilePath.Contains("https://"))
+                {
+
+                    if (sToFilePath.IndexOf("d.docs.live.net", StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        case "FileID":
-                            {
-                                dgvNewRow.Cells[i].Value = iNewFileID;
-                                break;
-                            }
-                        case "CreatedDate":
-                        case "LastModifiedDate":
-                            {
-                                dgvNewRow.Cells[i].Value = DateTime.Now.ToString("yyyy-MM-dd");
-                                break;
-                            }
-                        default:
-                            {
-                                //copy this information over
-                                dgvNewRow.Cells[i].Value = dgvFirstRow.Cells[i].Value;
-                                break;
-                            }
+                        // This resolves https://d.docs.live.net/<CID>/...
+                        sToFilePath = ResolveOnedriveCloudUrlToLocal(sToFilePath);
 
                     }
-                    oDictFileToAdd.Add(sColumnName, dgvFirstRow.Cells[i].Value.ToString());
+                    // --- OneDrive BUSINESS / SharePoint ---
+                    else if (sToFilePath.IndexOf(".sharepoint.com", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        // This resolves https://tenant-my.sharepoint.com/...
+                        sToFilePath = ResolveOneDriveBusinessPath(sToFilePath);
+
+                    }
+
+
+                    //string sOneDrivePath = ResolveOnedriveCloudUrlToLocal(sToFilePath);
+                    //sToFilePath = sOneDrivePath;
                 }
+                else
+                {
 
-                // Create a RecordUpdate for the new row
-                RecordUpdate ruRecord = new RecordUpdate();
-                ruRecord.sPrimaryKeyColumn = "FileID";
-                ruRecord.iId = iNewFileID;
-                ruRecord.odictColumnValues = oDictFileToAdd;
+                }
+                // Fallback: if we can't resolve, just return what Visio gave us
+                return sToFilePath;
+            }
+            catch (Exception ex) // *** CHANGED: added catch + logging + null return ***
+            {
 
-                // Wrap it in a MultipleRecordUpdates
-                MultipleRecordUpdates mruRecordsToInsert = new MultipleRecordUpdates();
-                mruRecordsToInsert.ruRecords = new List<RecordUpdate> { ruRecord };
-
-
-                //for (int i = 0; i < dgvFirstRow.Cells.Count; i++)
-                //{
-                //    string sColumnName = filePropertiesForm.dgvFileData.Columns[i].Name;
-                //    dgvNewRow.Cells[i].Value = oDictFileToAdd[sColumnName];
-                //}
-
-                int iInsertIndex = filePropertiesForm.dgvFileData.Rows.Count;
-                //add the new row to the datagridviewrow
-                filePropertiesForm.dgvFileData.Rows.Insert(iInsertIndex, dgvNewRow);
-
-                //now we need to write this to sql and add a new entry in the files_table
-                string sTable = "files_table";
-                //DataProcessingUtilities.BuildInsertSqlForRecordDictionary(sTable, oDictFileToAdd);
-
-                DataProcessingUtilities.BuildInsertSqlForMultipleRecords(sTable, mruRecordsToInsert);
+                return null;
             }
         }
 
-        internal static void UpdateFile(FilePropertiesForm filePropertiesForm)
+        public static string ResolveOneDriveBusinessPath(string cloudUrl)
         {
-            //will be ever be changing multiple files? 
-            //only if we give them the space --otherwise there is no spot for them to change something on two different files...  
+            if (string.IsNullOrEmpty(cloudUrl) || !cloudUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return null;
 
-            //where would we need to call update file?
-            //--when the file name or file path is changed, when the user changes the drawing type, wire prefix, ignroewirecolor, allow duplicate tags, show point data (some from the settings, another from the project properties form)
-            //modified date? when do i update this
-            //project_id will only change once we give the user the ability to associte and disassociate files with a project...
-            //m_dictFileDataInfoToCompare.Clear();
-            if(m_mruRecordsToCompare.ruRecords != null)
+            const string baseKeyPath = @"Software\Microsoft\OneDrive\Accounts";
+
+            using (RegistryKey accountsKey = Registry.CurrentUser.OpenSubKey(baseKeyPath))
             {
-                m_mruRecordsToCompare.ruRecords.Clear();
-            }
-           
+                if (accountsKey == null)
+                    return null;
 
-
-            //this will be done a little bit differently because the wire prefix, ignore wirecolor, allow duplicate tags, and show point data is from the visassist settings,
-            //but the file name, file path and drawing type are from somewhere else..also revision id i think...so therefore when we update the file we will often only be looking to update one column...
-
-            List<RecordUpdate> lstRecordUpdate = new List<RecordUpdate>();
-            foreach(DataGridViewRow dgvRow in filePropertiesForm.dgvFileData.Rows)
-            {
-                Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
-                string sPriamryKey = "";
-                int iPrimaryKeyValue = 0;
-
-                for(int i = 0; i < filePropertiesForm.dgvFileData.Columns.Count; i++)
+                foreach (string subKeyName in accountsKey.GetSubKeyNames())
                 {
-                    DataGridViewColumn dgvColumn = filePropertiesForm.dgvFileData.Columns[i];
-                    string sColumnname = dgvColumn.Name;
-                    string sValue = dgvRow.Cells[i].Value.ToString();
-                    string sKey = dgvColumn.Name;
+                    if (!subKeyName.StartsWith("Business", StringComparison.OrdinalIgnoreCase))
+                        continue;
 
-                    if(sColumnname == "FileID")
+                    using (RegistryKey accountKey = accountsKey.OpenSubKey(subKeyName))
                     {
-                        //this is the our priamry key 
-                        sPriamryKey = sColumnname;
-                        iPrimaryKeyValue = Convert.ToInt32(sValue);
-                    }
-                    else
-                    {
-                        oDictColumnValues.Add(sColumnname, sValue);
+                        if (accountKey == null)
+                            continue;
+
+                        string serviceUri = accountKey.GetValue("ServiceEndpointUri") as string;
+                        string localRoot = accountKey.GetValue("MountPoint") as string
+                                        ?? accountKey.GetValue("UserFolder") as string;
+
+                        if (string.IsNullOrEmpty(serviceUri) || string.IsNullOrEmpty(localRoot))
+                            continue;
+
+                        serviceUri = serviceUri.TrimEnd('/');
+                        if (serviceUri.EndsWith("_api", StringComparison.OrdinalIgnoreCase))
+                        {
+                            serviceUri = serviceUri.Substring(0, serviceUri.Length - "_api".Length);
+                            serviceUri = serviceUri.TrimEnd('/');
+                        }
+                        // Check if the cloud URL starts with the service endpoint
+                        if (cloudUrl.StartsWith(serviceUri, StringComparison.OrdinalIgnoreCase))
+                        {
+                            //add\Documents to the serviceUri so that we don't add that to the path if it truly isn't located there
+                            serviceUri = serviceUri + "/Documents";
+                            // Compute relative path after the service endpoint
+                            string relativePath = cloudUrl.Substring(serviceUri.Length).TrimStart('/');
+
+                            // Convert URL separators to Windows path separators
+                            string localPath = System.IO.Path.Combine(localRoot, relativePath.Replace("/", "\\"));
+
+                            return localPath;
+                        }
                     }
                 }
-
-                //create a recordupdate for this row
-                RecordUpdate ruRecordUpdate = new RecordUpdate();
-                ruRecordUpdate.sPrimaryKeyColumn = sPriamryKey;
-                ruRecordUpdate.iId = iPrimaryKeyValue;
-                ruRecordUpdate.odictColumnValues = oDictColumnValues;
-
-                lstRecordUpdate.Add(ruRecordUpdate);
             }
 
-            //wrap all the records into a multiple recorsupdates object
-            m_mruRecordsToCompare = new MultipleRecordUpdates(lstRecordUpdate);
-            //build up the m_dictFileDataInfoToUpdate based on each value in each column in the first row of filePropertiesForm.dgvFileData
-            //DataGridViewRow dgvFirstRow = filePropertiesForm.dgvFileData.Rows[0];
-            //for(int i= 0; i < filePropertiesForm.dgvFileData.Columns.Count; i++)
-            //{
-                
-
-            //    m_dictFileDataInfoToCompare.Add(sKey, sValue);
-            //}
-
-
-            //however i think we need to adjust how we are handling this because we won't compare a list of 14 to 14 always because if the user changes the drawing type does this mean
-            //we will go to all the other places that contain the file data and then always be checking two identical lists? 
-            //this is unlike the project properties because the project properties is all in one place
-            //m_dictFileDataInfoToUpdate = DataProcessingUtilities.CompareDataDictionaries(m_dictFileDataInfoBase, m_dictFileDataInfoToCompare);
-
-            m_mruRecordsToUpdate = DataProcessingUtilities.ComapreDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
-
-
-            if(m_mruRecordsToUpdate.ruRecords.Count > 0)
-            {
-                string sTable = "files_table";
-                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(sTable, m_mruRecordsToUpdate);
-                FileUtilities.GetFileDataFromDatabase(filePropertiesForm);
-            }
-            //if (m_dictFileDataInfoToUpdate.Count > 0)
-            //{
-            //    string sTable = "files_table";
-
-            //    DataProcessingUtilities.BuildUpdateSqlForOneRecord(sTable, m_dictFileDataInfoToUpdate, "UPDATE");
-
-            //    FileUtilities.GetFileDataFromDatabase(filePropertiesForm); //go and grab the data from the database to populate the m_dictProjectInfoBase
-
-            //}
+            return null;
         }
 
-        internal static void DeleteFile(FilePropertiesForm filePropertiesForm)
+        public static string ResolveOnedriveCloudUrlToLocal(string visioPath)
         {
-            //get the selected row in the filePropertiesForm.dgvFileData to determine which file to delete
-            string sTableName = "files_table";
-            // Get the selected row
-            DataGridViewSelectedRowCollection colSelectedRows = filePropertiesForm.dgvFileData.SelectedRows;
-            if (colSelectedRows == null || colSelectedRows.Count == 0)
-            {
-                MessageBox.Show("Please select at least one file to delete.");
-                return;
-            }
+            // Not a cloud path
+            if (!visioPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return visioPath;
 
-            // Build a list of RecordUpdate objects for each selected row
-            List<RecordUpdate> lstRecordsToDelete = new List<RecordUpdate>();
-            foreach (DataGridViewRow dgvRow in colSelectedRows)
-            {
-                int iFileID = Convert.ToInt32(dgvRow.Cells["FileID"].Value);
+            string cid = GetCidFromVisioUrl(visioPath);
+            if (cid == null)
+                return visioPath;
 
-                RecordUpdate ruRecord = new RecordUpdate();
-                ruRecord.sPrimaryKeyColumn = "FileID";
-                ruRecord.iId = iFileID;
+            string localRoot = FindLocalOneDrivePathForCid(cid);
+            if (localRoot == null)
+                return visioPath;  // Could not map → return original
 
-                lstRecordsToDelete.Add(ruRecord);
-            }
+            string relative = GetRelativeOneDrivePath(visioPath);
 
-            MultipleRecordUpdates mru = new MultipleRecordUpdates(lstRecordsToDelete);
+            string localPath = System.IO.Path.Combine(localRoot, relative.Replace("/", "\\"));
 
-            // Call delete
-            DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(sTableName,mru);
-
-            foreach(DataGridViewRow dgvRow in colSelectedRows)
-            {
-                filePropertiesForm.dgvFileData.Rows.Remove(dgvRow);
-            }
+            return localPath;
         }
-        internal static void DeleteAllFiles()
+        private static string GetCidFromVisioUrl(string url)
         {
-            //delete all the records in the files_table
-            using (SQLiteConnection sqliteConnection = new SQLiteConnection(Connection))
+            const string marker = "d.docs.live.net/";
+            int idx = url.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return null;
+
+            idx += marker.Length;
+            int endIdx = url.IndexOf("/", idx);
+            if (endIdx < 0) return null;
+
+            return url.Substring(idx, endIdx - idx);
+        }
+
+        private static string GetRelativeOneDrivePath(string fullUrl)
+        {
+            const string marker = "d.docs.live.net/";
+            int idx = fullUrl.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return null;
+
+            idx += marker.Length;
+
+            // Find the slash after the CID
+            int firstSlash = fullUrl.IndexOf("/", idx);
+            if (firstSlash < 0) return null;
+
+            return fullUrl.Substring(firstSlash + 1); // e.g., "Documents/VisAssist/..."
+        }
+
+        private static string FindLocalOneDrivePathForCid(string cid)
+        {
+            const string baseKeyPath = @"Software\Microsoft\OneDrive\Accounts";
+
+            using (RegistryKey accountsKey = Registry.CurrentUser.OpenSubKey(baseKeyPath))
             {
-                sqliteConnection.Open();
+                if (accountsKey == null)
+                    return null;
 
-                //enable foreign key enforcemnt for this connection
-                using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteConnection))
+                foreach (string subKeyName in accountsKey.GetSubKeyNames())
                 {
-                    sqlitcmdPragma.ExecuteNonQuery();
-                }
-
-                string sDelete = "DELETE FROM files_table;";
-
-                using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
-                {
-                    //logging here 
-                    cmd.ExecuteNonQuery();
-
-                }
-                //reset the auto-increment counter, also need to delete the pages_table...
-                string[] saTablesToReset = { "files_table", "pages_table" };
-                foreach (string sTable in saTablesToReset)
-                {
-                    //reset the auto-increment counter  //need to also reset the files_table and the pages_table and all other tables....
-                    string sReset = $"DELETE FROM sqlite_sequence WHERE name = '{sTable}';";
-                    using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
+                    using (RegistryKey accountKey = accountsKey.OpenSubKey(subKeyName))
                     {
-                        cmd.ExecuteNonQuery();
+                        if (accountKey == null)
+                            continue;
+
+                        // Read CID from registry
+                        string cidOnDisk = accountKey.GetValue("CID") as string;
+                        if (cidOnDisk == null)
+                            continue;
+
+                        if (!cidOnDisk.Equals(cid, StringComparison.OrdinalIgnoreCase))
+                            continue;  // Not the matching account
+
+                        // Found the correct OneDrive account
+                        string localPath = accountKey.GetValue("UserFolder") as string;
+                        if (localPath != null && Directory.Exists(localPath))
+                            return localPath;
                     }
                 }
-
-
             }
+
+            return null;
         }
     }
 }
