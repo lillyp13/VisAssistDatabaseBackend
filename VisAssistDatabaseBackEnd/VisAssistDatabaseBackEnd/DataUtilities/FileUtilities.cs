@@ -83,7 +83,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             oFileRecord = FileUtilities.BuildFileInformation();
             DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sFilesTable, oFileRecord);
 
-            ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ID", 0);
+            ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ProjectID", 0);
             ovDoc.DocumentSheet.Cells["User.ProjectID"].ResultIU = Convert.ToInt32(oFileRecord.ruRecords[0].odictColumnValues["ProjectID"]);
 
             ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "FileID", 0);
