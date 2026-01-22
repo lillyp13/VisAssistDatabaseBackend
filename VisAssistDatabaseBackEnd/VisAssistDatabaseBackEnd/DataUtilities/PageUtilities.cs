@@ -53,11 +53,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             List<RecordUpdate> lstRecordsToDelete = new List<RecordUpdate>();
             foreach (DataGridViewRow dgvRow in colSelectedRows)
             {
-                int iFileID = Convert.ToInt32(dgvRow.Cells["PageID"].Value);
+                int iPageID = Convert.ToInt32(dgvRow.Cells["PageID"].Value);
 
                 RecordUpdate ruRecord = new RecordUpdate();
-                ruRecord.sPrimaryKeyColumn = "PageID";
-                ruRecord.iId = iFileID;
+                ruRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK;
+                ruRecord.sId = iPageID.ToString();
 
                 lstRecordsToDelete.Add(ruRecord);
             }
@@ -65,7 +65,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             MultipleRecordUpdates mruRecordUpdates = new MultipleRecordUpdates(lstRecordsToDelete);
 
             // Call delete
-            DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sPagesTable, mruRecordUpdates);
+            DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, mruRecordUpdates);
 
             foreach (DataGridViewRow dgvRow in colSelectedRows)
             {
@@ -85,7 +85,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
                 // string sDelete = "DELETE FROM pages_table;";
 
-                string sDelete = "DELETE FROM " + DataProcessingUtilities.SqlTables.sPagesTable + ";";
+                string sDelete = "DELETE FROM " + DataProcessingUtilities.SqlTables.PagesTable.sPagesTable + ";";
                 using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
                 {
                     cmd.ExecuteNonQuery();
@@ -125,7 +125,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         string sValue = dgvRow.Cells[i].Value.ToString();
                         string sKey = dgvColumn.Name;
 
-                        if (sColumnName != DataProcessingUtilities.SqlTables.sPagesTablePK)
+                        if (sColumnName != DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK)
                         {
                             oDictColumnValues.Add(sColumnName, sValue); //this is not the primary key
                         }
@@ -141,8 +141,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 if (!bIsNull)
                 {
                     RecordUpdate ruRecordUpdate = new RecordUpdate();
-                    ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sPagesTablePK;
-                    ruRecordUpdate.iId = iPrimaryKeyValue;
+                    ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK;
+                    ruRecordUpdate.sId = iPrimaryKeyValue.ToString();
                     ruRecordUpdate.odictColumnValues = oDictColumnValues;
 
                     lstRecordUpdate.Add(ruRecordUpdate);
@@ -160,7 +160,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 //there is something to update
 
-                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sPagesTable, m_mruRecordsToUpdate);
+                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, m_mruRecordsToUpdate);
                 if (bAllPages)
                 {
                     //get the pages for all the files
@@ -175,15 +175,20 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void AddPage()
-        {
 
+        internal static void AddPageToDatabase(Visio.Page ovPage)
+        {
+           
+            MultipleRecordUpdates oPageRecord = new MultipleRecordUpdates();
+            oPageRecord = PageUtilities.BuildPageInformation(ovPage);
+            DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, oPageRecord);
         }
+
         internal static void AddSeedPage() //SEED
         {
             //make sure there is a file in the files_table and a project in the project_table
            
-            bool bDoesTableExist = DataProcessingUtilities.DoesParentTableHaveRecord(DataProcessingUtilities.SqlTables.sPagesTable);
+            bool bDoesTableExist = DataProcessingUtilities.DoesParentTableHaveRecord(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable);
             if (bDoesTableExist)
             {
                 DatabaseSeeding.SeedPages();
@@ -274,7 +279,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 List<RecordUpdate> lstRecords = new List<RecordUpdate>();
 
                 // string sSql = @"SELECT * FROM pages_table WHERE FileID = @FileID";
-                string sSql = @"SELECt * FROM " + DataProcessingUtilities.SqlTables.sPagesTable + " WHERE FileID = @FileID";
+                string sSql = @"SELECt * FROM " + DataProcessingUtilities.SqlTables.PagesTable.sPagesTable + " WHERE FileID = @FileID";
 
                 using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                 {
@@ -297,7 +302,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
                                     odictColumnValues.Add(sColumnName, sValue);
 
-                                    if (sColumnName == DataProcessingUtilities.SqlTables.sPagesTablePK)
+                                    if (sColumnName == DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK)
                                     {
                                         iID = Convert.ToInt32(sqlitereadReader.GetValue(i));
                                     }
@@ -305,8 +310,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 }
 
                                 RecordUpdate ruRecordUpdate = new RecordUpdate();
-                                ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sPagesTablePK;
-                                ruRecordUpdate.iId = iID;
+                                ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK;
+                                ruRecordUpdate.sId = iID.ToString();
                                 ruRecordUpdate.odictColumnValues = odictColumnValues;
 
 
@@ -334,7 +339,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 // Fetch all pages, no WHERE clause
                 //string sSql = @"SELECT * FROM pages_table";
-                string sSql = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.sPagesTable;
+                string sSql = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.PagesTable.sPagesTable;
 
                 using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                 {
@@ -356,7 +361,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
                                     odictColumnValues.Add(sColumnName, sValue);
 
-                                    if (sColumnName == DataProcessingUtilities.SqlTables.sPagesTablePK)
+                                    if (sColumnName == DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK)
                                     {
                                         iID = Convert.ToInt32(sqlitereadReader.GetValue(i));
                                     }
@@ -364,8 +369,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 }
 
                                 RecordUpdate ruRecordUpdate = new RecordUpdate();
-                                ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sPagesTablePK;
-                                ruRecordUpdate.iId = iID;
+                                ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK;
+                                ruRecordUpdate.sId = iID.ToString();
                                 ruRecordUpdate.odictColumnValues = odictColumnValues;
 
                                 lstRecords.Add(ruRecordUpdate);
@@ -399,11 +404,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             string sPageName = ovPage.Name;
             string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].ResultIU.ToString();
-            string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].ResultIU.ToString();
+            string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
             int iPageIndex = ovPage.Index;
             //get created date from a user cell?
             //for now it will the current date 
-            string sCreatedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string sCreatedDate = ovPage.PageSheet.Cells["User.CreatedDate"].get_ResultStr(0);
 
             string sLastModifiedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -436,6 +441,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             oDictFileValues.Add("PageName", sPageName);
             oDictFileValues.Add("ProjectID", sProjectID);
             oDictFileValues.Add("FileID", sFileID);
+            oDictFileValues.Add("PageIndex", iPageIndex.ToString());
             oDictFileValues.Add("CreatedDate", sCreatedDate);
             oDictFileValues.Add("LastModifiedDate", sLastModifiedDate);
             oDictFileValues.Add("Version", sVersion);
@@ -444,12 +450,25 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             oDictFileValues.Add("Scale", sScale);
 
             RecordUpdate ruFileRecord = new RecordUpdate();
-            ruFileRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sFilesTablePK;
-            ruFileRecord.iId = DataProcessingUtilities.GetNextIdForTable(DataProcessingUtilities.SqlTables.sFilesTable);
+            ruFileRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK;
+            ruFileRecord.sId = DataProcessingUtilities.GetNextIdForTable(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable).ToString();
             ruFileRecord.odictColumnValues = oDictFileValues;
 
             return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
         }
+
+        internal static void AddUserCellsToPage()
+        {
+            Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
+            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Version", 0); //not quite sure what the value of this is...
+            ovPage.PageSheet.Cells["User.Version"].Formula = "\"v1\""; //might want to pull the format string for visio fromm VisAssist...
+            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Class", 0);
+            ovPage.PageSheet.Cells["User.Class"].Formula = "\"Working\"";//might want to pull the format string for visio fromm VisAssist...
+            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "CreatedDate", 0);
+            ovPage.PageSheet.Cells["User.CreatedDate"].Formula = "\"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\"";
+
+        }
+
     }
 
 }

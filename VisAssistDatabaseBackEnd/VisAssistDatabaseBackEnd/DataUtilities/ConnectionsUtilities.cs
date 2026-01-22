@@ -78,7 +78,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         }
                         string sFileTableCommand = @"
                 CREATE TABLE IF NOT EXISTS files_table (
-                    FileID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    FileID TEXT PRIMARY KEY,
                     ProjectID INTEGER NOT NULL,
                     RevisionID INTEGER,
                     FileName TEXT NOT NULL,
@@ -120,7 +120,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     PageID INTEGER PRIMARY KEY AUTOINCREMENT,
                     PageName TEXT NOT NULL,
                     ProjectID INTEGER NOT NULL,
-                    FileID INTEGER NOT NULL,
+                    FileID TEXT NOT NULL,
                     PageIndex INTEGER,
                     CreatedDate TEXT,
                     LastModifiedDate TEXT,

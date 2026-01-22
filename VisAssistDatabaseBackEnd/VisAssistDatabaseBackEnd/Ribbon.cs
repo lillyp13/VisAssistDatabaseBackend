@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using VisAssistDatabaseBackEnd.Forms;
 
 namespace VisAssistDatabaseBackEnd
 {
@@ -79,7 +80,7 @@ namespace VisAssistDatabaseBackEnd
         {
             //grab all the pages and put them in a datagridview 
             //for now let's build a datagridview of all the pages in just one file...
-            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.sPagesTable);
+            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable);
             PageUtilities.OpenPagesForm();
         }
 
@@ -90,6 +91,7 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnGetProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
+            DatabaseConfig.BindToActiveDocument();
             string sAction = "Update";
             ProjectUtilities.OpenProjectForm(sAction);
             // ProjectUtilities.GetProjectInfo();
@@ -99,7 +101,7 @@ namespace VisAssistDatabaseBackEnd
         {
             DatabaseConfig.BindToActiveDocument();
 
-            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.sFilesTable);
+            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
             FileUtilities.OpenFileForm();
         }
 
@@ -123,8 +125,34 @@ namespace VisAssistDatabaseBackEnd
             //this will create the class b file and add it to an existing project
             //could either add the file to the existing doc's project
             //or could add a file to an existing project if the user points to save the file somewhere else...
-            FileUtilities.AddFile();
+            DatabaseConfig.BindToActiveDocument();
+            FileUtilities.AddNewFile();
 
+        }
+
+        private void btnDeleteFile_Click(object sender, RibbonControlEventArgs e)
+        {
+            DatabaseConfig.BindToActiveDocument();
+            FileUtilities.OpenFileForm();
+        }
+
+        private void btnDisAssociateFile_Click(object sender, RibbonControlEventArgs e)
+        {
+            DatabaseConfig.BindToActiveDocument();
+            FileUtilities.OpenFileForm();
+        }
+
+
+        private void button1_Click(object sender, RibbonControlEventArgs e)
+        {
+           
+
+        }
+
+        private void btnAssociateFile_Click(object sender, RibbonControlEventArgs e)
+        {
+            DatabaseConfig.BindToActiveDocument();
+            FileUtilities.WhichFileToAssociate();
         }
     }
 }

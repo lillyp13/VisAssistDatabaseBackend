@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.Tools.Applications.Deployment;
+using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
@@ -55,7 +56,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
         public static Dictionary<string, string> m_dictProjectInfoBase = new Dictionary<string, string>();  //key is the column name
-        public static Dictionary<string,string> m_dictProjectInfoToCompare = new Dictionary<string, string>();
+        public static Dictionary<string, string> m_dictProjectInfoToCompare = new Dictionary<string, string>();
         public static Dictionary<string, string> m_dictProjectInfoToUpdate = new Dictionary<string, string>();
         public static MultipleRecordUpdates m_mruRecordsBase = new MultipleRecordUpdates();
         public static MultipleRecordUpdates m_mruRecordsToCompare = new MultipleRecordUpdates();
@@ -75,7 +76,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 bool bDatabaseFileExists = System.IO.File.Exists(DatabaseConfig.DatabasePath);
                 if (bDatabaseFileExists)
                 {
-                    bool bTableExists = DoesTableExist(DataProcessingUtilities.SqlTables.sProjectTable);
+                    bool bTableExists = DoesTableExist(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable);
                     if (bTableExists)
                     {
                         //only add the data if the project_table exists...
@@ -83,7 +84,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                     else
                     {
-                        MessageBox.Show("Please add the database first: the table " + DataProcessingUtilities.SqlTables.sProjectTable + " does not exist");
+                        MessageBox.Show("Please add the database first: the table " + DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable + " does not exist");
                     }
                 }
                 else
@@ -98,28 +99,28 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
         }//SEEDING
-         
-        
-        
-        
+
+
+
+
         //CRUD Actions
         internal static void AddProjectInfo(ProjectPropertiesForm projectPropertiesForm)
         {
             //string sProjectTableName = "project_table";
-            
+
 
             bool bFolderAlreadyExists = ConnectionsUtilities.CheckForDatabaseDirectory(DatabaseConfig.DatabasePath);
-            if(bFolderAlreadyExists)
+            if (bFolderAlreadyExists)
             {
                 bool bDataBaseFileExists = System.IO.File.Exists(DatabaseConfig.DatabasePath);
-                if(bDataBaseFileExists)
+                if (bDataBaseFileExists)
                 {
-                    bool bTableExists = DoesTableExist(DataProcessingUtilities.SqlTables.sProjectTable);
+                    bool bTableExists = DoesTableExist(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable);
 
-                    if(bTableExists)
+                    if (bTableExists)
                     {
                         //the table exists let's go add the project
-                        bool bDoesProjectExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.sProjectTable);
+                        bool bDoesProjectExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable);
                         if (!bDoesProjectExist)
                         {
                             //there is no record in the project_Table yet so let's go add it...
@@ -127,15 +128,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
                             ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm);
 
-                            //m_mruRecordsToUpdate = DataProcessingUtilities.ComapreDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
-                            //m_dictProjectInfoToUpdate = DataProcessingUtilities.CompareDataDictionaries(m_dictProjectInfoBase, m_dictProjectInfoToCompare);
-
 
                             //if (m_dictProjectInfoToUpdate.Count > 0)
-                            if(m_mruRecordsToCompare.ruRecords.Count > 0)
+                            if (m_mruRecordsToCompare.ruRecords.Count > 0)
                             {
-                               
-                                DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sProjectTable, m_mruRecordsToCompare);
+
+                                DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsToCompare);
                                 //DataProcessingUtilities.BuildInsertSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate);
 
                                 ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
@@ -145,7 +143,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
             }
-        } //takes the information off the properties form to addd a new project
+        }
+        
+        //takes the information off the properties form to addd a new project
         internal static void DeleteProjectInfo()
         {
             try
@@ -160,7 +160,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         sqlitcmdPragma.ExecuteNonQuery();
                     }
                     // string sDelete = "DELETE FROM project_table;";
-                    string sDelete = "DELETE FROM " + DataProcessingUtilities.SqlTables.sProjectTable + ";";
+                    string sDelete = "DELETE FROM " + DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable + ";";
                     using (SQLiteCommand cmd = new SQLiteCommand(sDelete, sqliteConnection))
                     {
                         cmd.ExecuteNonQuery();
@@ -190,27 +190,21 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-                if(m_mruRecordsToCompare.ruRecords != null)
+                if (m_mruRecordsToCompare.ruRecords != null)
                 {
                     m_mruRecordsToCompare.ruRecords.Clear();
                 }
-               
 
-                //m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
+
                 ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm);
 
                 m_mruRecordsToUpdate = DataProcessingUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
 
-               // m_dictProjectInfoToUpdate = DataProcessingUtilities.CompareDataDictionaries(m_dictProjectInfoBase, m_dictProjectInfoToCompare);
-
-
-                //if (m_dictProjectInfoToUpdate.Count > 0)
-                if(m_mruRecordsToUpdate.ruRecords.Count > 0)
+                if (m_mruRecordsToUpdate.ruRecords.Count > 0)
                 {
 
-                    DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sProjectTable, m_mruRecordsToUpdate);
-                   // DataProcessingUtilities.BuildUpdateSqlForRecordDictionary(DataProcessingUtilities.SqlTables.sProjectTable, m_dictProjectInfoToUpdate);
-
+                    DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsToUpdate);
+                   
                     ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
 
                 }
@@ -222,8 +216,41 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
+        internal static void AddNewProject(ProjectPropertiesForm projectPropertiesForm)
+        {
+            MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
+            //get the active docuent 
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
 
-       
+            //we are adding a project for the first time create the database and the tables in it
+            ConnectionsUtilities.InitializeDatabase(DatabaseConfig.DatabasePath);
+            //gather the information from the properties form to fill out the project information 
+            ProjectUtilities.AddProjectInfo(projectPropertiesForm);
+            //i need a record for the file that was created in Add
+
+            string sFilePath = FileUtilities.ReturnFileStructurePath();
+            string sFileName = ovDoc.Name;
+            sFilePath = sFilePath + sFileName;
+            //add the file to the database: builds the file recored and runs the sql to the database, also increases the file count...
+            oFileRecord = FileUtilities.AddFileToDatabase(ovDoc, sFilePath);
+
+
+            FileUtilities.AddUserCellsToDocument(oFileRecord);
+            //this just adds stuff like the version and class, not sure what else needs to go to the page level right now
+            PageUtilities.AddUserCellsToPage();
+
+            //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
+            //need to build up the page reocrd and run the sql to the database
+            PageUtilities.AddPageToDatabase(ovPage);
+
+
+
+
+        }
+
+
+
 
         //Helper Functions
 
@@ -232,7 +259,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             try
             {
                 //THIS IS USING MULTIPLE RECORD UPDATES
-                if(m_mruRecordsToCompare.ruRecords != null)
+                if (m_mruRecordsToCompare.ruRecords != null)
                 {
                     m_mruRecordsToCompare.ruRecords.Clear();
                 }
@@ -486,11 +513,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     MessageBox.Show("There are no records in the project_table");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in PopulatePropertiesForm " + ex.Message, "VisAssist");
             }
-            
+
         }
 
         internal static void GetProjectInfoFromDatabase()
@@ -501,12 +528,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //RECORDS USING MUTLIPLE RECORD UPDATES
                 List<RecordUpdate> lstRecords = new List<RecordUpdate>();
 
-             
+
                 int iId = 1; // default for "new project"
                 Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
 
                 // string sSql = @"SELECT * FROM project_table LIMIT 1";
-                string sSql = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.sProjectTable + " LIMIT 1";
+                string sSql = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable + " LIMIT 1";
 
                 using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                 {
@@ -514,7 +541,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
                     {
-                        
+
                         using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
                         {
                             if (sqlitereadReader.Read())
@@ -524,7 +551,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 {
                                     string sColumnName = sqlitereadReader.GetName(i);
 
-                                    if (sColumnName.Equals(DataProcessingUtilities.SqlTables.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
+                                    if (sColumnName.Equals(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
                                     {
                                         iId = sqlitereadReader.GetInt32(i);
                                         continue; // PK not included in update dictionary
@@ -540,7 +567,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 {
                                     string columnName = sqlitereadReader.GetName(i);
 
-                                    if (columnName.Equals(DataProcessingUtilities.SqlTables.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
+                                    if (columnName.Equals(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
                                         continue;
 
                                     odictColumnValues[columnName] = null;
@@ -552,8 +579,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 // Build RecordUpdate
                 RecordUpdate ru = new RecordUpdate();
-                ru.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.sProjectTablePK;
-                ru.iId = iId;
+                ru.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK;
+                ru.sId = iId.ToString();
                 ru.odictColumnValues = odictColumnValues;
 
                 lstRecords.Add(ru);
@@ -610,11 +637,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in GetProjectInfoFromDatabase " + ex.Message, "ViAssist");
             }
-            
+
         }
 
         internal static void OpenProjectForm(string sAction)
@@ -625,7 +652,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 oNewForm.Display(sAction);
                 oNewForm.ShowDialog();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in OpenProjectForm " + ex.Message, "VisAssist");
             }
@@ -727,60 +754,78 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     {
                         oDictToUpdate[sBaseItem.Key] = sBaseItem.Value;
                     }
-                        
+
                 }
 
                 // Single project, always Id = 1
                 RecordUpdate record = new RecordUpdate();
                 record.sPrimaryKeyColumn = sPrimarykey;
-                record.iId = 1;
+                record.sId = "1";
                 record.odictColumnValues = oDictToUpdate;
 
                 m_mruRecordsToCompare = new MultipleRecordUpdates(new List<RecordUpdate> { record });
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in GatherProjectPropertiesInfo " + ex.Message, "VisAssist");
             }
         }
 
-        internal static void AddNewProject(ProjectPropertiesForm projectPropertiesForm)
+       
+
+
+        //increases or decreases the projects file count by one
+        internal static void AdjustFileCount(string sAdjustment)
         {
-            MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
-            MultipleRecordUpdates oPageRecord = new MultipleRecordUpdates();
-            //get the active docuent 
-            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-            Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
-
-            //we are adding a project for the first time create the database and the tables in it
-            ConnectionsUtilities.InitializeDatabase(DatabaseConfig.DatabasePath);
-            //gather the information from the properties form to fill out the project information 
-            ProjectUtilities.AddProjectInfo(projectPropertiesForm);
-            //i need a record for the file that was created in Add
-            oFileRecord = FileUtilities.BuildFileInformation();
-            DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sFilesTable, oFileRecord);
-
-            ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ProjectID", 0);
-            ovDoc.DocumentSheet.Cells["User.ProjectID"].ResultIU = 1; //the project id should always be 1 so do we need to do anything else? i need to add the fileID
-
-            ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "FileID", 0);
-            //add the fileid from the record we just added to this cell..
-            ovDoc.DocumentSheet.Cells["User.FileID"].Formula = oFileRecord.ruRecords[0].iId.ToString();
-            //need to add the user cells to the page too before adding to DB
-            //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
-            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Version", 0); //not quite sure what the value of this is...
-            ovPage.PageSheet.Cells["User.Version"].Formula = "\"v1\""; //might want to pull the format string for visio fromm VisAssist...
-            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Class", 0);
-            ovPage.PageSheet.Cells["User.Class"].Formula = "\"Working\"";//might want to pull the format string for visio fromm VisAssist...
-            oPageRecord = PageUtilities.BuildPageInformation(ovPage);
-            DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.sPagesTable, oPageRecord);
+            //sAdjustment will either be Increase or Decrease
             
+            ProjectUtilities.GetProjectInfoFromDatabase();
 
-            //this would build a Class A Visio file (using a template, has a coverpage, table of contents, symbols and divisions...) 
-            
+            List<RecordUpdate> lstUpdatedRecords = new List<RecordUpdate>();
 
+            foreach (RecordUpdate ruRecord in m_mruRecordsBase.ruRecords)
+            {
+                // Clone the column values dictionary so we don't mutate the original
+                Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>(ruRecord.odictColumnValues);
+
+                // Get current FileCount
+                int iFileCount = 0;
+                if (oDictColumnValues.TryGetValue("FileCount", out string sFileCount))
+                {
+                    // Parse safely
+                    int.TryParse(sFileCount, out iFileCount);
+                }
+
+                // increase or decrease based on sAdjustment 
+                if(sAdjustment == "Increase")
+                {
+                    iFileCount++;
+                }
+                else
+                {
+                    iFileCount--;
+                }
+                
+
+                // Update the dictionary
+                oDictColumnValues["FileCount"] = iFileCount.ToString();
+
+                // Create a new RecordUpdate with the updated FileCount
+                RecordUpdate ruUpdated = new RecordUpdate();
+                ruUpdated.sPrimaryKeyColumn = ruRecord.sPrimaryKeyColumn;
+                ruUpdated.sId = ruRecord.sId;
+                ruUpdated.odictColumnValues = oDictColumnValues;
+
+                // Add to the list
+                lstUpdatedRecords.Add(ruUpdated);
+            }
+            m_mruRecordsBase = new MultipleRecordUpdates(lstUpdatedRecords);
+
+            //increase the value in FileCount for the project_table in the database...
+            DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsBase);
         }
+
     }
 }
 

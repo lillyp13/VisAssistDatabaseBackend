@@ -34,7 +34,7 @@ namespace VisAssistDatabaseBackEnd.Forms
                 //the database doesn't exist yet open the form 
                 //ConnectionsUtilities.InitializeDatabase();
                 //ProjectUtilities.AddProjectInfo(this);
-                txtFileCount.Text = "1";
+                
             }
             else
             {

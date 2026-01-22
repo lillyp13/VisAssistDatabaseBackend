@@ -26,6 +26,11 @@ namespace VisAssistDatabaseBackEnd.Forms
         public void Display()
         {
             FileUtilities.GetFileDataFromDatabase(this);
+            bool bGetFileDataAgain = FileUtilities.CheckThatFilesExistInFolder();
+            if(bGetFileDataAgain)
+            {
+                FileUtilities.GetFileDataFromDatabase(this);
+            }
             FileUtilities.PopulateFilePropertiesForm(this);
         }
 
@@ -44,6 +49,11 @@ namespace VisAssistDatabaseBackEnd.Forms
         private void btnDeleteFile_Click(object sender, EventArgs e)
         {
             FileUtilities.DeleteFile(this);
+        }
+
+        private void btnDisassociate_Click(object sender, EventArgs e)
+        {
+            FileUtilities.DisassociateFile(this);
         }
     }
 }

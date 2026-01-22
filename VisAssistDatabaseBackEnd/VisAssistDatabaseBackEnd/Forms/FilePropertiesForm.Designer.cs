@@ -29,8 +29,6 @@
         private void InitializeComponent()
         {
             this.dgvFileData = new System.Windows.Forms.DataGridView();
-            this.btnAddFile = new System.Windows.Forms.Button();
-            this.btnUpdateFile = new System.Windows.Forms.Button();
             this.FileID = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ProjectID = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.RevisionID = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -45,7 +43,10 @@
             this.IgnoreWireColor = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.AllowDuplicateTags = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ShowPointData = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.btnAddFile = new System.Windows.Forms.Button();
+            this.btnUpdateFile = new System.Windows.Forms.Button();
             this.btnDeleteFile = new System.Windows.Forms.Button();
+            this.btnDisassociate = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dgvFileData)).BeginInit();
             this.SuspendLayout();
             // 
@@ -74,26 +75,6 @@
             this.dgvFileData.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvFileData.Size = new System.Drawing.Size(1403, 300);
             this.dgvFileData.TabIndex = 0;
-            // 
-            // btnAddFile
-            // 
-            this.btnAddFile.Location = new System.Drawing.Point(1461, 61);
-            this.btnAddFile.Name = "btnAddFile";
-            this.btnAddFile.Size = new System.Drawing.Size(75, 23);
-            this.btnAddFile.TabIndex = 1;
-            this.btnAddFile.Text = "Add File";
-            this.btnAddFile.UseVisualStyleBackColor = true;
-            this.btnAddFile.Click += new System.EventHandler(this.btnAddFile_Click);
-            // 
-            // btnUpdateFile
-            // 
-            this.btnUpdateFile.Location = new System.Drawing.Point(1461, 115);
-            this.btnUpdateFile.Name = "btnUpdateFile";
-            this.btnUpdateFile.Size = new System.Drawing.Size(75, 23);
-            this.btnUpdateFile.TabIndex = 2;
-            this.btnUpdateFile.Text = "Update File";
-            this.btnUpdateFile.UseVisualStyleBackColor = true;
-            this.btnUpdateFile.Click += new System.EventHandler(this.btnUpdateFile_Click);
             // 
             // FileID
             // 
@@ -169,6 +150,26 @@
             this.ShowPointData.HeaderText = "Show Point Data";
             this.ShowPointData.Name = "ShowPointData";
             // 
+            // btnAddFile
+            // 
+            this.btnAddFile.Location = new System.Drawing.Point(1461, 61);
+            this.btnAddFile.Name = "btnAddFile";
+            this.btnAddFile.Size = new System.Drawing.Size(75, 23);
+            this.btnAddFile.TabIndex = 1;
+            this.btnAddFile.Text = "Add File";
+            this.btnAddFile.UseVisualStyleBackColor = true;
+            this.btnAddFile.Click += new System.EventHandler(this.btnAddFile_Click);
+            // 
+            // btnUpdateFile
+            // 
+            this.btnUpdateFile.Location = new System.Drawing.Point(1461, 115);
+            this.btnUpdateFile.Name = "btnUpdateFile";
+            this.btnUpdateFile.Size = new System.Drawing.Size(75, 23);
+            this.btnUpdateFile.TabIndex = 2;
+            this.btnUpdateFile.Text = "Update File";
+            this.btnUpdateFile.UseVisualStyleBackColor = true;
+            this.btnUpdateFile.Click += new System.EventHandler(this.btnUpdateFile_Click);
+            // 
             // btnDeleteFile
             // 
             this.btnDeleteFile.Location = new System.Drawing.Point(1461, 155);
@@ -179,11 +180,22 @@
             this.btnDeleteFile.UseVisualStyleBackColor = true;
             this.btnDeleteFile.Click += new System.EventHandler(this.btnDeleteFile_Click);
             // 
+            // btnDisassociate
+            // 
+            this.btnDisassociate.Location = new System.Drawing.Point(1461, 195);
+            this.btnDisassociate.Name = "btnDisassociate";
+            this.btnDisassociate.Size = new System.Drawing.Size(111, 24);
+            this.btnDisassociate.TabIndex = 4;
+            this.btnDisassociate.Text = "Disassociate File";
+            this.btnDisassociate.UseVisualStyleBackColor = true;
+            this.btnDisassociate.Click += new System.EventHandler(this.btnDisassociate_Click);
+            // 
             // FilePropertiesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1669, 390);
+            this.Controls.Add(this.btnDisassociate);
             this.Controls.Add(this.btnDeleteFile);
             this.Controls.Add(this.btnUpdateFile);
             this.Controls.Add(this.btnAddFile);
@@ -216,5 +228,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn AllowDuplicateTags;
         private System.Windows.Forms.DataGridViewTextBoxColumn ShowPointData;
         public System.Windows.Forms.Button btnDeleteFile;
+        public System.Windows.Forms.Button btnDisassociate;
     }
 }

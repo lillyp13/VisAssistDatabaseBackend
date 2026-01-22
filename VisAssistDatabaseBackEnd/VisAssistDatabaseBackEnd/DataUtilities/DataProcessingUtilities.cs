@@ -6,6 +6,7 @@ using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Security;
+using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -18,14 +19,59 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         //create a struct that will contain the names of the sql tables 
         public struct SqlTables
         {
-            public const string sProjectTable = "project_table";
-            public const string sFilesTable = "files_table";
-            public const string sPagesTable = "pages_table";
+            public struct ProjectTable
+            {
+                public const string sProjectTable = "project_table";
+                public const string sProjectTablePK = "Id";
+                //don't know if i'll ever need to saProjectColumns...
+                public static readonly string[] saProjectColumns = new string[]
+                {
+                "ProjectName", "CustomerName", "CreatedDate", "LastModifiedDate", "JobName", "JobNumber", "JobCity", "JobState", "JobStreetAddress1",
+                "JobStreetAddress2", "JobZipCode", "ControlContractorName", "ControlContractorCity", "ControlContractorState", "ControlContractorStreetAddress1",
+                "ControlContractorStreetAddress2", "ControlContractorZipCode", "ControlContractorPhone", "ControlContractorEmail", "MechanicalEngineer", "MechanicalContractor",
+                "DesignedBy", "ReviewedBy", "FileCount"
+                };
+            }
+            public struct FilesTable
+            {
+                public const string sFilesTable = "files_table";
+                public const string sFilesTablePK = "FileID";
+                public static readonly string[] saFileColumns = new string[]
+            {
+                "ProjectID", "RevisionID", "FileName", "FilePath", "CreatedDate",
+                "LastModifiedDate", "Version", "Class", "DrawingType", "WirePrefix",
+                "IgnoreWireColor", "AllowDuplicateTags", "ShowPointData"
+            };
+            }
+            public struct PagesTable
+            {
+                public const string sPagesTable = "pages_table";
+                public const string sPagesTablePK = "PageID";
 
-            //add the primary keys
-            public const string sProjectTablePK = "Id";
-            public const string sFilesTablePK = "FileID";
-            public const string sPagesTablePK = "PageID";
+                public static readonly string[] saPagesColumns = new string[]
+                {
+                "PageName", "ProjectID", "FileID", "PageIndex", "CreatedDate", "LastModifiedDate", "Version", "Class", "Orientation", "Scale"
+                };
+            }
+
+
+            public static readonly Dictionary<string, (string PrimaryKey, string[] Columns)> odictTableInfo = new Dictionary<string, (string PrimaryKey, string[] Columns)>()
+            {
+                { ProjectTable.sProjectTable, (ProjectTable.sProjectTablePK, ProjectTable.saProjectColumns) },
+                { FilesTable.sFilesTable, (FilesTable.sFilesTablePK, FilesTable.saFileColumns) },
+                { PagesTable.sPagesTable, (PagesTable.sPagesTablePK, PagesTable.saPagesColumns) }
+            };
+        }
+
+        internal static string GetPrimaryKey(string tableName)
+        {
+            switch (tableName)
+            {
+                case "files_table": return DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK;
+                case "pages_table": return DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK;
+
+                default: return "Id"; // fallback
+            }
         }
 
 
@@ -48,7 +94,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     RecordUpdate ruCompare = new RecordUpdate();
                     foreach (RecordUpdate ruUpdate in mruRecordsToCompare.ruRecords)
                     {
-                        if (ruUpdate.iId == ruBase.iId && ruUpdate.sPrimaryKeyColumn == ruBase.sPrimaryKeyColumn)
+                        if (ruUpdate.sId == ruBase.sId && ruUpdate.sPrimaryKeyColumn == ruBase.sPrimaryKeyColumn)
                         {
                             //we found the matching record in the multiplerecords udpate  in the mruRecordsToCompare that matches the record in the mruRecordsBase
                             ruCompare = ruUpdate;
@@ -87,7 +133,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                         RecordUpdate ruUpdate = new RecordUpdate();
                         ruUpdate.sPrimaryKeyColumn = ruBase.sPrimaryKeyColumn;
-                        ruUpdate.iId = ruBase.iId;
+                        ruUpdate.sId = ruBase.sId;
                         ruUpdate.odictColumnValues = odictChanges;
 
                         ruRecordsToUpdate.Add(ruUpdate);
@@ -157,8 +203,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             {
                                 if (rRecord.odictColumnValues.ContainsKey(sCol))
                                 {
-                                    string sParameterName = $"@{sCol}_{rRecord.iId}";
-                                    sSqlUpdate += $"WHEN {rRecord.iId} THEN {sParameterName} ";
+                                    string sParameterName = $"@{sCol}_{rRecord.sId}";
+                                    sSqlUpdate += $"WHEN {rRecord.sId} THEN {sParameterName} ";
                                     sqlitecmdCommand.Parameters.AddWithValue(sParameterName, rRecord.odictColumnValues[sCol]);
                                 }
                             }
@@ -176,7 +222,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         sSqlUpdate = sSqlUpdate.TrimEnd(',', ' ');
 
                         // Add WHERE clause to update only the relevant records
-                        sSqlUpdate += $" WHERE {sWhereColumn} IN ({string.Join(",", mruRecords.ruRecords.Select(r => r.iId))})";
+                        sSqlUpdate += $" WHERE {sWhereColumn} IN ({string.Join(",", mruRecords.ruRecords.Select(r => r.sId))})";
 
                         // Set command text and execute
                         sqlitecmdCommand.CommandText = sSqlUpdate;
@@ -225,7 +271,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                             sqlitecmdCommand.Parameters.AddWithValue(
                                 sParameterName,
-                                mruRecords.ruRecords[i].iId
+                                mruRecords.ruRecords[i].sId
                             );
                         }
 
@@ -256,6 +302,25 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sqliteconConnection))
                     {
+
+                        //if this is the files_table i need to add the pk value
+                        if (sTableName == DataProcessingUtilities.SqlTables.FilesTable.sFilesTable)
+                        {
+                            for (int i = 0; i < mruRecords.ruRecords.Count; i++)
+                            {
+                                RecordUpdate ruRecord = mruRecords.ruRecords[i]; 
+
+                                if(ruRecord.odictColumnValues == null)
+                                {
+                                    ruRecord.odictColumnValues = new Dictionary<string, string>();
+                                }
+                                
+                                if(!ruRecord.odictColumnValues.ContainsKey(DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK))
+                                {
+                                    ruRecord.odictColumnValues.Add(SqlTables.FilesTable.sFilesTablePK, ruRecord.sId);
+                                }
+                            }
+                        }
                         // Collect all unique columns across all records
                         HashSet<string> hsAllColumns = new HashSet<string>();
 
@@ -356,6 +421,30 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
+        internal static Visio.Page GetVisioPageByFileID(int fileID, Visio.Document visioDoc)
+        {
+
+
+            foreach (Visio.Page page in visioDoc.Pages)
+            {
+                // Assume each page has a User-defined cell called "User.FileID"
+                string cellValue = page.PageSheet.CellsU["User.FileID"].ResultStr[Visio.VisUnitCodes.visNumber];
+                if (int.TryParse(cellValue, out int pageFileID))
+                {
+                    if (pageFileID == fileID)
+                    {
+                        return page; // Found the page
+                    }
+                }
+
+
+
+            }
+
+            // If not found, return null
+            return null;
+        }
+
 
         /// <summary>
         /// given a table we want to know if the parent table has at least one record...
@@ -417,11 +506,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     sqlitecmdCommand.Parameters.AddWithValue("@tableName", sTableName);
 
-                    using(SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
+                    using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
                     {
-                        if(sqlitereadReader.Read())
+                        if (sqlitereadReader.Read())
                         {
-                            if(!sqlitereadReader.IsDBNull(0))
+                            if (!sqlitereadReader.IsDBNull(0))
                             {
                                 iNextID = sqlitereadReader.GetInt32(0) + 1;
                             }
@@ -443,13 +532,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
     public struct RecordUpdate
     {
         public string sPrimaryKeyColumn;
-        public int iId; // Primary key value
+        public string sId; // Primary key value
         public Dictionary<string, string> odictColumnValues; // Columns to update
 
-        public RecordUpdate(string sPrimaryKeyColumn, int iId, Dictionary<string, string> odictColumnValues)
+        public RecordUpdate(string sPrimaryKeyColumn, string sId, Dictionary<string, string> odictColumnValues)
         {
             this.sPrimaryKeyColumn = sPrimaryKeyColumn;
-            this.iId = iId;
+            this.sId = sId;
             this.odictColumnValues = odictColumnValues;
         }
     }
@@ -465,8 +554,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
     }
 
 
-    
 
-    
+
+
 
 }
