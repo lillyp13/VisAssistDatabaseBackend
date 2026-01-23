@@ -32,7 +32,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         connection.Open();
                         string sProjectTableCommand = @"
                 CREATE TABLE IF NOT EXISTS project_table (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Id TEXT PRIMARY KEY,
                     ProjectName TEXT NOT NULL,
                     CustomerName TEXT,
                     CreatedDate TEXT NOT NULL,
@@ -79,7 +79,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         string sFileTableCommand = @"
                 CREATE TABLE IF NOT EXISTS files_table (
                     FileID TEXT PRIMARY KEY,
-                    ProjectID INTEGER NOT NULL,
+                    ProjectID TEXT NOT NULL,
                     RevisionID INTEGER,
                     FileName TEXT NOT NULL,
                     FilePath TEXT,
@@ -117,9 +117,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         }
                         string sPageTableCommand = @"
                 CREATE TABLE IF NOT EXISTS pages_table (
-                    PageID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    PageID TEXT PRIMARY KEY,
                     PageName TEXT NOT NULL,
-                    ProjectID INTEGER NOT NULL,
+                    ProjectID TEXT NOT NULL,
                     FileID TEXT NOT NULL,
                     PageIndex INTEGER,
                     CreatedDate TEXT,
@@ -395,7 +395,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             if (string.IsNullOrEmpty(doc.FullName))
                 return false;
 
-            string sFolderPath = FileUtilities.ReturnFileStructurePath();
+            string sFolderPath = FileUtilities.ReturnFileStructurePath(doc.Path);
 
             sFolderPath = Path.GetDirectoryName(sFolderPath);
 

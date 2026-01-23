@@ -61,6 +61,24 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 { FilesTable.sFilesTable, (FilesTable.sFilesTablePK, FilesTable.saFileColumns) },
                 { PagesTable.sPagesTable, (PagesTable.sPagesTablePK, PagesTable.saPagesColumns) }
             };
+
+
+            public static bool TryGetPrimaryKey(string sTableName, out string sPK)
+            {
+                sPK = null;
+
+                if (string.IsNullOrWhiteSpace(sTableName))
+                    return false;
+
+                if (odictTableInfo.TryGetValue(sTableName, out (string PrimaryKey, string[] Columns) oTableInfo))
+                {
+                    sPK = oTableInfo.PrimaryKey;
+                    return true;
+                }
+
+                return false;
+            }
+
         }
 
         internal static string GetPrimaryKey(string tableName)
@@ -204,7 +222,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 if (rRecord.odictColumnValues.ContainsKey(sCol))
                                 {
                                     string sParameterName = $"@{sCol}_{rRecord.sId}";
-                                    sSqlUpdate += $"WHEN {rRecord.sId} THEN {sParameterName} ";
+                                    sSqlUpdate += $"WHEN '{rRecord.sId}' THEN {sParameterName} ";
                                     sqlitecmdCommand.Parameters.AddWithValue(sParameterName, rRecord.odictColumnValues[sCol]);
                                 }
                             }
@@ -222,7 +240,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         sSqlUpdate = sSqlUpdate.TrimEnd(',', ' ');
 
                         // Add WHERE clause to update only the relevant records
-                        sSqlUpdate += $" WHERE {sWhereColumn} IN ({string.Join(",", mruRecords.ruRecords.Select(r => r.sId))})";
+                        sSqlUpdate += $" WHERE {sWhereColumn} IN ({string.Join(",", mruRecords.ruRecords.Select(r => $"'{r.sId}'"))})";
 
                         // Set command text and execute
                         sqlitecmdCommand.CommandText = sSqlUpdate;
@@ -304,23 +322,35 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     {
 
                         //if this is the files_table i need to add the pk value
-                        if (sTableName == DataProcessingUtilities.SqlTables.FilesTable.sFilesTable)
-                        {
-                            for (int i = 0; i < mruRecords.ruRecords.Count; i++)
-                            {
-                                RecordUpdate ruRecord = mruRecords.ruRecords[i]; 
+                        //if (sTableName == DataProcessingUtilities.SqlTables.FilesTable.sFilesTable)
+                        //{
+                        //    for (int i = 0; i < mruRecords.ruRecords.Count; i++)
+                        //    {
+                        //        RecordUpdate ruRecord = mruRecords.ruRecords[i]; 
 
-                                if(ruRecord.odictColumnValues == null)
-                                {
-                                    ruRecord.odictColumnValues = new Dictionary<string, string>();
-                                }
-                                
-                                if(!ruRecord.odictColumnValues.ContainsKey(DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK))
-                                {
-                                    ruRecord.odictColumnValues.Add(SqlTables.FilesTable.sFilesTablePK, ruRecord.sId);
-                                }
+                        //        if(ruRecord.odictColumnValues == null)
+                        //        {
+                        //            ruRecord.odictColumnValues = new Dictionary<string, string>();
+                        //        }
+
+                        //        if(!ruRecord.odictColumnValues.ContainsKey(DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK))
+                        //        {
+                        //            ruRecord.odictColumnValues.Add(SqlTables.FilesTable.sFilesTablePK, ruRecord.sId);
+                        //        }
+                        //    }
+                        //}
+                        DataProcessingUtilities.SqlTables.TryGetPrimaryKey(sTableName, out string sPK);
+                        
+                        foreach(RecordUpdate ruRecord in mruRecords.ruRecords)
+                        {
+                            if(!ruRecord.odictColumnValues.ContainsKey(sPK))
+                            {
+                                //add the pk column 
+                                ruRecord.odictColumnValues.Add(sPK, ruRecord.sId);
                             }
                         }
+
+
                         // Collect all unique columns across all records
                         HashSet<string> hsAllColumns = new HashSet<string>();
 

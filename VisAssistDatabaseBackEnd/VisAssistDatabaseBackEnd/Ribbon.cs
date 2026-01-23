@@ -26,19 +26,27 @@ namespace VisAssistDatabaseBackEnd
         private void btnProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
             //this is the seed data
-            ProjectUtilities.AddProjectInfoSeeding();
+            //ProjectUtilities.AddProjectInfoSeeding();
         }
 
         private void btnAddFileInfo_Click(object sender, RibbonControlEventArgs e)
         {
             //this would get triggered basically right after add project info because when we create a new project and press ok we create a new file...
             //idea that there would always be one file associated with the project UNLESS the user goes and disassociates all files in a project (but when initially creating a project there should always be at least one file)
-            FileUtilities.AddSeedFile();
+            //FileUtilities.AddSeedFile();
         }
 
         private void btnAddPageInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            PageUtilities.AddSeedPage();
+            DatabaseConfig.BindToActiveDocument();
+
+            bool bDoesDBExist = FileUtilities.DoesDBFileExist();
+            if(bDoesDBExist)
+            {
+                PageUtilities.AddSeedPage();
+            }
+            
+
         }
 
         private void btnDeletePageInfo_Click(object sender, RibbonControlEventArgs e)
@@ -53,7 +61,12 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnDeleteProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            ProjectUtilities.DeleteProjectInfo();
+            
+            ProjectUtilities.DeleteProject();
+
+
+            //this just clears the project record from the table-user would never do this and we aren't giving them a place to do it 
+            //ProjectUtilities.DeleteProjectInfo();
         }
 
         private void btnModifyProjectInfo_Click(object sender, RibbonControlEventArgs e)
@@ -80,8 +93,18 @@ namespace VisAssistDatabaseBackEnd
         {
             //grab all the pages and put them in a datagridview 
             //for now let's build a datagridview of all the pages in just one file...
-            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable);
-            PageUtilities.OpenPagesForm();
+            DatabaseConfig.BindToActiveDocument();
+
+            bool bDoesDBExist = FileUtilities.DoesDBFileExist();
+            if (bDoesDBExist)
+            {
+                bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable);
+                if (bDoesTableExist)
+                {
+                    PageUtilities.OpenPagesForm();
+                }
+            }
+
         }
 
         private void btnDeleteDatabase_Click(object sender, RibbonControlEventArgs e)
@@ -92,27 +115,48 @@ namespace VisAssistDatabaseBackEnd
         private void btnGetProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
             DatabaseConfig.BindToActiveDocument();
-            string sAction = "Update";
-            ProjectUtilities.OpenProjectForm(sAction);
-            // ProjectUtilities.GetProjectInfo();
+
+            bool bDoesDBExist = FileUtilities.DoesDBFileExist();
+            if (bDoesDBExist)
+            {
+                string sAction = "Update";
+                ProjectUtilities.OpenProjectForm(sAction, "", "");
+                // ProjectUtilities.GetProjectInfo();
+            }
+            
         }
 
         private void btnGetFileData_Click(object sender, RibbonControlEventArgs e)
         {
             DatabaseConfig.BindToActiveDocument();
 
-            bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
-            FileUtilities.OpenFileForm();
+
+            bool bDoesDBExist = FileUtilities.DoesDBFileExist();
+            if (bDoesDBExist)
+            {
+                bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
+                if (bDoesDBExist)
+                {
+                    FileUtilities.OpenFileForm();
+                }
+
+            }
+
         }
 
         private void btnAddProjectWithVisio_Click(object sender, RibbonControlEventArgs e)
         {
             //this creates the visio document
-            string sClass = "Master"; //i think this would always creating the Master File
-            FileUtilities.AddVisioDocument(sClass);
+            //string sClass = "Master"; //i think this would always creating the Master File
+            //FileUtilities.AddVisioDocument(sClass);
+
+            string sFilePath = ProjectUtilities.AddProjectFileStructure();
+
+            string sProjectName = ProjectUtilities.GetProjectName();
+
 
             string sAction = "Add";
-            ProjectUtilities.OpenProjectForm(sAction);
+            ProjectUtilities.OpenProjectForm(sAction, sProjectName, sFilePath);
 
 
 
@@ -126,33 +170,48 @@ namespace VisAssistDatabaseBackEnd
             //could either add the file to the existing doc's project
             //or could add a file to an existing project if the user points to save the file somewhere else...
             DatabaseConfig.BindToActiveDocument();
-            FileUtilities.AddNewFile();
+
+            bool bDoesDBExist = FileUtilities.DoesDBFileExist();
+            if (bDoesDBExist)
+            {
+                FileUtilities.AddNewFile();
+            }
 
         }
 
         private void btnDeleteFile_Click(object sender, RibbonControlEventArgs e)
         {
             DatabaseConfig.BindToActiveDocument();
-            FileUtilities.OpenFileForm();
+
+            bool bDoesDBExist = FileUtilities.DoesDBFileExist();
+            if (bDoesDBExist)
+            {
+                FileUtilities.OpenFileForm();
+            }
         }
 
         private void btnDisAssociateFile_Click(object sender, RibbonControlEventArgs e)
         {
             DatabaseConfig.BindToActiveDocument();
-            FileUtilities.OpenFileForm();
+
+            bool bDoesDBExist = FileUtilities.DoesDBFileExist();
+            if (bDoesDBExist)
+            {
+                FileUtilities.OpenFileForm();
+            }
         }
 
 
-        private void button1_Click(object sender, RibbonControlEventArgs e)
-        {
-           
-
-        }
 
         private void btnAssociateFile_Click(object sender, RibbonControlEventArgs e)
         {
             DatabaseConfig.BindToActiveDocument();
-            FileUtilities.WhichFileToAssociate();
+
+            bool bDoesDBExist = FileUtilities.DoesDBFileExist();
+            if (bDoesDBExist)
+            {
+                FileUtilities.WhichFileToAssociate();
+            }
         }
     }
 }

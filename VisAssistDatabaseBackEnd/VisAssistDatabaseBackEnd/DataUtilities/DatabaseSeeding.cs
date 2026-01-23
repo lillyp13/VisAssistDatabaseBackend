@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static VisAssistDatabaseBackEnd.DataUtilities.ConnectionsUtilities;
+using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
 {
@@ -77,29 +78,49 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         public static void SeedPages()
         {
-            //create a new sqlite connection
-            using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+            Visio.Application ovApp = Globals.ThisAddIn.Application;
+            Visio.Document ovDoc = ovApp.ActiveDocument;
+
+            const int iPageCount = 50;
+            for(int i = 1; i <= iPageCount; i++)
             {
-                //open the connection
-                sqliteconConnection.Open();
-                //this is the practice data sql...
-                string sInsert = @"INSERT INTO pages_Table (PageName, ProjectID, FileID, PageIndex, CreatedDate, LastModifiedDate,
-                                Version, Class, Orientation, Scale) 
-                                VALUES('North Campus BAS Sheet 1', 1, 1, 1, '2026-01-05 08:30:00', '2026-01-10 17:00:00','v1.0', 'A', 'Landscape', '1:50'),
-                                ('North Campus BAS Sheet 2', 1, 1, 2, '2026-01-05 08:45:00', '2026-01-10 17:00:00','v1.0', 'A', 'Portrait', '1:50'),
-                                ('Central Library HVAC Sheet 1', 1, 1, 3, '2025-11-18 08:00:00', '2026-01-02 15:30:00','v2.0', 'B', 'Landscape', '1:100'),
-                                ('Central Library HVAC Sheet 2', 1, 2, 1, '2025-11-18 08:15:00', '2026-01-02 15:30:00','v2.0', 'B', 'Portrait', '1:100'),
-                                ('Data Center Cooling Sheet 1', 1, 2, 2, '2025-12-01 10:00:00', '2026-01-11 14:00:00','v1.0', 'C', 'Landscape', '1:75'),
-                                ('Data Center Cooling Sheet 2', 1, 2, 3, '2025-12-02 09:15:00', '2026-01-11 13:45:00','v1.1', 'C', 'Portrait', '1:75');";
+                Visio.Page ovPage = ovDoc.Pages.Add();
 
-                //create a new command using the sql statement (sInsert) and the open connection
-                using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sInsert, sqliteconConnection))
-                {
-                    //execute the command line (in this case it is an INSERT)
-                    sqlitecmdCommand.ExecuteNonQuery();
+                //add a loop to add tweny pages and call build 
+                PageUtilities.AddUserCellsToPage();
 
-                }
+                //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
+                //need to build up the page reocrd and run the sql to the database
+                PageUtilities.AddPageToDatabase(ovPage);
             }
+
+            ovDoc.Save();
+
+            //add twenty visio pages and add them to the database...
+
+            ////create a new sqlite connection
+            //using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+            //{
+            //    //open the connection
+            //    sqliteconConnection.Open();
+            //    //this is the practice data sql...
+            //    string sInsert = @"INSERT INTO pages_Table (PageName, ProjectID, FileID, PageIndex, CreatedDate, LastModifiedDate,
+            //                    Version, Class, Orientation, Scale) 
+            //                    VALUES('North Campus BAS Sheet 1', 1, 1, 1, '2026-01-05 08:30:00', '2026-01-10 17:00:00','v1.0', 'A', 'Landscape', '1:50'),
+            //                    ('North Campus BAS Sheet 2', 1, 1, 2, '2026-01-05 08:45:00', '2026-01-10 17:00:00','v1.0', 'A', 'Portrait', '1:50'),
+            //                    ('Central Library HVAC Sheet 1', 1, 1, 3, '2025-11-18 08:00:00', '2026-01-02 15:30:00','v2.0', 'B', 'Landscape', '1:100'),
+            //                    ('Central Library HVAC Sheet 2', 1, 2, 1, '2025-11-18 08:15:00', '2026-01-02 15:30:00','v2.0', 'B', 'Portrait', '1:100'),
+            //                    ('Data Center Cooling Sheet 1', 1, 2, 2, '2025-12-01 10:00:00', '2026-01-11 14:00:00','v1.0', 'C', 'Landscape', '1:75'),
+            //                    ('Data Center Cooling Sheet 2', 1, 2, 3, '2025-12-02 09:15:00', '2026-01-11 13:45:00','v1.1', 'C', 'Portrait', '1:75');";
+
+            //    //create a new command using the sql statement (sInsert) and the open connection
+            //    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sInsert, sqliteconConnection))
+            //    {
+            //        //execute the command line (in this case it is an INSERT)
+            //        sqlitecmdCommand.ExecuteNonQuery();
+
+            //    }
+            //}
         }
 
 

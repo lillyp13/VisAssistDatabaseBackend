@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -91,12 +92,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     cmd.ExecuteNonQuery();
                 }
 
-                //reset the auto-increment counter 
-                string sReset = "DELETE FROM sqlite_sequence WHERE name = 'pages_table';"; ///will need to do shapes too...
-                using (SQLiteCommand cmd = new SQLiteCommand(sReset, sqliteConnection))
-                {
-                    cmd.ExecuteNonQuery();
-                }
+               
             }
         }
         internal static void UpdatePage(PagesForm pagesForm, bool bAllPages, int iFileID)
@@ -353,7 +349,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             while (sqlitereadReader.Read())
                             {
                                 Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
-                                int iID = 0;
+                                string sID = "";
 
                                 for (int i = 0; i < sqlitereadReader.FieldCount; i++)
                                 {
@@ -363,14 +359,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                                     if (sColumnName == DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK)
                                     {
-                                        iID = Convert.ToInt32(sqlitereadReader.GetValue(i));
+                                        sID = sqlitereadReader.GetValue(i).ToString();
                                     }
                                         
                                 }
 
                                 RecordUpdate ruRecordUpdate = new RecordUpdate();
                                 ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK;
-                                ruRecordUpdate.sId = iID.ToString();
+                                ruRecordUpdate.sId = sID;
                                 ruRecordUpdate.odictColumnValues = odictColumnValues;
 
                                 lstRecords.Add(ruRecordUpdate);
@@ -403,12 +399,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //Scale
 
             string sPageName = ovPage.Name;
-            string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].ResultIU.ToString();
+            string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
             string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
             int iPageIndex = ovPage.Index;
             //get created date from a user cell?
             //for now it will the current date 
-            string sCreatedDate = ovPage.PageSheet.Cells["User.CreatedDate"].get_ResultStr(0);
+           
 
             string sLastModifiedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -442,19 +438,61 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             oDictFileValues.Add("ProjectID", sProjectID);
             oDictFileValues.Add("FileID", sFileID);
             oDictFileValues.Add("PageIndex", iPageIndex.ToString());
-            oDictFileValues.Add("CreatedDate", sCreatedDate);
+            // oDictFileValues.Add("CreatedDate", dtCreatedDate.ToString());
+           
             oDictFileValues.Add("LastModifiedDate", sLastModifiedDate);
             oDictFileValues.Add("Version", sVersion);
             oDictFileValues.Add("Class", sClass);
             oDictFileValues.Add("Orientation", sOrientation);
             oDictFileValues.Add("Scale", sScale);
 
+            string sPageID = "";
+            if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+            {
+                oDictFileValues["CreatedDate"] = ovPage.Document.DocumentSheet.Cells["User.CreatedDate"].get_ResultStr(0);
+                sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+            }
+
+            if(sPageID == "")
+            {
+                //this is us adding a page there isn't a page id yet...
+                oDictFileValues["CreatedDate"] = DateTime.Now.ToString();
+                sPageID = PageUtilities.GeneratePageID(sProjectID, sFileID, sPageName, DateTime.Now);
+                ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0);
+                ovPage.PageSheet.Cells["User.PageID"].Formula = "\"" + sPageID + "\"";
+
+            }
+            else
+            {
+               
+            }
+
             RecordUpdate ruFileRecord = new RecordUpdate();
             ruFileRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.PagesTable.sPagesTablePK;
-            ruFileRecord.sId = DataProcessingUtilities.GetNextIdForTable(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable).ToString();
+            ruFileRecord.sId = sPageID;
             ruFileRecord.odictColumnValues = oDictFileValues;
 
             return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
+        }
+
+        private static string GeneratePageID(string sProjectID, string sFileID, string sPageName, DateTime now)
+        {
+            //project: sDirectoryPath + "Dwg - Cover Pages" + project name and created date
+            //file: projectID + filepath + created date
+            //page: ProjectID + FileID + page name + created date
+
+            string input = sProjectID + sFileID + sPageName + now.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] bytehashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in bytehashBytes)
+                {
+                    sb.Append(b.ToString("x2")); // hex
+                }
+
+                return sb.ToString();
+            }
         }
 
         internal static void AddUserCellsToPage()
@@ -466,6 +504,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             ovPage.PageSheet.Cells["User.Class"].Formula = "\"Working\"";//might want to pull the format string for visio fromm VisAssist...
             ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "CreatedDate", 0);
             ovPage.PageSheet.Cells["User.CreatedDate"].Formula = "\"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\"";
+            //ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0); // i will add this later when i am building the page information...
+
 
         }
 

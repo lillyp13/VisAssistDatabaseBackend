@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO.Ports;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -26,14 +27,18 @@ namespace VisAssistDatabaseBackEnd.Forms
         }
 
         public string m_sAction = "";
-        public void Display(string sAction)
+        public string m_sFilePath = "";
+        public void Display(string sAction, string sProjectName, string sFilePath)
         {
             m_sAction = sAction;
+            m_sFilePath = sFilePath;
             if(sAction == "Add")
             {
                 //the database doesn't exist yet open the form 
                 //ConnectionsUtilities.InitializeDatabase();
                 //ProjectUtilities.AddProjectInfo(this);
+                txtProjectName.Text = sProjectName;
+
                 
             }
             else
@@ -64,7 +69,7 @@ namespace VisAssistDatabaseBackEnd.Forms
             {
                 if(m_sAction == "Add")
                 {
-                    ProjectUtilities.AddNewProject(this);
+                    ProjectUtilities.AddNewProject(this, m_sFilePath);
                     
                      
                     m_sAction = "Update"; //change this to update after adding the project (i think we just close the form so not sure we need to do this...)
