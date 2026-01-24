@@ -38,7 +38,7 @@ namespace VisAssistDatabaseBackEnd.Forms
                 //ConnectionsUtilities.InitializeDatabase();
                 //ProjectUtilities.AddProjectInfo(this);
                 txtProjectName.Text = sProjectName;
-
+                ShowDialog();
                 
             }
             else
@@ -46,8 +46,19 @@ namespace VisAssistDatabaseBackEnd.Forms
                 if(sAction == "Update")
                 {
                     //the project already exists
-                    ProjectUtilities.GetProjectInfoFromDatabase();
-                    ProjectUtilities.PopulatePropertiesForm(this);
+                    Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                    bool bAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+
+                    if (bAssignedToProject)
+                    {
+                        ProjectUtilities.GetProjectInfoFromDatabase();
+                        ProjectUtilities.PopulatePropertiesForm(this);
+                        ShowDialog();
+                    }
+                    else
+                    {
+                        MessageBox.Show("This file is not associated with a project.", "VisAssist");
+                    }
                 }
             }
             

@@ -21,13 +21,13 @@ namespace VisAssistDatabaseBackEnd.Forms
 
         private void FilePropertiesForm_Load(object sender, EventArgs e)
         {
-            
+
         }
         public void Display()
         {
             FileUtilities.GetFileDataFromDatabase(this);
             bool bGetFileDataAgain = FileUtilities.CheckThatFilesExistInFolder();
-            if(bGetFileDataAgain)
+            if (bGetFileDataAgain)
             {
                 FileUtilities.GetFileDataFromDatabase(this);
             }
@@ -38,7 +38,7 @@ namespace VisAssistDatabaseBackEnd.Forms
         {
             //this just adds a practice add new file
             //FileUtilities.AddFile(this);
-            
+
         }
 
         private void btnUpdateFile_Click(object sender, EventArgs e)
@@ -53,7 +53,19 @@ namespace VisAssistDatabaseBackEnd.Forms
 
         private void btnDisassociate_Click(object sender, EventArgs e)
         {
-            FileUtilities.DisassociateFile(this);
+            MultipleRecordUpdates mruRecords = FileUtilities.GatherDisassociationData(this);
+
+
+            ProjectUtilities.AdjustFileCount("Decrease");
+            FileUtilities.DisassociateFile(mruRecords);
+
+            DataGridViewSelectedRowCollection colSelectedRows = dgvFileData.SelectedRows;
+
+            foreach (DataGridViewRow dgvRow in colSelectedRows)
+            {
+                dgvFileData.Rows.Remove(dgvRow);
+            }
+
         }
     }
 }

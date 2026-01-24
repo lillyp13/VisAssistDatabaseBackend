@@ -10,14 +10,18 @@ using System.Windows.Forms;
 
 namespace VisAssistDatabaseBackEnd.Forms
 {
-    public partial class ProjectNameForm : Form
+    public partial class NameForm : Form
     {
-        public ProjectNameForm()
+        public NameForm()
         {
             InitializeComponent();
         }
-
-        public string sProjectName => txtProjectName.Text.Trim();
+        public string PromptText
+        {
+            get => lblPrompt.Text;
+            set => lblPrompt.Text = value;
+        }
+        public string sName => txtName.Text.Trim();
         public void Display()
         {
 
@@ -25,7 +29,7 @@ namespace VisAssistDatabaseBackEnd.Forms
 
         private void btnOk_Click(object sender, EventArgs e)
         {
-            if(txtProjectName.Text.Length > 0)
+            if(txtName.Text.Length > 0)
             {
                 this.DialogResult = DialogResult.OK;
                 this.Close();

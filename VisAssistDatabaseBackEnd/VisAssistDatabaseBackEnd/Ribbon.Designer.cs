@@ -46,10 +46,11 @@
             this.btnAddFile = this.Factory.CreateRibbonButton();
             this.btnGetFileData = this.Factory.CreateRibbonButton();
             this.btnDeleteFileInfo = this.Factory.CreateRibbonButton();
-            this.btnAssociateAnotherFile = this.Factory.CreateRibbonButton();
-            this.btnDeleteFile = this.Factory.CreateRibbonButton();
-            this.btnDisAssociateFile = this.Factory.CreateRibbonButton();
             this.btnAssociateFile = this.Factory.CreateRibbonButton();
+            this.btnDisAssociateFile = this.Factory.CreateRibbonButton();
+            this.btnDeleteFile = this.Factory.CreateRibbonButton();
+            this.btnAssociateAnotherFile = this.Factory.CreateRibbonButton();
+            this.btnAssociateOrphanedFile = this.Factory.CreateRibbonButton();
             this.grpPages = this.Factory.CreateRibbonGroup();
             this.btnAddPageInfo = this.Factory.CreateRibbonButton();
             this.btnDeletePageInfo = this.Factory.CreateRibbonButton();
@@ -61,6 +62,7 @@
             this.grpWireInfo = this.Factory.CreateRibbonGroup();
             this.btnAddWireInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteWireInfo = this.Factory.CreateRibbonButton();
+            this.btnChangeFileName = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.grpInitialize.SuspendLayout();
             this.grpProjectInfo.SuspendLayout();
@@ -136,6 +138,8 @@
             this.grpFile.Items.Add(this.btnDisAssociateFile);
             this.grpFile.Items.Add(this.btnDeleteFile);
             this.grpFile.Items.Add(this.btnAssociateAnotherFile);
+            this.grpFile.Items.Add(this.btnAssociateOrphanedFile);
+            this.grpFile.Items.Add(this.btnChangeFileName);
             this.grpFile.Label = "File Info";
             this.grpFile.Name = "grpFile";
             // 
@@ -158,16 +162,11 @@
             this.btnDeleteFileInfo.Visible = false;
             this.btnDeleteFileInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnDeleteFileInfo_Click);
             // 
-            // btnAssociateAnotherFile
+            // btnAssociateFile
             // 
-            this.btnAssociateAnotherFile.Label = "";
-            this.btnAssociateAnotherFile.Name = "btnAssociateAnotherFile";
-            // 
-            // btnDeleteFile
-            // 
-            this.btnDeleteFile.Label = "Delete File";
-            this.btnDeleteFile.Name = "btnDeleteFile";
-            this.btnDeleteFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnDeleteFile_Click);
+            this.btnAssociateFile.Label = "Associate Another File";
+            this.btnAssociateFile.Name = "btnAssociateFile";
+            this.btnAssociateFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAssociateFile_Click);
             // 
             // btnDisAssociateFile
             // 
@@ -175,11 +174,22 @@
             this.btnDisAssociateFile.Name = "btnDisAssociateFile";
             this.btnDisAssociateFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnDisAssociateFile_Click);
             // 
-            // btnAssociateFile
+            // btnDeleteFile
             // 
-            this.btnAssociateFile.Label = "Associate Another File";
-            this.btnAssociateFile.Name = "btnAssociateFile";
-            this.btnAssociateFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAssociateFile_Click);
+            this.btnDeleteFile.Label = "Delete File";
+            this.btnDeleteFile.Name = "btnDeleteFile";
+            this.btnDeleteFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnDeleteFile_Click);
+            // 
+            // btnAssociateAnotherFile
+            // 
+            this.btnAssociateAnotherFile.Label = "";
+            this.btnAssociateAnotherFile.Name = "btnAssociateAnotherFile";
+            // 
+            // btnAssociateOrphanedFile
+            // 
+            this.btnAssociateOrphanedFile.Label = "Associate Orphaned File";
+            this.btnAssociateOrphanedFile.Name = "btnAssociateOrphanedFile";
+            this.btnAssociateOrphanedFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAssociateOrphanedFile_Click);
             // 
             // grpPages
             // 
@@ -255,6 +265,12 @@
             this.btnDeleteWireInfo.Name = "btnDeleteWireInfo";
             this.btnDeleteWireInfo.Visible = false;
             // 
+            // btnChangeFileName
+            // 
+            this.btnChangeFileName.Label = "Change File Name";
+            this.btnChangeFileName.Name = "btnChangeFileName";
+            this.btnChangeFileName.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnChangeFileName_Click);
+            // 
             // Ribbon
             // 
             this.Name = "Ribbon";
@@ -308,6 +324,8 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeleteFile;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDisAssociateFile;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAssociateFile;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAssociateOrphanedFile;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnChangeFileName;
     }
 
     partial class ThisRibbonCollection

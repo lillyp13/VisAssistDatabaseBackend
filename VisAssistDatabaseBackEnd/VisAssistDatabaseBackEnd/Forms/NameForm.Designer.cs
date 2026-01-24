@@ -1,6 +1,6 @@
 ﻿namespace VisAssistDatabaseBackEnd.Forms
 {
-    partial class ProjectNameForm
+    partial class NameForm
     {
         /// <summary>
         /// Required designer variable.
@@ -28,27 +28,27 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.txtProjectName = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
+            this.txtName = new System.Windows.Forms.TextBox();
+            this.lblPrompt = new System.Windows.Forms.Label();
             this.btnOk = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // txtProjectName
+            // txtName
             // 
-            this.txtProjectName.Location = new System.Drawing.Point(38, 69);
-            this.txtProjectName.Name = "txtProjectName";
-            this.txtProjectName.Size = new System.Drawing.Size(270, 20);
-            this.txtProjectName.TabIndex = 0;
+            this.txtName.Location = new System.Drawing.Point(38, 69);
+            this.txtName.Name = "txtName";
+            this.txtName.Size = new System.Drawing.Size(270, 20);
+            this.txtName.TabIndex = 0;
             // 
-            // label1
+            // lblPrompt
             // 
-            this.label1.AutoSize = true;
-            this.label1.Font = new System.Drawing.Font("Arial", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.Location = new System.Drawing.Point(35, 31);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(103, 18);
-            this.label1.TabIndex = 1;
-            this.label1.Text = "Project Name";
+            this.lblPrompt.AutoSize = true;
+            this.lblPrompt.Font = new System.Drawing.Font("Arial", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblPrompt.Location = new System.Drawing.Point(35, 31);
+            this.lblPrompt.Name = "lblPrompt";
+            this.lblPrompt.Size = new System.Drawing.Size(103, 18);
+            this.lblPrompt.TabIndex = 1;
+            this.lblPrompt.Text = "Project Name";
             // 
             // btnOk
             // 
@@ -60,15 +60,17 @@
             this.btnOk.UseVisualStyleBackColor = true;
             this.btnOk.Click += new System.EventHandler(this.btnOk_Click);
             // 
-            // ProjectNameForm
+            // NameForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(513, 133);
             this.Controls.Add(this.btnOk);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.txtProjectName);
-            this.Name = "ProjectNameForm";
+            this.Controls.Add(this.lblPrompt);
+            this.Controls.Add(this.txtName);
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Name = "NameForm";
             this.Text = "ProjectNameForm";
             this.Load += new System.EventHandler(this.ProjectNameForm_Load);
             this.ResumeLayout(false);
@@ -78,8 +80,8 @@
 
         #endregion
 
-        private System.Windows.Forms.TextBox txtProjectName;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button btnOk;
+        public System.Windows.Forms.TextBox txtName;
+        public System.Windows.Forms.Label lblPrompt;
+        public System.Windows.Forms.Button btnOk;
     }
 }

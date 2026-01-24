@@ -87,7 +87,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 Visio.Page ovPage = ovDoc.Pages.Add();
 
                 //add a loop to add tweny pages and call build 
-                PageUtilities.AddUserCellsToPage();
+                PageUtilities.AddUserCellsToPage(ovPage);
 
                 //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
                 //need to build up the page reocrd and run the sql to the database

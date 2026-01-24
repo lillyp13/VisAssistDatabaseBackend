@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
@@ -10,6 +11,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
+using WindowsAPICodePack.Dialogs;
 using Visio = Microsoft.Office.Interop.Visio;
 
 
@@ -75,33 +77,50 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
             //create a new visio file (it will either be classified as a class a or b depedning on which one the user wants...
-            string sClass = "Secondary"; //this is dependent on which kind of file th user wants to add, but i believe in most cases this will be used to add a new secondary file to a project...
-                                         //it is possible that the user wants to add a Master file 
+            string sClass = ""; //this is dependent on which kind of file th user wants to add, but i believe in most cases this will be used to add a new secondary file to a project...
+                                //it is possible that the user wants to add a Master file 
+                                //for the class for now i am going to see if the current doc's file name contains Cover Pages and if it does we are creating a type b off of a type a so we are going to close the document 
+                                //but if we were creating a type b off of a type b we aren't going to close the current docuemnt....
+                                //check to see if our current document is assigned to a project before we continue....
+                                //we also need to account for when the user decides to create a class a or class b file so we also know which kind of document we should be creating...
+            Visio.Document ovCurrentDocument = Globals.ThisAddIn.Application.ActiveDocument;
+            if (ovCurrentDocument.Name.Contains("Cover Pages"))
+            {
+                //we are creating a type b off of a type a
+                sClass = "Close"; //we will be using the current instance of visio and closing the document 
+            }
+            else
+            {
+                sClass = "Open"; //we will be opening a new isntance of visio
+            }
 
-           Visio.Document ovDoc = AddVisioDocument(sClass);
+            Visio.Document ovDoc = AddVisioDocument(sClass);
 
-            Visio.Page ovPage = ovDoc.Pages[1]; //get the first page...
-            string sFilePath = ReturnFileStructurePath(ovDoc.Path);
-            string sFileName = ovDoc.Name;
-            sFilePath = sFilePath + sFileName;
+            if (ovDoc != null)
+            {
+                Visio.Page ovPage = ovDoc.Pages[1]; //get the first page...
+                string sFilePath = ReturnFileStructurePath(ovDoc.Path);
+                string sFileName = ovDoc.Name;
+                sFilePath = sFilePath + sFileName;
 
-            //need to get the projectID of the db we want to add to
-            ProjectUtilities.GetProjectInfoFromDatabase();
-            string sProjectID = ProjectUtilities.m_mruRecordsBase.ruRecords[0].sId;
+                //need to get the projectID of the db we want to add to
+                ProjectUtilities.GetProjectInfoFromDatabase();
+                string sProjectID = ProjectUtilities.m_mruRecordsBase.ruRecords[0].sId;
 
-            oFileRecord = AddFileToDatabase(ovDoc, sFilePath, sProjectID);
-            AddUserCellsToDocument(oFileRecord, ovDoc);
+                oFileRecord = AddFileToDatabase(ovDoc, sFilePath, sProjectID);
+                AddUserCellsToDocument(oFileRecord, ovDoc);
 
-            //increase the filecount for the project
-            //get the project id from the document 
-
-
+                //increase the filecount for the project
+                //get the project id from the document 
 
 
-            PageUtilities.AddUserCellsToPage();
-            PageUtilities.AddPageToDatabase(ovPage);
 
-            ovDoc.SaveAs(sFilePath);
+
+                PageUtilities.AddUserCellsToPage(ovPage);
+                PageUtilities.AddPageToDatabase(ovPage);
+
+                ovDoc.SaveAs(sFilePath);
+            }
         }
 
         internal static MultipleRecordUpdates AddFileToDatabase(Visio.Document ovDoc, string sFilePath, string sProjectID)
@@ -191,20 +210,62 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             //get the selected row in the filePropertiesForm.dgvFileData to determine which file to delete
 
-            MultipleRecordUpdates mruRecords = DisassociateFile(filePropertiesForm);
 
-            //go and actually delete the visio file itself 
-            foreach (RecordUpdate ruRecordUpdate in mruRecords.ruRecords)
+
+            //MultipleRecordUpdates mruRecords = DisassociateFile(filePropertiesForm);
+            MultipleRecordUpdates mruRecords = GatherDisassociationData(filePropertiesForm);
+
+            DataGridViewRow dgvFirstRow = filePropertiesForm.dgvFileData.Rows[0];
+            string sProjectID = dgvFirstRow.Cells["ProjectID"].Value.ToString();
+
+            int iRecordCount = DataProcessingUtilities.GetTableRecordCount(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
+
+            if (iRecordCount > 1)
             {
-                string sFilePath = ruRecordUpdate.odictColumnValues["FilePath"];
 
-                //the file does need to be closed, if it is open we need to make a delayed event to delete it...i think
-                if (File.Exists(sFilePath))
+
+                if (mruRecords.ruRecords != null)
                 {
-                    File.Delete(sFilePath);
+                    //go and actually delete the visio file itself 
+                    foreach (RecordUpdate ruRecordUpdate in mruRecords.ruRecords)
+                    {
+                        string sFilePath = ruRecordUpdate.odictColumnValues["FilePath"];
+
+                        //make sure the file to delete is not being used...
+                        Visio.Document ovDoc = IsVisioFileOpen(Globals.ThisAddIn.Application, sFilePath);
+
+                        if (ovDoc == null)
+                        {
+                            bool bIsFileLocked = IsFileLocked(sFilePath);
+                            if (!bIsFileLocked)
+                            {
+                                //the file is not locked we can safely delete it...
+                                if (File.Exists(sFilePath))
+                                {
+                                    File.Delete(sFilePath);
+                                    ProjectUtilities.AdjustFileCount("Decrease");
+                                    DisassociateFile(mruRecords);
+                                }
+
+                            }
+                            else
+                            {
+                                //the file is open in a different instance of visio 
+                                MessageBox.Show("Cannot delete this file as it is currently open.", "VisAssist");
+                            }
+                        }
+                        else
+                        {
+                            //the file is currently open in our instance of visio
+                            MessageBox.Show("Cannot delete this file as it is currently open.", "VisAssist");
+                        }
+
+
+                    }
                 }
-                ProjectUtilities.AdjustFileCount("Decrease");
             }
+
+
         }
         internal static void DeleteAllFiles()
         {
@@ -255,17 +316,85 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-        internal static MultipleRecordUpdates DisassociateFile(FilePropertiesForm filePropertiesForm)
+        internal static MultipleRecordUpdates DisassociateFile(MultipleRecordUpdates mruRecords)
         {
             // Get the selected row
+
+
+
+
+            //DataGridViewSelectedRowCollection colSelectedRows = filePropertiesForm.dgvFileData.SelectedRows;
+            //if (colSelectedRows == null || colSelectedRows.Count == 0)
+            //{
+            //    MessageBox.Show("Please select at least one file to delete.");
+            //    return mruRecords;
+            //}
+
+            ////get the project ID and check to see if there is only one file in the project: we cannot have a project with no files...
+            ////the project id is in the second column...
+            //DataGridViewRow dgvFirstRow = filePropertiesForm.dgvFileData.Rows[0];
+            //string sProjectID = dgvFirstRow.Cells["ProjectID"].Value.ToString();
+
+            //int iRecordCount = DataProcessingUtilities.GetTableRecordCount(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
+
+            //if (iRecordCount > 1)
+            //{
+            //    //we have more than one record, we will allow the user to continue...
+
+            //    MultipleRecordUpdates mruRecords = GatherDisassociationData(filePropertiesForm);
+
+            //// Build a list of RecordUpdate objects for each selected row
+            //List<RecordUpdate> lstRecordsToDelete = new List<RecordUpdate>();
+            //Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
+            //foreach (DataGridViewRow dgvRow in colSelectedRows)
+            //{
+            //    string sFileID = dgvRow.Cells["FileID"].Value.ToString();
+            //    string sFilePath = dgvRow.Cells["FilePath"].Value.ToString();
+            //    oDictColumnValues.Add("FilePath", sFilePath);
+
+            //    RecordUpdate ruRecord = new RecordUpdate();
+            //    ruRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK;
+            //    ruRecord.sId = sFileID;
+            //    ruRecord.odictColumnValues = oDictColumnValues;
+
+            //    lstRecordsToDelete.Add(ruRecord);
+            //}
+
+            //mruRecords = new MultipleRecordUpdates(lstRecordsToDelete);
+
+
+
+            //based on the file path of the file to disassociate, open it and make clear the projectID
+            bool bClearedProjectID = ProjectUtilities.ClearProjectID(mruRecords);
+            if (bClearedProjectID)
+            {
+                // Disassociate by deleting the record in the database
+                DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecords);
+
+                ProjectUtilities.AdjustFileCount("Decrease");
+
+
+            }
+            else
+            {
+                //we are unable to disassociate the file because the file is open in a different instance of visio...
+                MessageBox.Show("Please close the file: " + mruRecords.ruRecords[0].odictColumnValues["FilePath"] + " in order to disassociate.");
+            }
+            //}
+            //else
+            //{
+            //    MessageBox.Show("Cannot disassociate file, one file must remain in a project at all times.", "VisAssist");
+            //}
+
+
+
+            return mruRecords;
+        }
+
+        internal static MultipleRecordUpdates GatherDisassociationData(FilePropertiesForm filePropertiesForm)
+        {
             MultipleRecordUpdates mruRecords = new MultipleRecordUpdates();
             DataGridViewSelectedRowCollection colSelectedRows = filePropertiesForm.dgvFileData.SelectedRows;
-            if (colSelectedRows == null || colSelectedRows.Count == 0)
-            {
-                MessageBox.Show("Please select at least one file to delete.");
-                return mruRecords;
-            }
-
             // Build a list of RecordUpdate objects for each selected row
             List<RecordUpdate> lstRecordsToDelete = new List<RecordUpdate>();
             Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
@@ -284,27 +413,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
 
             mruRecords = new MultipleRecordUpdates(lstRecordsToDelete);
-            //based on the file path of the file to disassociate, open it and make clear the projectID
-            bool bClearedProjectID = ProjectUtilities.ClearProjectID(mruRecords);
-            if (bClearedProjectID)
-            {
-                // Disassociate by deleting the record in the database
-                DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecords);
-
-                ProjectUtilities.AdjustFileCount("Decrease");
-
-                foreach (DataGridViewRow dgvRow in colSelectedRows)
-                {
-                    filePropertiesForm.dgvFileData.Rows.Remove(dgvRow);
-                }
-            }
-            else
-            {
-                //we are unable to disassociate the file because the file is open in a different instance of visio...
-                MessageBox.Show("Please close the file: " + mruRecords.ruRecords[0].odictColumnValues["FilePath"] + " in order to disassociate.");
-            }
-
-
 
             return mruRecords;
         }
@@ -536,60 +644,135 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             //this is for when we are adding a new visio document/file...
 
-            //open a save file dialog to ask user where they want to save the visio document that will be creatd 
-            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+
+            //now we want to pop open the nameform to ask the user what to name the new file then add it to the current project therefore we know wehre to put it...
+
+
+            string sFileName = GetFileName("");
+
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+
+            //get the path of where to save the new file 
+            //use the current docuemtn and get that file structure, then add the Dwg - sFileName.vsdx and save 
+            string sFileStructure = ReturnFileStructurePath(ovDoc.Path);
+            string sFilePath = Path.Combine(sFileStructure, "Dwg - " + sFileName + ".vsdx");
+            //add a file in a new instance of visio
+
+            Visio.Application ovApp;
+            Visio.Document ovNewDoc;
+            if (sClass == "Open")
             {
-                saveFileDialog.Title = "Save Visio Document";
-                saveFileDialog.Filter = "Visio Files (*.vsdx)|*.vsdx|All Files (*.*)|*.*";
-                saveFileDialog.DefaultExt = "vsdx";
-                saveFileDialog.AddExtension = true;
+                //create a new instance of visio...
+                ovApp = new Visio.Application();
+                ovApp.Visible = true; // make it visible
+            }
+            else
+            {
+                //we are using our current isntance of visio 
+                ovApp = Globals.ThisAddIn.Application;
 
-                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            }
+            ovNewDoc = ovApp.Documents.Add("");
+
+            // Anchor it to disk immediately and cleanly
+            const short visSaveAsNoPrompt = 0x40;
+            const short visSaveAsDontList = 0x200;
+            ovNewDoc.SaveAsEx(sFilePath, (short)(visSaveAsNoPrompt | visSaveAsDontList));
+
+
+            ovDoc.Save();
+            if (sClass == "Close")
+            {
+                ovDoc.Close();
+            }
+
+
+            return ovNewDoc;
+
+
+
+
+
+
+
+
+
+
+
+
+            //THIS IS THE OLD VERSION
+            //open a save file dialog to ask user where they want to save the visio document that will be creatd 
+            //using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            //{
+            //    saveFileDialog.Title = "Save Visio Document";
+            //    saveFileDialog.Filter = "Visio Files (*.vsdx)|*.vsdx|All Files (*.*)|*.*";
+            //    saveFileDialog.DefaultExt = "vsdx";
+            //    saveFileDialog.AddExtension = true;
+
+            //    if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            //    {
+            //        string sFilePath = saveFileDialog.FileName;
+
+            //        Visio.Application ovVisioApp = Globals.ThisAddIn.Application;
+
+            //        // Create new document
+            //        Visio.Document ovDoc = ovVisioApp.Documents.Add("");
+
+            //        // Anchor it to disk immediately and cleanly
+            //        const short visSaveAsNoPrompt = 0x40;
+            //        const short visSaveAsDontList = 0x200;
+
+            //        ovDoc.SaveAsEx(sFilePath, (short)(visSaveAsNoPrompt | visSaveAsDontList));
+
+            //        // Set DB path
+            //        string sDirectoryPath = Path.GetDirectoryName(sFilePath);
+            //        DatabaseConfig.DatabasePath = Path.Combine(sDirectoryPath, "VisAssistBackEnd.db");
+
+            //        // Close cover pages doc if open
+            //        string sFilePathOfCoverPages = Path.Combine(sDirectoryPath, "Dwg - Cover Pages.vsdx");
+
+            //        foreach (Visio.Document ovDocToCheck in ovVisioApp.Documents)
+            //        {
+            //            string fullPath = Path.Combine(sDirectoryPath, ovDocToCheck.Name);
+
+            //            if (fullPath.Equals(sFilePathOfCoverPages, StringComparison.OrdinalIgnoreCase))
+            //            {
+            //                if (!ovDocToCheck.Saved)
+            //                {
+            //                    ovDocToCheck.Save();
+            //                }
+            //                ovDocToCheck.Close();
+            //                break;
+            //            }
+            //        }
+
+            //        return ovDoc; // ← IMPORTANT: return the live document
+            //    }
+            //    else
+            //    {
+            //        MessageBox.Show("Save operation cancelled.");
+            //        return null;
+            //    }
+            // }
+
+        } //this creates the  new visio file and saves it where the user specified...
+
+
+        internal static string GetFileName(string sCurrentName)
+        {
+            using (NameForm oForm = new NameForm())
+            {
+                oForm.Text = "File Name";
+                oForm.PromptText = "File Name";
+                oForm.txtName.Text = sCurrentName;
+
+                if (oForm.ShowDialog() == DialogResult.OK)
                 {
-                    string sFilePath = saveFileDialog.FileName;
-
-                    Visio.Application ovVisioApp = Globals.ThisAddIn.Application;
-
-                    // Create new document
-                    Visio.Document ovDoc = ovVisioApp.Documents.Add("");
-
-                    // Anchor it to disk immediately and cleanly
-                    const short visSaveAsNoPrompt = 0x40;
-                    const short visSaveAsDontList = 0x200;
-
-                    ovDoc.SaveAsEx(sFilePath,(short)(visSaveAsNoPrompt | visSaveAsDontList));
-
-                    // Set DB path
-                    string sDirectoryPath = Path.GetDirectoryName(sFilePath);
-                    DatabaseConfig.DatabasePath = Path.Combine(sDirectoryPath, "VisAssistBackEnd.db");
-
-                    // Close cover pages doc if open
-                    string sFilePathOfCoverPages = Path.Combine(sDirectoryPath, "Dwg - Cover Pages.vsdx");
-
-                    foreach (Visio.Document ovDocToCheck in ovVisioApp.Documents)
-                    {
-                        string fullPath = Path.Combine(sDirectoryPath, ovDocToCheck.Name);
-
-                        if (fullPath.Equals(sFilePathOfCoverPages, StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (!ovDocToCheck.Saved)
-                            {
-                                ovDocToCheck.Save();
-                            }
-                            ovDocToCheck.Close();
-                            break;
-                        }
-                    }
-
-                    return ovDoc; // ← IMPORTANT: return the live document
-                }
-                else
-                {
-                    MessageBox.Show("Save operation cancelled.");
-                    return null;
+                    return oForm.sName;
                 }
             }
-        } //this creates the  new visio file and saves it where the user specified...
+            return null;
+        }
 
         internal static void AddCoverPageDocument(string sFilePath)
         {
@@ -608,7 +791,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             //get the file name and set that to the database path...
             string sDirectoryPath = Path.GetDirectoryName(sFilePath);
-            DatabaseConfig.DatabasePath = Path.Combine(sDirectoryPath, "VisAssistBackEnd.db");
+            DatabaseConfig.DatabasePath = Path.Combine(sDirectoryPath, "DB", "VisAssistBackEnd.db");
         }
 
 
@@ -694,14 +877,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //open the file in visio first if it is not already open...going to have to do this for each document?????
                     //Visio.Document ovOtherDoc = ovApp.Documents.Open(sFolderPath + sFileName);
                     // 3️⃣ Call your merge/associate function
-                    AssociateFile(sFilePath, sFolderPath);
+                    bool bAssociatedFile = OpenFilesToAssociate(sFilePath, sFolderPath);
+                    if (bAssociatedFile)
+                    {
+                        MessageBox.Show("Databases successfully associated!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("You a document already associated with this project, please pick a different document.", "VisAssist");
+                        WhichFileToAssociate();
+                    }
 
-                    MessageBox.Show("Databases successfully associated!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
 
-        private static void AssociateFile(string sFilePath, string sFolderPath)
+        internal static bool OpenFilesToAssociate(string sFilePath, string sFolderPath)
         {
 
             //RIGHT NOW I AM ONLY ASSOCIATING FILES THAT HAVE INFORMATION (ie have been in a database -they have the User.FileID... )
@@ -709,6 +900,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             string sFileName = Path.GetFileName(sFilePath);
             Visio.Document ovDoc = null;
             string sFullFilePath = ReturnFileStructurePath(sFilePath);
+            string sCurrentFilePath = ovApp.ActiveDocument.Path;
+            sCurrentFilePath = ReturnFileStructurePath(ovApp.ActiveDocument.Path);
+            sCurrentFilePath = Path.Combine(sCurrentFilePath, ovApp.ActiveDocument.Name);
+
+            //check to make sure the user didn't accidentally click associate the same file that we are currently on (they might have just fat fingered it)
+            if (sCurrentFilePath == sFullFilePath)
+            {
+                return false;
+            }
+
+
+
+            //also need to check to see if the file the user picked already exists in the current docs project
+            //i think this will require us to open the document and look at the file id and see if that file id already exists in the project...
+            //i think the file name/path would be unreliable...
+
             // Check if file is already open in THIS Visio instance
             ovDoc = IsVisioFileOpen(ovApp, sFullFilePath);
             bool bCloseDocument = false;
@@ -744,44 +951,61 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 }
 
+
+                AssociateFile(ovDoc, sDestFilePath, sFolderPath, sFileName, bDeleteTempFilePath, sFilePath, sTempFilePath);
                 // Process the Visio document
-                if (ovDoc != null)
-                {
-                    //need to get the projectID of the db we want to add to
-                    ProjectUtilities.GetProjectInfoFromDatabase();
-                    string sProjectID = ProjectUtilities.m_mruRecordsBase.ruRecords[0].sId;
+                //if (ovDoc != null)
+                //{
+                //    //need to get the projectID of the db we want to add to
+                //    ProjectUtilities.GetProjectInfoFromDatabase();
+                //    string sProjectID = ProjectUtilities.m_mruRecordsBase.ruRecords[0].sId;
 
 
-                    AddFileToDatabase(ovDoc, sFilePath, sProjectID);
-                    ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
+                //    //before we add it to the database we need to check to see if it already exists...
+                //    string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                //    bool bDoesRecordExist = DataProcessingUtilities.DoesRecordExist(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, sFileID);
 
-                    foreach (Visio.Page ovPage in ovDoc.Pages)
-                    {
-                        PageUtilities.AddPageToDatabase(ovPage);
-                    }
-                    //will also need to put the work to add all the shapes on the page in the database....
-                    // Copy the file to the new folder
-                    
+                //    if (bDoesRecordExist)
+                //    {
+                //        //this file/record already exists in the project
 
-                    sDestFilePath = Path.Combine(sFolderPath, sFileName);
-                    if (!bDeleteTempFilePath)
-                    {
-                        //we can copy from the given path...
-                        //need to see if the file already exists in the location 
-                        if (sFilePath != sDestFilePath)
-                        {
-                            File.Copy(sFilePath, sDestFilePath, true); //not the same path
-                        }
+                //        return false;
+                //    }
 
-                    }
-                    else
-                    {
-                        //we need to copy from the temporary file...
-                        File.Copy(sTempFilePath, sDestFilePath, true);
-                    }
+                //    sDestFilePath = Path.Combine(sFolderPath, sFileName);
+
+                //    AddFileToDatabase(ovDoc, sDestFilePath, sProjectID);
+                //    ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
+
+                //    foreach (Visio.Page ovPage in ovDoc.Pages)
+                //    {
+                //        PageUtilities.AddPageToDatabase(ovPage);
+                //    }
+                //    //will also need to put the work to add all the shapes on the page in the database....
+                //    // Copy the file to the new folder
 
 
-                }
+
+                //    if (!bDeleteTempFilePath)
+                //    {
+                //        //we can copy from the given path...
+                //        //need to see if the file already exists in the location 
+                //        if (sFilePath != sDestFilePath)
+                //        {
+                //            File.Copy(sFilePath, sDestFilePath, true); //not the same path
+                //        }
+
+                //    }
+                //    else
+                //    {
+                //        //we need to copy from the temporary file...
+                //        File.Copy(sTempFilePath, sDestFilePath, true);
+                //    }
+
+                //    return true;
+
+
+                //}
             }
             catch (Exception ex)
             {
@@ -792,16 +1016,84 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //delete/close the files that we need to based on if we opened it or the user opened it...
                 if (bCloseDocument && ovDoc != null)
                 {
+                    if (sDestFilePath != "")
+                    {
+                        ovDoc.SaveAs(sDestFilePath);
 
-                    ovDoc.SaveAs(sDestFilePath);
+                    }
+                    else
+                    {
+                        ovDoc.SaveAs(sFileName);
+                    }
                     ovDoc.Close();
+
                 }
 
                 if (bDeleteTempFilePath)
                 {
                     File.Delete(sTempFilePath);
                 }
+
+
             }
+            return true;
+        }
+
+        internal static bool AssociateFile(Visio.Document ovDoc, string sDestFilePath, string sFolderPath, string sFileName, bool bDeleteTempFilePath, string sFilePath, string sTempFilePath)
+        {
+            if (ovDoc != null)
+            {
+                //need to get the projectID of the db we want to add to
+                ProjectUtilities.GetProjectInfoFromDatabase();
+                string sProjectID = ProjectUtilities.m_mruRecordsBase.ruRecords[0].sId;
+
+
+                //before we add it to the database we need to check to see if it already exists...
+                string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                bool bDoesRecordExist = DataProcessingUtilities.DoesRecordExist(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, sFileID);
+
+                if (bDoesRecordExist)
+                {
+                    //this file/record already exists in the project
+
+                    return false;
+                }
+
+                sDestFilePath = Path.Combine(sFolderPath, sFileName);
+
+                AddFileToDatabase(ovDoc, sDestFilePath, sProjectID);
+                ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
+
+                foreach (Visio.Page ovPage in ovDoc.Pages)
+                {
+                    PageUtilities.AddPageToDatabase(ovPage);
+                }
+                //will also need to put the work to add all the shapes on the page in the database....
+                // Copy the file to the new folder
+
+
+
+                if (!bDeleteTempFilePath)
+                {
+                    //we can copy from the given path...
+                    //need to see if the file already exists in the location 
+                    if (sFilePath != sDestFilePath)
+                    {
+                        File.Copy(sFilePath, sDestFilePath, true); //not the same path
+                    }
+
+                }
+                else
+                {
+                    //we need to copy from the temporary file...
+                    File.Copy(sTempFilePath, sDestFilePath, true);
+                }
+
+                return true;
+
+
+            }
+            return false;
         }
 
         internal static bool IsFileLocked(string filePath)
@@ -875,7 +1167,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 string sFolderPath = ReturnFileStructurePath(ovDoc.Path);
 
-                string sDBPath = Path.Combine(sFolderPath, "VisAssistBackEnd.db");
+                string sDBPath = Path.Combine(sFolderPath, "DB", "VisAssistBackEnd.db");
 
                 if (File.Exists(sDBPath))
                 {
@@ -892,9 +1184,38 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
+        internal static bool IsFileAssignedToProject(Visio.Document ovDoc)
+        {
+            //check if the document has a User.ProjectID and if it is blank this means it is an orphan file (it has been disassociated from a project)
+            string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
 
+            if (sProjectID != "")
+            {
+                return true; //it is assigned to a project
+            }
+            else
+            {
+                return false; //it is not assigned to a project the projectid is a blank string
+            }
+        }
 
+        internal static string WhichProjectToAssociateOrphanedFile()
+        {
+            using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
+            {
+                folderdialog.IsFolderPicker = true;
+                folderdialog.Title = "Select the db folder of the project you want to assign the file to";
+                
+                if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
+                {
+                    //get the folder that the user clicked it should be the DB folder
+                    string sDBPath = folderdialog.FileName;
 
+                    return sDBPath;
+                }
+            }
+            return "";
+        }
 
 
 
@@ -1085,6 +1406,35 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return null;
         }
 
+        internal static void UpdateFileName(string sFileName)
+        {
+            //save the current document using the sFileName
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
 
+
+            string sFileStructure = ReturnFileStructurePath(ovDoc.Path);
+            string sFilePath = Path.Combine(sFileStructure, sFileName);
+
+            string sOldFilePath = Path.Combine(sFileStructure, ovDoc.Name);
+
+            ovDoc.SaveAs(sFilePath);
+            //delete the old file...
+
+            if(File.Exists(sOldFilePath))
+            {
+                File.Delete(sOldFilePath);
+            }
+           
+
+            string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+
+            //update the file name in the database...
+            //build up a mru to send to the build update..
+            MultipleRecordUpdates mruRecord = BuildFileInformation(ovDoc, sFilePath, sProjectID);
+            DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecord);
+
+            
+
+        }
     }
 }

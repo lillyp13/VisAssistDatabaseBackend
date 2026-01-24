@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
@@ -445,10 +446,36 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
         //we want to know if there is at least one record given a table..
-        internal static bool DoesRecordExist()
+        internal static bool DoesRecordExist(string sTableName, string sID)
         {
-            return true;
+            try
+            {
+                string sPk = GetPrimaryKey(sTableName);
+
+                using (SQLiteConnection sqliteconConnection =new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+
+                    string sSQL = $@"SELECT 1 FROM {sTableName} WHERE {sPk} = @Id LIMIT 1;";
+
+                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                    {
+                        sqlcmdCommand.Parameters.Add("@Id", DbType.String).Value = sID;
+
+                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
+                        {
+                            return sqlitereadReader.Read();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in DoesRecordExist: " + ex.Message, "VisAssist");
+                return false;
+            }
         }
+
 
 
         internal static Visio.Page GetVisioPageByFileID(int fileID, Visio.Document visioDoc)
@@ -522,35 +549,23 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static int GetNextIdForTable(string sTableName)
+
+        internal static int GetTableRecordCount(string sTableName)
         {
-            int iNextID = 1;
+            string sSql = $"SELECT COUNT(*) FROM {sTableName};";
 
             using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
             {
                 sqliteconConnection.Open();
 
-                string sql = "SELECT seq FROM sqlite_sequence WHERE name = @tableName";
-
-                using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sql, sqliteconConnection))
+                using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
                 {
-                    sqlitecmdCommand.Parameters.AddWithValue("@tableName", sTableName);
-
-                    using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
-                    {
-                        if (sqlitereadReader.Read())
-                        {
-                            if (!sqlitereadReader.IsDBNull(0))
-                            {
-                                iNextID = sqlitereadReader.GetInt32(0) + 1;
-                            }
-                        }
-                    }
+                    return Convert.ToInt32(sqlitecmdCommand.ExecuteScalar());
                 }
             }
-
-            return iNextID;
         }
+
+
 
 
 

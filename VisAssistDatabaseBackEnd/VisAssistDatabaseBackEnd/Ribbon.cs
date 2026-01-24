@@ -1,11 +1,14 @@
 ﻿using Microsoft.Office.Tools.Ribbon;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using VisAssistDatabaseBackEnd.Forms;
+using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd
 {
@@ -43,7 +46,18 @@ namespace VisAssistDatabaseBackEnd
             bool bDoesDBExist = FileUtilities.DoesDBFileExist();
             if(bDoesDBExist)
             {
-                PageUtilities.AddSeedPage();
+                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                if (bIsFileAssignedToProject)
+                {
+
+
+                    PageUtilities.AddSeedPage();
+                }
+                else
+                {
+                    MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                }
             }
             
 
@@ -56,7 +70,7 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnDeleteFileInfo_Click(object sender, RibbonControlEventArgs e)
         {
-            FileUtilities.DeleteAllFiles();
+            //FileUtilities.DeleteAllFiles();
         }
 
         private void btnDeleteProjectInfo_Click(object sender, RibbonControlEventArgs e)
@@ -101,7 +115,17 @@ namespace VisAssistDatabaseBackEnd
                 bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable);
                 if (bDoesTableExist)
                 {
-                    PageUtilities.OpenPagesForm();
+                    Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                    bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                    if (bIsFileAssignedToProject)
+                    {
+                        PageUtilities.OpenPagesForm();
+                    }
+                    else
+                    {
+                        MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                    }
+
                 }
             }
 
@@ -137,7 +161,18 @@ namespace VisAssistDatabaseBackEnd
                 bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
                 if (bDoesDBExist)
                 {
-                    FileUtilities.OpenFileForm();
+                    Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                    bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                    if (bIsFileAssignedToProject)
+                    {
+
+
+                        FileUtilities.OpenFileForm();
+                    }
+                    else
+                    {
+                        MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                    }
                 }
 
             }
@@ -149,7 +184,7 @@ namespace VisAssistDatabaseBackEnd
             //this creates the visio document
             //string sClass = "Master"; //i think this would always creating the Master File
             //FileUtilities.AddVisioDocument(sClass);
-
+            
             string sFilePath = ProjectUtilities.AddProjectFileStructure();
 
             string sProjectName = ProjectUtilities.GetProjectName();
@@ -174,7 +209,16 @@ namespace VisAssistDatabaseBackEnd
             bool bDoesDBExist = FileUtilities.DoesDBFileExist();
             if (bDoesDBExist)
             {
-                FileUtilities.AddNewFile();
+                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                if (bIsFileAssignedToProject)
+                {
+                    FileUtilities.AddNewFile();
+                }
+                else
+                {
+                    MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                }
             }
 
         }
@@ -186,7 +230,17 @@ namespace VisAssistDatabaseBackEnd
             bool bDoesDBExist = FileUtilities.DoesDBFileExist();
             if (bDoesDBExist)
             {
-                FileUtilities.OpenFileForm();
+                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                if(bIsFileAssignedToProject)
+                {
+                    FileUtilities.OpenFileForm();
+                }
+                else
+                {
+                    MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                }
+                
             }
         }
 
@@ -197,7 +251,16 @@ namespace VisAssistDatabaseBackEnd
             bool bDoesDBExist = FileUtilities.DoesDBFileExist();
             if (bDoesDBExist)
             {
-                FileUtilities.OpenFileForm();
+                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                if (bIsFileAssignedToProject)
+                {
+                    FileUtilities.OpenFileForm();
+                }
+                else
+                {
+                    MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                }
             }
         }
 
@@ -210,8 +273,74 @@ namespace VisAssistDatabaseBackEnd
             bool bDoesDBExist = FileUtilities.DoesDBFileExist();
             if (bDoesDBExist)
             {
-                FileUtilities.WhichFileToAssociate();
+                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                if (bIsFileAssignedToProject)
+                {
+
+
+                    FileUtilities.WhichFileToAssociate();
+                }
+                else
+                {
+                    MessageBox.Show("This file is not assigned to a project. Use the Associate Orphaned File button", "VisAssist");
+                }
             }
+        }
+
+        private void btnAssociateOrphanedFile_Click(object sender, RibbonControlEventArgs e)
+        {
+            //we have an orphaned file and we want to assign it to a project
+            //ask the user which project to save this orphaned file to 
+            //we want a folder dialog box where the user will choose the DB folder that contains the db file and where the file structure is where we want to save the new file to
+            //we will need to unhide the hidden folders..
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            if(ovDoc == null)
+            {
+                MessageBox.Show("Please open a document.");
+            }
+
+            string sProjectID = ovDoc.DocumentSheet.Cells["ProjectID"].get_ResultStr(0);
+            if (sProjectID == "")
+            {
+
+
+                string sDBPath = FileUtilities.WhichProjectToAssociateOrphanedFile();
+
+                //from DBPath get the path of the new file: 
+                string sFileStructure = Path.GetDirectoryName(sDBPath);
+                //get the file name of the curreent unassigned docuemnt 
+                 
+                string sFileName = ovDoc.Name;
+
+                string sDestinationFilePath = Path.Combine(sFileStructure, sFileName);
+
+                string sFilePath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
+                string sFolderPath = Path.GetDirectoryName(sFilePath);
+                string sFilePathToCopy = Path.Combine(sFilePath, sFileName);
+
+                FileUtilities.AssociateFile(ovDoc, sDestinationFilePath, sFolderPath, sFileName, false, sFilePathToCopy, "");
+            }
+            else
+            {
+                MessageBox.Show("This is not an orphaned file.");
+            }
+
+        }
+
+        private void btnChangeFileName_Click(object sender, RibbonControlEventArgs e)
+        {
+            bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(Globals.ThisAddIn.Application.ActiveDocument);
+            if(bIsFileAssignedToProject)
+            {
+                DatabaseConfig.BindToActiveDocument();
+                //open the naem form witn the current visio file name and allow them to change it...
+                string sCurrentName = Globals.ThisAddIn.Application.ActiveDocument.Name;
+                string sFileName = FileUtilities.GetFileName(sCurrentName);
+
+                FileUtilities.UpdateFileName(sFileName);
+            }
+           
         }
     }
 }

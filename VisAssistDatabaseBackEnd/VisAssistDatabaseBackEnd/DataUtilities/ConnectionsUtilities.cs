@@ -399,7 +399,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             sFolderPath = Path.GetDirectoryName(sFolderPath);
 
-            DatabasePath = Path.Combine(sFolderPath, "VisAssistBackEnd.db");
+            DatabasePath = Path.Combine(sFolderPath, "DB", "VisAssistBackEnd.db");
             return true;
         }
     }

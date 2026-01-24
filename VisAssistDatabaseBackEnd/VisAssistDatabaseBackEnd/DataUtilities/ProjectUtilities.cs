@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -9,6 +10,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
+using WindowsAPICodePack.Dialogs;
 using static VisAssistDatabaseBackEnd.DataUtilities.DataProcessingUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
 
@@ -239,7 +241,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             FileUtilities.AddUserCellsToDocument(oFileRecord, ovDoc);
 
             //this just adds stuff like the version and class, not sure what else needs to go to the page level right now
-            PageUtilities.AddUserCellsToPage();
+            PageUtilities.AddUserCellsToPage(ovPage);
 
             //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
             //need to build up the page reocrd and run the sql to the database
@@ -252,7 +254,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             ovDoc.Close();
 
             //// Reopen it so Visio refreshes its internal cache
-            ovDoc = Globals.ThisAddIn.Application.Documents.Open(sFilePath);
+            ovDoc = ovDoc.Application.Documents.Open(sFilePath);
             //ovDoc.SaveAs(sFilePath);
             ovDoc.Saved = true;
 
@@ -261,16 +263,64 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static string AddProjectFileStructure()
         {
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
+            //using (SaveFileDialog saveDialog = new SaveFileDialog())
+            //{
+            //    saveDialog.Title = "Select a folder to create the VisAssist project structure";
+            //    saveDialog.Filter = "Folder|*.*";
+            //    saveDialog.FileName = "Select Folder"; // fake filename
+            //    saveDialog.OverwritePrompt = false;
+            //    saveDialog.CheckFileExists = false;
+            //    saveDialog.CheckPathExists = true;
+            //    saveDialog.AddExtension = false;
+
+            //    if (saveDialog.ShowDialog() == DialogResult.OK)
+            //    {
+            //        string sBasePath = Path.GetDirectoryName(saveDialog.FileName);
+
+            //        if (string.IsNullOrWhiteSpace(sBasePath))
+            //        {
+            //            MessageBox.Show("Invalid folder selected.");
+            //            return null;
+            //        }
+
+            //        string sVisAssist = "VisAssist";
+            //        string sProjectFolderPath = Path.Combine(sBasePath, sVisAssist);
+
+            //        // If VisAssist already exists, append -1, -2, -3, etc.
+            //        int iCounter = 1;
+            //        while (Directory.Exists(sProjectFolderPath))
+            //        {
+            //            sProjectFolderPath = Path.Combine(sBasePath, $"{sVisAssist}-{iCounter}");
+            //            iCounter++;
+            //        }
+
+            //        // Create the unique project folder
+            //        Directory.CreateDirectory(sProjectFolderPath);
+
+            //        string sClassAFilePath = Path.Combine(sProjectFolderPath, "Dwg - Cover Pages.vsdx");
+
+            //        // Example database path
+            //        DatabaseConfig.DatabasePath = Path.Combine(sProjectFolderPath, "VisAssistBackEnd.db");
+
+            //        return sClassAFilePath;
+            //    }
+            //    else
+            //    {
+            //        MessageBox.Show("Folder selection cancelled.");
+            //    }
+            //}
+            //return "";
+
+
+            using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
             {
-                folderDialog.Description = "Select a folder to create the VisAssist project structure";
-                folderDialog.ShowNewFolderButton = true;
+                folderdialog.IsFolderPicker = true;
+                folderdialog.Title = "Select a folder to create the VisAssist project structure";
 
-                DialogResult result = folderDialog.ShowDialog();
-
-                if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(folderDialog.SelectedPath))
+                if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
                 {
-                    string sBasePath = folderDialog.SelectedPath;
+                    string sBasePath = folderdialog.FileName; // folder path
+
                     string sVisAssist = "VisAssist";
                     string sProjectFolderPath = Path.Combine(sBasePath, sVisAssist);
 
@@ -287,34 +337,40 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     string sClassAFilePath = Path.Combine(sProjectFolderPath, "Dwg - Cover Pages.vsdx");
 
-                    // Example database path
-                    DatabaseConfig.DatabasePath = Path.Combine(sProjectFolderPath, "VisAssistBackEnd.db");
+                    //now we need to create a hidden folder that will contain the database.. put it in sProjectFolderPath -name it Dwg - sProjectName DB...
+                  
+                    string sDbFolderPath = Path.Combine(sProjectFolderPath, "DB");
+
+                    // Create the folder
+                    Directory.CreateDirectory(sDbFolderPath);
+
+                    // Make it hidden
+                    File.SetAttributes(sDbFolderPath, File.GetAttributes(sDbFolderPath) | FileAttributes.Hidden);
+
+                    // Path to the database inside the hidden folder
+                    DatabaseConfig.DatabasePath = Path.Combine(sDbFolderPath, "VisAssistBackEnd.db");
 
                     return sClassAFilePath;
                 }
-                else
-                {
-                    MessageBox.Show("Folder selection cancelled.");
-                }
             }
-            return "";
-
+            return null;
 
         }
 
         internal static string GetProjectName()
         {
-            using (ProjectNameForm oForm = new ProjectNameForm())
+            using (NameForm oForm = new NameForm())
             {
+                oForm.Text = "Project Name";
+                oForm.PromptText = "Project Name";
                 if (oForm.ShowDialog() == DialogResult.OK)
                 {
-                    return oForm.sProjectName;
+                    return oForm.sName;
                 }
             }
             return null;
         }
-
-
+       
         //Helper Functions
 
         internal static void PopulatePropertiesForm(ProjectPropertiesForm projectPropertiesForm)
@@ -713,7 +769,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 ProjectPropertiesForm oNewForm = new ProjectPropertiesForm();
                 oNewForm.Display(sAction, sProjectName, sFilePath);
-                oNewForm.ShowDialog();
+                //oNewForm.ShowDialog();
             }
             catch (Exception ex)
             {
@@ -983,6 +1039,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     try
                     {
+
+                        //if this files name is VisAssistBackEnd.db delete this last if we were succesfully in deleting the other projects
                         // Attempt to delete entire project folder
                         Directory.Delete(sProjectFolderPath, true);
 
