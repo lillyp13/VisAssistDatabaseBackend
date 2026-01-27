@@ -56,14 +56,20 @@ namespace VisAssistDatabaseBackEnd.Forms
             MultipleRecordUpdates mruRecords = FileUtilities.GatherDisassociationData(this);
 
 
-            ProjectUtilities.AdjustFileCount("Decrease");
-            FileUtilities.DisassociateFile(mruRecords);
-
-            DataGridViewSelectedRowCollection colSelectedRows = dgvFileData.SelectedRows;
-
-            foreach (DataGridViewRow dgvRow in colSelectedRows)
+           
+            bool bDisAssoicatedFile = FileUtilities.DisassociateFile(mruRecords);
+            if (bDisAssoicatedFile)
             {
-                dgvFileData.Rows.Remove(dgvRow);
+                //we were able to disasociate the file (sometimes we can't because it is open in a different instance of visio...
+                ProjectUtilities.AdjustFileCount("Decrease");
+
+
+                DataGridViewSelectedRowCollection colSelectedRows = dgvFileData.SelectedRows;
+
+                foreach (DataGridViewRow dgvRow in colSelectedRows)
+                {
+                    dgvFileData.Rows.Remove(dgvRow);
+                }
             }
 
         }

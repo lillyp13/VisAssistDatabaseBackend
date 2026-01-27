@@ -245,7 +245,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
             //need to build up the page reocrd and run the sql to the database
-            PageUtilities.AddPageToDatabase(ovPage);
+            //The page has sufficient data to move forward with AddPageToDatabase
+            PageUtilities.AddPageToDatabase(ovPage, "");
 
             //after adding the necessary user cells save the document 
             ovDoc.SaveAs(sFilePath);
@@ -263,55 +264,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static string AddProjectFileStructure()
         {
-            //using (SaveFileDialog saveDialog = new SaveFileDialog())
-            //{
-            //    saveDialog.Title = "Select a folder to create the VisAssist project structure";
-            //    saveDialog.Filter = "Folder|*.*";
-            //    saveDialog.FileName = "Select Folder"; // fake filename
-            //    saveDialog.OverwritePrompt = false;
-            //    saveDialog.CheckFileExists = false;
-            //    saveDialog.CheckPathExists = true;
-            //    saveDialog.AddExtension = false;
-
-            //    if (saveDialog.ShowDialog() == DialogResult.OK)
-            //    {
-            //        string sBasePath = Path.GetDirectoryName(saveDialog.FileName);
-
-            //        if (string.IsNullOrWhiteSpace(sBasePath))
-            //        {
-            //            MessageBox.Show("Invalid folder selected.");
-            //            return null;
-            //        }
-
-            //        string sVisAssist = "VisAssist";
-            //        string sProjectFolderPath = Path.Combine(sBasePath, sVisAssist);
-
-            //        // If VisAssist already exists, append -1, -2, -3, etc.
-            //        int iCounter = 1;
-            //        while (Directory.Exists(sProjectFolderPath))
-            //        {
-            //            sProjectFolderPath = Path.Combine(sBasePath, $"{sVisAssist}-{iCounter}");
-            //            iCounter++;
-            //        }
-
-            //        // Create the unique project folder
-            //        Directory.CreateDirectory(sProjectFolderPath);
-
-            //        string sClassAFilePath = Path.Combine(sProjectFolderPath, "Dwg - Cover Pages.vsdx");
-
-            //        // Example database path
-            //        DatabaseConfig.DatabasePath = Path.Combine(sProjectFolderPath, "VisAssistBackEnd.db");
-
-            //        return sClassAFilePath;
-            //    }
-            //    else
-            //    {
-            //        MessageBox.Show("Folder selection cancelled.");
-            //    }
-            //}
-            //return "";
-
-
             using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
             {
                 folderdialog.IsFolderPicker = true;
@@ -361,6 +313,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             using (NameForm oForm = new NameForm())
             {
+                oForm.ControlBox = false;
                 oForm.Text = "Project Name";
                 oForm.PromptText = "Project Name";
                 if (oForm.ShowDialog() == DialogResult.OK)
@@ -890,7 +843,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     string sDirectoryPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
                     //the created date doesn't exist yet...
                     DateTime dtCreatedDate = DateTime.Now;
-                    oDictToUpdate["CreatedDate"] = dtCreatedDate.ToString();
+                    oDictToUpdate["CreatedDate"] = dtCreatedDate.ToString("yyyy-MM-dd HH:mm:ss");
                     sProjectID = ProjectUtilities.GenerateProjectID(sDirectoryPath, dtCreatedDate, m_dictProjectInfoToCompare["ProjectName"]);
                 }
 
@@ -1039,12 +992,36 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     try
                     {
-
+                        bool bAllFilesUnlocked = true;
+                        foreach(string sFilePath in Directory.GetFiles(sProjectFolderPath, "*", SearchOption.AllDirectories))
+                        {
+                           bool bIsFileLocked = FileUtilities.IsFileLocked(sFilePath);
+                            if(bIsFileLocked)
+                            {
+                                bAllFilesUnlocked = false;
+                                break;
+                            }
+                        }
                         //if this files name is VisAssistBackEnd.db delete this last if we were succesfully in deleting the other projects
                         // Attempt to delete entire project folder
-                        Directory.Delete(sProjectFolderPath, true);
+                        if(bAllFilesUnlocked)
+                        {
+                            Directory.Delete(sProjectFolderPath, true);
+                            MessageBox.Show("Project deleted successfully.", "VisAssist", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            //a file in the folder is locked...
+                            MessageBox.Show("Unable to delete the project folder.\n\n" +
+                            "Please make sure all Visio documents and related files in this project are closed, then try again.",
+                            "VisAssist",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+                        }
+                        
 
-                        MessageBox.Show("Project deleted successfully.","VisAssist",MessageBoxButtons.OK,MessageBoxIcon.Information);
+                        
                     }
 
                     //add a few catches...

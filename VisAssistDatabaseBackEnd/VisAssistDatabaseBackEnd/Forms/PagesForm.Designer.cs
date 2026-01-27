@@ -40,12 +40,12 @@
             this.Class = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Orientation = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.Scale = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.txtFileID = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
             this.btnGetPages = new System.Windows.Forms.Button();
             this.btnUpdatePages = new System.Windows.Forms.Button();
             this.btnGetAllPages = new System.Windows.Forms.Button();
             this.btnDeletePage = new System.Windows.Forms.Button();
+            this.btnUpdatePage = new System.Windows.Forms.Button();
+            this.btnGetCurrentPage = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPages)).BeginInit();
             this.SuspendLayout();
             // 
@@ -126,35 +126,19 @@
             this.Scale.HeaderText = "Scale";
             this.Scale.Name = "Scale";
             // 
-            // txtFileID
-            // 
-            this.txtFileID.Location = new System.Drawing.Point(49, 61);
-            this.txtFileID.Name = "txtFileID";
-            this.txtFileID.Size = new System.Drawing.Size(100, 20);
-            this.txtFileID.TabIndex = 1;
-            // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(49, 42);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(34, 13);
-            this.label1.TabIndex = 2;
-            this.label1.Text = "FileID";
-            // 
             // btnGetPages
             // 
             this.btnGetPages.Location = new System.Drawing.Point(201, 61);
             this.btnGetPages.Name = "btnGetPages";
-            this.btnGetPages.Size = new System.Drawing.Size(75, 23);
+            this.btnGetPages.Size = new System.Drawing.Size(173, 23);
             this.btnGetPages.TabIndex = 3;
-            this.btnGetPages.Text = "Get Pages";
+            this.btnGetPages.Text = "Get Page For Current Document";
             this.btnGetPages.UseVisualStyleBackColor = true;
             this.btnGetPages.Click += new System.EventHandler(this.btnGetPages_Click);
             // 
             // btnUpdatePages
             // 
-            this.btnUpdatePages.Location = new System.Drawing.Point(320, 61);
+            this.btnUpdatePages.Location = new System.Drawing.Point(408, 59);
             this.btnUpdatePages.Name = "btnUpdatePages";
             this.btnUpdatePages.Size = new System.Drawing.Size(100, 23);
             this.btnUpdatePages.TabIndex = 4;
@@ -174,7 +158,7 @@
             // 
             // btnDeletePage
             // 
-            this.btnDeletePage.Location = new System.Drawing.Point(444, 61);
+            this.btnDeletePage.Location = new System.Drawing.Point(532, 59);
             this.btnDeletePage.Name = "btnDeletePage";
             this.btnDeletePage.Size = new System.Drawing.Size(100, 23);
             this.btnDeletePage.TabIndex = 6;
@@ -182,24 +166,43 @@
             this.btnDeletePage.UseVisualStyleBackColor = true;
             this.btnDeletePage.Click += new System.EventHandler(this.btnDeletePage_Click);
             // 
+            // btnUpdatePage
+            // 
+            this.btnUpdatePage.Location = new System.Drawing.Point(692, 59);
+            this.btnUpdatePage.Name = "btnUpdatePage";
+            this.btnUpdatePage.Size = new System.Drawing.Size(100, 23);
+            this.btnUpdatePage.TabIndex = 7;
+            this.btnUpdatePage.Text = "Update Page";
+            this.btnUpdatePage.UseVisualStyleBackColor = true;
+            this.btnUpdatePage.Click += new System.EventHandler(this.btnUpdatePage_Click);
+            // 
+            // btnGetCurrentPage
+            // 
+            this.btnGetCurrentPage.Location = new System.Drawing.Point(692, 30);
+            this.btnGetCurrentPage.Name = "btnGetCurrentPage";
+            this.btnGetCurrentPage.Size = new System.Drawing.Size(100, 23);
+            this.btnGetCurrentPage.TabIndex = 8;
+            this.btnGetCurrentPage.Text = "Get Current Page";
+            this.btnGetCurrentPage.UseVisualStyleBackColor = true;
+            this.btnGetCurrentPage.Click += new System.EventHandler(this.btnGetCurrentPage_Click);
+            // 
             // PagesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1474, 448);
+            this.Controls.Add(this.btnGetCurrentPage);
+            this.Controls.Add(this.btnUpdatePage);
             this.Controls.Add(this.btnDeletePage);
             this.Controls.Add(this.btnGetAllPages);
             this.Controls.Add(this.btnUpdatePages);
             this.Controls.Add(this.btnGetPages);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.txtFileID);
             this.Controls.Add(this.dgvPages);
             this.Name = "PagesForm";
             this.Text = "Delete Page";
             this.Load += new System.EventHandler(this.PagesForm_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dgvPages)).EndInit();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -217,11 +220,11 @@
         public System.Windows.Forms.DataGridViewTextBoxColumn Class;
         public System.Windows.Forms.DataGridViewTextBoxColumn Orientation;
         public System.Windows.Forms.DataGridViewTextBoxColumn Scale;
-        public System.Windows.Forms.TextBox txtFileID;
-        public System.Windows.Forms.Label label1;
         public System.Windows.Forms.Button btnGetPages;
         public System.Windows.Forms.Button btnUpdatePages;
         public System.Windows.Forms.Button btnGetAllPages;
         public System.Windows.Forms.Button btnDeletePage;
+        public System.Windows.Forms.Button btnUpdatePage;
+        public System.Windows.Forms.Button btnGetCurrentPage;
     }
 }

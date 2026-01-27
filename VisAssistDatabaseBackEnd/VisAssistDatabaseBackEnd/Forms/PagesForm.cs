@@ -27,31 +27,25 @@ namespace VisAssistDatabaseBackEnd.Forms
         {
 
         }
-        public int m_iFileID = 0;
+        public string m_sFileID = "";
         public bool m_bAllPages;
         private void btnGetPages_Click(object sender, EventArgs e)
         {
             m_bAllPages = false;
             //based on the fileid in the txtfileid retrieve all the pages associated with that file...
-            if (txtFileID.Text != "")
-            {
+
+            //get the file id from the current document...
 
 
-                m_iFileID = Convert.ToInt32(txtFileID.Text);
+            PageUtilities.GetPagesForCurrentFile();
+            PageUtilities.PopulatePagesForm(this);
 
-                PageUtilities.GetPagesForSpecificFile(m_iFileID);
-                PageUtilities.PopulatePagesForm(this);
-            }
-            else
-            {
-                MessageBox.Show("Please select a File ID.");
-            }
         }
 
         private void btnUpdatePages_Click(object sender, EventArgs e)
         {
             //based on if we are doing pages for a specific file or not we need to reset the baserecord set
-            PageUtilities.UpdatePage(this, m_bAllPages, m_iFileID);
+            PageUtilities.UpdatePage(this, m_bAllPages, m_sFileID);
         }
 
         private void btnGetAllPages_Click(object sender, EventArgs e)
@@ -66,6 +60,18 @@ namespace VisAssistDatabaseBackEnd.Forms
         {
             //delete the page that is selected
             PageUtilities.DeletePage(this);
+        }
+
+        private void btnGetCurrentPage_Click(object sender, EventArgs e)
+        {
+            //populate the dgv with the information from visio...this is to mimic how the change will start from visio...
+            PageUtilities.PopulatePagesFormForOnePage(this);
+
+        }
+
+        private void btnUpdatePage_Click(object sender, EventArgs e)
+        {
+            PageUtilities.UpdateCurrentPage(this);
         }
     }
 }

@@ -310,51 +310,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
     //just to get where to save the database
-    //internal static class DatabaseConfig
-    //{
-    //    private static string m_databasePath;
-
-    //    public static string DatabasePath
-    //    {
-    //        get
-    //        {
-    //            if (string.IsNullOrEmpty(m_databasePath))
-    //            {
-    //                //throw new InvalidOperationException("Database path has not been set.");
-    //                //populate this by getting the curernt document and seeing where that document is saved
-    //                Visio.Application ovApp = Globals.ThisAddIn.Application;
-    //                if(ovApp.Documents.Count == 0 || ovApp.ActiveDocument == null)
-    //                {
-    //                    return null;// no document open 
-    //                }
-    //                Visio.Document ovDoc = ovApp.ActiveDocument;
-    //                string sFolderPath = FileUtilities.ReturnFileStructurePath();
-
-    //                m_databasePath = sFolderPath + "VisAssistBackEnd.db";
-
-
-    //            }
-
-    //            return m_databasePath;
-    //        }
-    //        set
-    //        {
-    //            m_databasePath = value;
-    //        }
-    //        ///HARDCODED TO THE DESKTOP
-    //        //get
-    //        //{
-    //        //    // Save the database on the desktop for now
-    //        //    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-
-    //        //    // Put the DB in a VisAssist folder on the desktop
-    //        //    return Path.Combine(desktopPath, "VisAssist", "VisAssistBackEnd.db");
-    //        //}
-    //    }
-
-    //    public static string ConnectionString =>
-    //        $"Data Source={DatabasePath};Version=3;";
-    //}
+    
 
     internal static class DatabaseConfig
     {
@@ -382,22 +338,24 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         /// Binds the database path to the currently active Visio document.
         /// Call this before any DB access to ensure that we are using the correct connection string...
         /// </summary>
-        public static bool BindToActiveDocument()
+        public static bool BindToActiveDocument(string sFolderPath)
         {
-            Visio.Application app = Globals.ThisAddIn.Application;
+            //instead of binding the document to the active document let's give this method the document path that we want to bind it to 
 
-            if (app.Documents.Count == 0 || app.ActiveDocument == null)
-                return false;
+            //Visio.Application app = Globals.ThisAddIn.Application;
 
-            Visio.Document doc = app.ActiveDocument;
+            //if (app.Documents.Count == 0 || app.ActiveDocument == null)
+            //    return false;
 
-            // Unsaved document → no filesystem location yet
-            if (string.IsNullOrEmpty(doc.FullName))
-                return false;
+            //Visio.Document doc = app.ActiveDocument;
 
-            string sFolderPath = FileUtilities.ReturnFileStructurePath(doc.Path);
+            //// Unsaved document → no filesystem location yet
+            //if (string.IsNullOrEmpty(doc.FullName))
+            //    return false;
 
-            sFolderPath = Path.GetDirectoryName(sFolderPath);
+            //string sFolderPath = FileUtilities.ReturnFileStructurePath(doc.Path);
+
+            //sFolderPath = Path.GetDirectoryName(sFolderPath);
 
             DatabasePath = Path.Combine(sFolderPath, "DB", "VisAssistBackEnd.db");
             return true;

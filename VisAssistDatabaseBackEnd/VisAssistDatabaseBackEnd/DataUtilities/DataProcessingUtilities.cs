@@ -478,30 +478,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-        internal static Visio.Page GetVisioPageByFileID(int fileID, Visio.Document visioDoc)
-        {
-
-
-            foreach (Visio.Page page in visioDoc.Pages)
-            {
-                // Assume each page has a User-defined cell called "User.FileID"
-                string cellValue = page.PageSheet.CellsU["User.FileID"].ResultStr[Visio.VisUnitCodes.visNumber];
-                if (int.TryParse(cellValue, out int pageFileID))
-                {
-                    if (pageFileID == fileID)
-                    {
-                        return page; // Found the page
-                    }
-                }
-
-
-
-            }
-
-            // If not found, return null
-            return null;
-        }
-
 
         /// <summary>
         /// given a table we want to know if the parent table has at least one record...

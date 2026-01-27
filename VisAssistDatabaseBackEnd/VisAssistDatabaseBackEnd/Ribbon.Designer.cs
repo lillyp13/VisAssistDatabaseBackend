@@ -51,6 +51,7 @@
             this.btnDeleteFile = this.Factory.CreateRibbonButton();
             this.btnAssociateAnotherFile = this.Factory.CreateRibbonButton();
             this.btnAssociateOrphanedFile = this.Factory.CreateRibbonButton();
+            this.btnChangeFileName = this.Factory.CreateRibbonButton();
             this.grpPages = this.Factory.CreateRibbonGroup();
             this.btnAddPageInfo = this.Factory.CreateRibbonButton();
             this.btnDeletePageInfo = this.Factory.CreateRibbonButton();
@@ -62,7 +63,6 @@
             this.grpWireInfo = this.Factory.CreateRibbonGroup();
             this.btnAddWireInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteWireInfo = this.Factory.CreateRibbonButton();
-            this.btnChangeFileName = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.grpInitialize.SuspendLayout();
             this.grpProjectInfo.SuspendLayout();
@@ -191,6 +191,12 @@
             this.btnAssociateOrphanedFile.Name = "btnAssociateOrphanedFile";
             this.btnAssociateOrphanedFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAssociateOrphanedFile_Click);
             // 
+            // btnChangeFileName
+            // 
+            this.btnChangeFileName.Label = "Change File Name";
+            this.btnChangeFileName.Name = "btnChangeFileName";
+            this.btnChangeFileName.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnChangeFileName_Click);
+            // 
             // grpPages
             // 
             this.grpPages.Items.Add(this.btnAddPageInfo);
@@ -264,12 +270,6 @@
             this.btnDeleteWireInfo.Label = "Delete Wire Info";
             this.btnDeleteWireInfo.Name = "btnDeleteWireInfo";
             this.btnDeleteWireInfo.Visible = false;
-            // 
-            // btnChangeFileName
-            // 
-            this.btnChangeFileName.Label = "Change File Name";
-            this.btnChangeFileName.Name = "btnChangeFileName";
-            this.btnChangeFileName.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnChangeFileName_Click);
             // 
             // Ribbon
             // 
