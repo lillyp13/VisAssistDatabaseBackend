@@ -31,6 +31,8 @@ namespace VisAssistDatabaseBackEnd.Forms
             {
                 FileUtilities.GetFileDataFromDatabase(this);
             }
+
+            //check the opposite, we have checked to see that all of the files in the db have a visio file, but now we want to check if the visio file has a file id and exists in the db...
             FileUtilities.PopulateFilePropertiesForm(this);
         }
 

@@ -31,6 +31,7 @@
             this.txtName = new System.Windows.Forms.TextBox();
             this.lblPrompt = new System.Windows.Forms.Label();
             this.btnOk = new System.Windows.Forms.Button();
+            this.btnCancel = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // txtName
@@ -52,19 +53,31 @@
             // 
             // btnOk
             // 
-            this.btnOk.Location = new System.Drawing.Point(357, 69);
+            this.btnOk.Location = new System.Drawing.Point(323, 69);
             this.btnOk.Name = "btnOk";
-            this.btnOk.Size = new System.Drawing.Size(103, 20);
+            this.btnOk.Size = new System.Drawing.Size(102, 20);
             this.btnOk.TabIndex = 2;
             this.btnOk.Text = "OK";
             this.btnOk.UseVisualStyleBackColor = true;
             this.btnOk.Click += new System.EventHandler(this.btnOk_Click);
             // 
+            // btnCancel
+            // 
+            this.btnCancel.Location = new System.Drawing.Point(449, 69);
+            this.btnCancel.Name = "btnCancel";
+            this.btnCancel.Size = new System.Drawing.Size(102, 20);
+            this.btnCancel.TabIndex = 3;
+            this.btnCancel.Text = "Cancel";
+            this.btnCancel.UseVisualStyleBackColor = true;
+            this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
+            // 
             // NameForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(513, 133);
+            this.ClientSize = new System.Drawing.Size(581, 147);
+            this.ControlBox = false;
+            this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOk);
             this.Controls.Add(this.lblPrompt);
             this.Controls.Add(this.txtName);
@@ -83,5 +96,6 @@
         public System.Windows.Forms.TextBox txtName;
         public System.Windows.Forms.Label lblPrompt;
         public System.Windows.Forms.Button btnOk;
+        public System.Windows.Forms.Button btnCancel;
     }
 }

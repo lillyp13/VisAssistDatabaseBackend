@@ -112,41 +112,47 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void AddProjectInfo(ProjectPropertiesForm projectPropertiesForm, Visio.Document ovDoc)
         {
             //string sProjectTableName = "project_table";
-
-
-            bool bFolderAlreadyExists = ConnectionsUtilities.CheckForDatabaseDirectory(DatabaseConfig.DatabasePath);
-            if (bFolderAlreadyExists)
+            try
             {
-                bool bDataBaseFileExists = System.IO.File.Exists(DatabaseConfig.DatabasePath);
-                if (bDataBaseFileExists)
+
+                bool bFolderAlreadyExists = ConnectionsUtilities.CheckForDatabaseDirectory(DatabaseConfig.DatabasePath);
+                if (bFolderAlreadyExists)
                 {
-                    bool bTableExists = DoesTableExist(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable);
-
-                    if (bTableExists)
+                    bool bDataBaseFileExists = System.IO.File.Exists(DatabaseConfig.DatabasePath);
+                    if (bDataBaseFileExists)
                     {
-                        //the table exists let's go add the project
-                        bool bDoesProjectExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable);
-                        if (!bDoesProjectExist)
+                        bool bTableExists = DoesTableExist(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable);
+
+                        if (bTableExists)
                         {
-                            //there is no record in the project_Table yet so let's go add it...
-                            //we have the data the user wants to add in the projectPropertiesForm
-                            m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
-                            ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm, ovDoc);
-
-
-                            //if (m_dictProjectInfoToUpdate.Count > 0)
-                            if (m_mruRecordsToCompare.ruRecords.Count > 0)
+                            //the table exists let's go add the project
+                            bool bDoesProjectExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable);
+                            if (!bDoesProjectExist)
                             {
+                                //there is no record in the project_Table yet so let's go add it...
+                                //we have the data the user wants to add in the projectPropertiesForm
+                                m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
+                                ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm, ovDoc);
 
-                                DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsToCompare);
-                                //DataProcessingUtilities.BuildInsertSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate);
 
-                                ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
+                                //if (m_dictProjectInfoToUpdate.Count > 0)
+                                if (m_mruRecordsToCompare.ruRecords.Count > 0)
+                                {
 
+                                    DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsToCompare);
+                                    //DataProcessingUtilities.BuildInsertSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate);
+
+                                    ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
+
+                                }
                             }
                         }
                     }
                 }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in AddProjectInfo " + ex.Message, "VisAssist");
             }
         }
 
@@ -215,115 +221,182 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void AddNewProject(ProjectPropertiesForm projectPropertiesForm, string sFilePath)
         {
-            //this needs to create the new visio file now and then we can add the database...
-            FileUtilities.AddCoverPageDocument(sFilePath);
+            try
+            {
 
 
-            MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
-            //get the active docuent 
-            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-            Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
-
-            //we are adding a project for the first time create the database and the tables in it
-            ConnectionsUtilities.InitializeDatabase(DatabaseConfig.DatabasePath);
-            //gather the information from the properties form to fill out the project information 
-            ProjectUtilities.AddProjectInfo(projectPropertiesForm, ovDoc);
-            //i need a record for the file that was created in Add
-
-            sFilePath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
-            string sFileName = ovDoc.Name;
-            sFilePath = sFilePath + sFileName;
+                //this needs to create the new visio file now and then we can add the database...
+                FileUtilities.AddCoverPageDocument(sFilePath);
 
 
-            //add the file to the database: builds the file recored and runs the sql to the database, also increases the file count...
-            oFileRecord = FileUtilities.AddFileToDatabase(ovDoc, sFilePath, m_mruRecordsToCompare.ruRecords[0].sId);
+                MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
+                //get the active docuent 
+                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
 
-            FileUtilities.AddUserCellsToDocument(oFileRecord, ovDoc);
+                //we are adding a project for the first time create the database and the tables in it
+                ConnectionsUtilities.InitializeDatabase(DatabaseConfig.DatabasePath);
+                //gather the information from the properties form to fill out the project information 
+                ProjectUtilities.AddProjectInfo(projectPropertiesForm, ovDoc);
+                //i need a record for the file that was created in Add
 
-            //this just adds stuff like the version and class, not sure what else needs to go to the page level right now
-            PageUtilities.AddUserCellsToPage(ovPage);
+                sFilePath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
+                string sFileName = ovDoc.Name;
+                sFilePath = sFilePath + sFileName;
 
-            //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
-            //need to build up the page reocrd and run the sql to the database
-            //The page has sufficient data to move forward with AddPageToDatabase
-            PageUtilities.AddPageToDatabase(ovPage, "");
 
-            //after adding the necessary user cells save the document 
-            ovDoc.SaveAs(sFilePath);
+                //add the file to the database: builds the file recored and runs the sql to the database, also increases the file count...
+                oFileRecord = FileUtilities.AddFileToDatabase(ovDoc, sFilePath, m_mruRecordsToCompare.ruRecords[0].sId);
 
-            //closing and reopening so we don't have any cache problems...
-            ovDoc.Close();
+                FileUtilities.AddUserCellsToDocument(oFileRecord, ovDoc);
 
-            //// Reopen it so Visio refreshes its internal cache
-            ovDoc = ovDoc.Application.Documents.Open(sFilePath);
-            //ovDoc.SaveAs(sFilePath);
-            ovDoc.Saved = true;
+                //this just adds stuff like the version and class, not sure what else needs to go to the page level right now
+                PageUtilities.AddUserCellsToPage(ovPage);
 
+                //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
+                //need to build up the page reocrd and run the sql to the database
+                //The page has sufficient data to move forward with AddPageToDatabase
+                PageUtilities.AddPageToDatabase(ovPage, "");
+
+                //after adding the necessary user cells save the document 
+                ovDoc.SaveAs(sFilePath);
+
+                //closing and reopening so we don't have any cache problems...
+                ovDoc.Close();
+
+                //// Reopen it so Visio refreshes its internal cache
+                ovDoc = ovDoc.Application.Documents.Open(sFilePath);
+                //ovDoc.SaveAs(sFilePath);
+                ovDoc.Saved = true;
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in AddNewProject " + ex.Message, "VisAssist");
+            }
 
         }
 
         internal static string AddProjectFileStructure()
         {
+            try
+            {
+
+
+                using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
+                {
+                    folderdialog.IsFolderPicker = true;
+                    folderdialog.Title = "Select a folder to create the VisAssist project structure";
+
+                    if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
+                    {
+                        string sBasePath = folderdialog.FileName; // folder path
+
+                        string sVisAssist = "VisAssist";
+                        string sProjectFolderPath = Path.Combine(sBasePath, sVisAssist);
+
+                        // If VisAssist already exists, append -1, -2, -3, etc.
+                        int iCounter = 1;
+                        while (Directory.Exists(sProjectFolderPath))
+                        {
+                            sProjectFolderPath = Path.Combine(sBasePath, $"{sVisAssist}-{iCounter}");
+                            iCounter++;
+                        }
+
+                        // Create the unique project folder
+                        Directory.CreateDirectory(sProjectFolderPath);
+
+                        string sClassAFilePath = Path.Combine(sProjectFolderPath, "Dwg - Cover Pages.vsdx");
+
+                        //now we need to create a hidden folder that will contain the database.. put it in sProjectFolderPath -name it Dwg - sProjectName DB...
+
+                        string sDbFolderPath = Path.Combine(sProjectFolderPath, "DB");
+
+                        // Create the folder
+                        Directory.CreateDirectory(sDbFolderPath);
+
+                        // Make it hidden
+                        File.SetAttributes(sDbFolderPath, File.GetAttributes(sDbFolderPath) | FileAttributes.Hidden);
+
+                        // Path to the database inside the hidden folder
+                        DatabaseConfig.DatabasePath = Path.Combine(sDbFolderPath, "VisAssistBackEnd.db");
+
+                        return sClassAFilePath;
+                    }
+                }
+            }
+            catch(Exception ex)
+
+            {
+                MessageBox.Show("Error in AddProjectFileStructure " + ex.Message, "VisAssist");
+            }
+            return null;
+
+        }
+
+
+        internal static void DeleteProject()
+        {
+            // i want to delete the project entireley so i will see if i can delete the folder (if everything in it is closed...)
+            //open a folder dialog box and have the user point to the folder they want to delete
+            //try to delete it-if we can't catch the exception and tell the user hey you need to close all the files in that project before i delete the project...
             using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
             {
-                folderdialog.IsFolderPicker = true;
-                folderdialog.Title = "Select a folder to create the VisAssist project structure";
+                folderdialog.Title = "Select the VisAssist project folder to delete";
 
                 if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
                 {
-                    string sBasePath = folderdialog.FileName; // folder path
+                    string sProjectFolderPath = folderdialog.FileName;
 
-                    string sVisAssist = "VisAssist";
-                    string sProjectFolderPath = Path.Combine(sBasePath, sVisAssist);
-
-                    // If VisAssist already exists, append -1, -2, -3, etc.
-                    int iCounter = 1;
-                    while (Directory.Exists(sProjectFolderPath))
+                    try
                     {
-                        sProjectFolderPath = Path.Combine(sBasePath, $"{sVisAssist}-{iCounter}");
-                        iCounter++;
+                        bool bAllFilesUnlocked = true;
+                        foreach (string sFilePath in Directory.GetFiles(sProjectFolderPath, "*", SearchOption.AllDirectories))
+                        {
+                            bool bIsFileLocked = FileUtilities.IsFileLocked(sFilePath);
+                            if (bIsFileLocked)
+                            {
+                                bAllFilesUnlocked = false;
+                                break;
+                            }
+                        }
+                        //if this files name is VisAssistBackEnd.db delete this last if we were succesfully in deleting the other projects
+                        // Attempt to delete entire project folder
+                        if (bAllFilesUnlocked)
+                        {
+                            Directory.Delete(sProjectFolderPath, true);
+                            MessageBox.Show("Project deleted successfully.", "VisAssist", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            //a file in the folder is locked...
+                            MessageBox.Show("Unable to delete the project folder.\n\n" +
+                            "Please make sure all Visio documents and related files in this project are closed, then try again.",
+                            "VisAssist",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+                        }
+
+
+
                     }
 
-                    // Create the unique project folder
-                    Directory.CreateDirectory(sProjectFolderPath);
-
-                    string sClassAFilePath = Path.Combine(sProjectFolderPath, "Dwg - Cover Pages.vsdx");
-
-                    //now we need to create a hidden folder that will contain the database.. put it in sProjectFolderPath -name it Dwg - sProjectName DB...
-                  
-                    string sDbFolderPath = Path.Combine(sProjectFolderPath, "DB");
-
-                    // Create the folder
-                    Directory.CreateDirectory(sDbFolderPath);
-
-                    // Make it hidden
-                    File.SetAttributes(sDbFolderPath, File.GetAttributes(sDbFolderPath) | FileAttributes.Hidden);
-
-                    // Path to the database inside the hidden folder
-                    DatabaseConfig.DatabasePath = Path.Combine(sDbFolderPath, "VisAssistBackEnd.db");
-
-                    return sClassAFilePath;
+                    //add a few catches...
+                    catch (IOException)
+                    {
+                        MessageBox.Show("Unable to delete the project folder.\n\n" +
+                            "Please make sure all Visio documents and related files in this project are closed, then try again.",
+                            "VisAssist",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning
+                        );
+                    }
                 }
             }
-            return null;
+
 
         }
 
-        internal static string GetProjectName()
-        {
-            using (NameForm oForm = new NameForm())
-            {
-                oForm.ControlBox = false;
-                oForm.Text = "Project Name";
-                oForm.PromptText = "Project Name";
-                if (oForm.ShowDialog() == DialogResult.OK)
-                {
-                    return oForm.sName;
-                }
-            }
-            return null;
-        }
-       
         //Helper Functions
 
         internal static void PopulatePropertiesForm(ProjectPropertiesForm projectPropertiesForm)
@@ -662,52 +735,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-
-                //RECORDS USING DICTIONARY
-                //m_dictProjectInfoBase.Clear();//this should be cleared because you build this when the user presses update
-                //m_dictProjectInfoToUpdate.Clear();//this should be cleared because you build this when the user presses update
-
-                //string sSQl = @"SELECT * FROM project_table WHERE Id = 1";
-                ////logging statement placeholder
-                //using (SQLiteConnection sqliteconConnection = new SQLiteConnection(Connection))
-                //{
-                //    //logging statement placeholder
-                //    sqliteconConnection.Open();
-                //    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSQl, sqliteconConnection))
-                //    {
-                //        //logging here
-                //        //execute the query and read the result
-                //        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
-                //        {
-                //            if (sqlitereadReader.Read())
-                //            {
-                //                string sRowData = "";
-                //                string sColumnName = "";
-                //                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
-                //                {
-                //                    sColumnName = sqlitereadReader.GetName(i).ToString(); // column name
-                //                    sRowData = sqlitereadReader.GetValue(i).ToString(); //actual value we care about
-                //                    m_dictProjectInfoBase.Add(sColumnName, sRowData); //build up the dictionary so the column is the key and the value is the value in the cell...
-                //                    //logging statement placeholder
-                //                }
-
-                //            }
-                //            else
-                //            {
-                //                //there are no records in the project_Table
-                //                for(int i = 0; i <sqlitereadReader.FieldCount; i++)
-                //                {
-                //                    string sColumnName = sqlitereadReader.GetName(i);
-                //                    m_dictProjectInfoBase.Add(sColumnName, null);
-                //                }
-                //            }
-
-
-                //        }
-                //    }
-                //}
-
-
             }
             catch (Exception ex)
             {
@@ -862,6 +889,21 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+        internal static string GetProjectName()
+        {
+            using (NameForm oForm = new NameForm())
+            {
+                oForm.ControlBox = false;
+                oForm.Text = "Project Name";
+                oForm.PromptText = "Project Name";
+                if (oForm.ShowDialog() == DialogResult.OK)
+                {
+                    string sTrimmedName = oForm.sName?.Trim();
+                    return sTrimmedName;
+                }
+            }
+            return null;
+        }
 
 
 
@@ -869,55 +911,64 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void AdjustFileCount(string sAdjustment)
         {
             //sAdjustment will either be Increase or Decrease
-
-            ProjectUtilities.GetProjectInfoFromDatabase();
-
-            List<RecordUpdate> lstUpdatedRecords = new List<RecordUpdate>();
-
-            foreach (RecordUpdate ruRecord in m_mruRecordsBase.ruRecords)
+            try
             {
-                // Clone the column values dictionary so we don't mutate the original
-                Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>(ruRecord.odictColumnValues);
 
-                // Get current FileCount
-                int iFileCount = 0;
-                if (oDictColumnValues.TryGetValue("FileCount", out string sFileCount))
+
+                ProjectUtilities.GetProjectInfoFromDatabase();
+
+                List<RecordUpdate> lstUpdatedRecords = new List<RecordUpdate>();
+
+                foreach (RecordUpdate ruRecord in m_mruRecordsBase.ruRecords)
                 {
-                    // Parse safely
-                    int.TryParse(sFileCount, out iFileCount);
+                    // Clone the column values dictionary so we don't mutate the original
+                    Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>(ruRecord.odictColumnValues);
+
+                    // Get current FileCount
+                    int iFileCount = 0;
+                    if (oDictColumnValues.TryGetValue("FileCount", out string sFileCount))
+                    {
+                        // Parse safely
+                        int.TryParse(sFileCount, out iFileCount);
+                    }
+
+                    // increase or decrease based on sAdjustment 
+                    if (sAdjustment == "Increase")
+                    {
+                        iFileCount++;
+                    }
+                    else
+                    {
+                        iFileCount--;
+                    }
+
+
+                    // Update the dictionary
+                    oDictColumnValues["FileCount"] = iFileCount.ToString();
+
+                    // Create a new RecordUpdate with the updated FileCount
+                    RecordUpdate ruUpdated = new RecordUpdate();
+                    ruUpdated.sPrimaryKeyColumn = ruRecord.sPrimaryKeyColumn;
+                    ruUpdated.sId = ruRecord.sId;
+                    ruUpdated.odictColumnValues = oDictColumnValues;
+
+                    // Add to the list
+                    lstUpdatedRecords.Add(ruUpdated);
                 }
+                m_mruRecordsBase = new MultipleRecordUpdates(lstUpdatedRecords);
 
-                // increase or decrease based on sAdjustment 
-                if (sAdjustment == "Increase")
-                {
-                    iFileCount++;
-                }
-                else
-                {
-                    iFileCount--;
-                }
-
-
-                // Update the dictionary
-                oDictColumnValues["FileCount"] = iFileCount.ToString();
-
-                // Create a new RecordUpdate with the updated FileCount
-                RecordUpdate ruUpdated = new RecordUpdate();
-                ruUpdated.sPrimaryKeyColumn = ruRecord.sPrimaryKeyColumn;
-                ruUpdated.sId = ruRecord.sId;
-                ruUpdated.odictColumnValues = oDictColumnValues;
-
-                // Add to the list
-                lstUpdatedRecords.Add(ruUpdated);
+                //increase the value in FileCount for the project_table in the database...
+                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsBase);
             }
-            m_mruRecordsBase = new MultipleRecordUpdates(lstUpdatedRecords);
-
-            //increase the value in FileCount for the project_table in the database...
-            DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsBase);
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in AdjustFileCount " + ex.Message, "VisAssist");
+            }
         }
 
         internal static string GenerateProjectID(string sDirectoryPath, DateTime createdDate, string sProjectName)
         {
+
             //project: sDirectoryPath + "Dwg - Cover Pages" + project name and created date
             //file: projectID + filepath + created date
             //page: ProjectID + FileID + page name + created date
@@ -938,107 +989,53 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static bool ClearProjectID(MultipleRecordUpdates mruRecords)
         {
-            foreach (RecordUpdate ruUpdated in mruRecords.ruRecords)
+            try
             {
-                Visio.Application ovApp = Globals.ThisAddIn.Application;
-                string sFilePath = ruUpdated.odictColumnValues["FilePath"];
-
-                Visio.Document ovDoc = FileUtilities.IsVisioFileOpen(ovApp, sFilePath);
-                if (ovDoc == null)
+                foreach (RecordUpdate ruUpdated in mruRecords.ruRecords)
                 {
-                    //the document is not open in the current instance of visio-check to see if it is open/locked 
-                    bool bFileLocked = FileUtilities.IsFileLocked(sFilePath);
-                    if (bFileLocked)
+                    Visio.Application ovApp = Globals.ThisAddIn.Application;
+                    string sFilePath = ruUpdated.odictColumnValues["FilePath"];
+
+                    Visio.Document ovDoc = FileUtilities.IsVisioFileOpen(ovApp, sFilePath);
+                    if (ovDoc == null)
                     {
-                        //the file is open in another instance...we want to close it and re open it in our instance of visio i think we need to tell them they need to close it before we disassociate it...
-                        ///otherwise we might run into cached docuemnts errors...
-                        return false;
-                    }
-                    else
-                    {
-
-                        ovDoc = ovApp.Documents.Open(sFilePath);
-                        ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"\"";
-                        ovDoc.SaveAs(sFilePath);
-                        ovDoc.Close();
-                        return true;
-                    }
-                }
-                else
-                {
-                    //the document is already openend 
-                    ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"\"";
-                    ovDoc.SaveAs(sFilePath);
-                }
-
-
-
-            }
-            return true;
-        }
-
-        internal static void DeleteProject()
-        {
-            // i want to delete the project entireley so i will see if i can delete the folder (if everything in it is closed...)
-            //open a folder dialog box and have the user point to the folder they want to delete
-            //try to delete it-if we can't catch the exception and tell the user hey you need to close all the files in that project before i delete the project...
-            using (FolderBrowserDialog folderDialog = new FolderBrowserDialog())
-            {
-                folderDialog.Description = "Select the VisAssist project folder to delete";
-
-                if (folderDialog.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(folderDialog.SelectedPath))
-                {
-                    string sProjectFolderPath = folderDialog.SelectedPath;
-
-                    try
-                    {
-                        bool bAllFilesUnlocked = true;
-                        foreach(string sFilePath in Directory.GetFiles(sProjectFolderPath, "*", SearchOption.AllDirectories))
+                        //the document is not open in the current instance of visio-check to see if it is open/locked 
+                        bool bFileLocked = FileUtilities.IsFileLocked(sFilePath);
+                        if (bFileLocked)
                         {
-                           bool bIsFileLocked = FileUtilities.IsFileLocked(sFilePath);
-                            if(bIsFileLocked)
-                            {
-                                bAllFilesUnlocked = false;
-                                break;
-                            }
-                        }
-                        //if this files name is VisAssistBackEnd.db delete this last if we were succesfully in deleting the other projects
-                        // Attempt to delete entire project folder
-                        if(bAllFilesUnlocked)
-                        {
-                            Directory.Delete(sProjectFolderPath, true);
-                            MessageBox.Show("Project deleted successfully.", "VisAssist", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            //the file is open in another instance...we want to close it and re open it in our instance of visio i think we need to tell them they need to close it before we disassociate it...
+                            ///otherwise we might run into cached docuemnts errors...
+                            return false;
                         }
                         else
                         {
-                            //a file in the folder is locked...
-                            MessageBox.Show("Unable to delete the project folder.\n\n" +
-                            "Please make sure all Visio documents and related files in this project are closed, then try again.",
-                            "VisAssist",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning
-                        );
+
+                            ovDoc = ovApp.Documents.Open(sFilePath);
+                            ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"\"";
+                            ovDoc.SaveAs(sFilePath);
+                            ovDoc.Close();
+                            return true;
                         }
-                        
-
-                        
                     }
-
-                    //add a few catches...
-                    catch (IOException)
+                    else
                     {
-                        MessageBox.Show("Unable to delete the project folder.\n\n" +
-                            "Please make sure all Visio documents and related files in this project are closed, then try again.",
-                            "VisAssist",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning
-                        );
+                        //the document is already openend 
+                        ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"\"";
+                        ovDoc.SaveAs(sFilePath);
                     }
+
+
+
                 }
+                return true;
             }
-
-
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in ClearProjectID " + ex.Message, "VisAssist");
+            }
+            return false;
         }
+
     }
 }
 

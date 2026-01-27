@@ -197,33 +197,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        private static void UpdateVisioPages()
-        {
-            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-            if (ovDoc != null)
-            {
-                //use the m_mruRecordsToUpdate to update the page names in visio
-                //use the User.PageID to match the pages with what page to update to...(or if we don't need to update it...)
-                foreach (Visio.Page ovPage in ovDoc.Pages)
-                {
-                    string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                    foreach (RecordUpdate ruRecord in m_mruRecordsToUpdate.ruRecords)
-                    {
-                        string sID = ruRecord.sId;
-                        //check to see if the visio pages id is the same as this page to update in the database...
-                        if (sPageID == sID)
-                        {
-                            //this is the visio page to update 
-                            if (ruRecord.odictColumnValues.ContainsKey("PageName"))
-                            {
-                                ovPage.Name = ruRecord.odictColumnValues["PageName"];
-                            }
-
-                        }
-                    }
-                }
-            }
-        }
 
         internal static void AddPageToDatabase(Visio.Page ovPage, string sProjectID)
         {
@@ -233,6 +206,36 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, oPageRecord);
         }
 
+
+        internal static void UpdateCurrentPage(PagesForm pagesForm)
+        {
+            Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
+            if (ovPage != null)
+            {
+                string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+
+                PageUtilities.UpdateVisioPageName(pagesForm);
+
+                //build up the multiplerecordupate of the page 
+                MultipleRecordUpdates mruRecord = BuildPageInformation(ovPage, sProjectID);
+
+                //there is something to update
+                //sync with visio this is to simulate the actual event (user changes a page name in visio and it triggers the update to db 
+                //this method is just to keep visio and our db in sync as of today (our event handlers...)
+
+
+                //will need to add the page name no matter what..but should only update the LastModifiedDate if something else was updated...
+
+                //PageUtilities.UpdateVisioPages();
+
+
+                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, mruRecord);
+                //I think we will also want to update the files and projects LastModifiedDate-right???
+
+
+            }
+
+        }
         internal static void AddSeedPage() //SEED
         {
             //make sure there is a file in the files_table and a project in the project_table
@@ -315,7 +318,34 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+        //simulates changing many page names in visio...don't think we are giving them a space to do this...but it is possible we will want to update multiple pages at once...
+        private static void UpdateVisioPages()
+        {
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            if (ovDoc != null)
+            {
+                //use the m_mruRecordsToUpdate to update the page names in visio
+                //use the User.PageID to match the pages with what page to update to...(or if we don't need to update it...)
+                foreach (Visio.Page ovPage in ovDoc.Pages)
+                {
+                    string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    foreach (RecordUpdate ruRecord in m_mruRecordsToUpdate.ruRecords)
+                    {
+                        string sID = ruRecord.sId;
+                        //check to see if the visio pages id is the same as this page to update in the database...
+                        if (sPageID == sID)
+                        {
+                            //this is the visio page to update 
+                            if (ruRecord.odictColumnValues.ContainsKey("PageName"))
+                            {
+                                ovPage.Name = ruRecord.odictColumnValues["PageName"];
+                            }
 
+                        }
+                    }
+                }
+            }
+        }
         internal static void GetPagesForCurrentFile()
         {
             try
@@ -628,36 +658,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void UpdateCurrentPage(PagesForm pagesForm)
-        {
-            Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
-            if (ovPage != null)
-            {
-                string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-
-                PageUtilities.UpdateVisioPageName(pagesForm);
-
-                //build up the multiplerecordupate of the page 
-                MultipleRecordUpdates mruRecord = BuildPageInformation(ovPage, sProjectID);
-
-                //there is something to update
-                //sync with visio this is to simulate the actual event (user changes a page name in visio and it triggers the update to db 
-                //this method is just to keep visio and our db in sync as of today (our event handlers...)
-
-
-                //will need to add the page name no matter what..but should only update the LastModifiedDate if something else was updated...
-                
-                //PageUtilities.UpdateVisioPages();
-
-
-                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, mruRecord);
-                //I think we will also want to update the files and projects LastModifiedDate-right???
-
-
-            }
-
-        }
-
+      
+        //simulates changing the page name in visio
         private static void UpdateVisioPageName(PagesForm pagesForm)
         {
             //gather the information for the current informtaion and apply it the pages shape sheet...
