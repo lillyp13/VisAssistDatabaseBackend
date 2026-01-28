@@ -341,6 +341,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //try to delete it-if we can't catch the exception and tell the user hey you need to close all the files in that project before i delete the project...
             using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
             {
+                folderdialog.IsFolderPicker = true;
                 folderdialog.Title = "Select the VisAssist project folder to delete";
 
                 if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
@@ -907,64 +908,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-        //increases or decreases the projects file count by one
-        internal static void AdjustFileCount(string sAdjustment)
-        {
-            //sAdjustment will either be Increase or Decrease
-            try
-            {
-
-
-                ProjectUtilities.GetProjectInfoFromDatabase();
-
-                List<RecordUpdate> lstUpdatedRecords = new List<RecordUpdate>();
-
-                foreach (RecordUpdate ruRecord in m_mruRecordsBase.ruRecords)
-                {
-                    // Clone the column values dictionary so we don't mutate the original
-                    Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>(ruRecord.odictColumnValues);
-
-                    // Get current FileCount
-                    int iFileCount = 0;
-                    if (oDictColumnValues.TryGetValue("FileCount", out string sFileCount))
-                    {
-                        // Parse safely
-                        int.TryParse(sFileCount, out iFileCount);
-                    }
-
-                    // increase or decrease based on sAdjustment 
-                    if (sAdjustment == "Increase")
-                    {
-                        iFileCount++;
-                    }
-                    else
-                    {
-                        iFileCount--;
-                    }
-
-
-                    // Update the dictionary
-                    oDictColumnValues["FileCount"] = iFileCount.ToString();
-
-                    // Create a new RecordUpdate with the updated FileCount
-                    RecordUpdate ruUpdated = new RecordUpdate();
-                    ruUpdated.sPrimaryKeyColumn = ruRecord.sPrimaryKeyColumn;
-                    ruUpdated.sId = ruRecord.sId;
-                    ruUpdated.odictColumnValues = oDictColumnValues;
-
-                    // Add to the list
-                    lstUpdatedRecords.Add(ruUpdated);
-                }
-                m_mruRecordsBase = new MultipleRecordUpdates(lstUpdatedRecords);
-
-                //increase the value in FileCount for the project_table in the database...
-                DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsBase);
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in AdjustFileCount " + ex.Message, "VisAssist");
-            }
-        }
+       
+       
 
         internal static string GenerateProjectID(string sDirectoryPath, DateTime createdDate, string sProjectName)
         {

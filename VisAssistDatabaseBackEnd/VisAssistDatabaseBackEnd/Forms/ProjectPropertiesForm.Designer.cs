@@ -549,6 +549,7 @@
             this.Controls.Add(this.txtProjectName);
             this.Name = "ProjectPropertiesForm";
             this.Text = "ProjectPropertiesForm";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.ProjectPropertiesForm_FormClosing);
             this.Load += new System.EventHandler(this.ProjectPropertiesForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();

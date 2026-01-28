@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.Forms
 {
@@ -66,13 +67,13 @@ namespace VisAssistDatabaseBackEnd.Forms
         {
             MultipleRecordUpdates mruRecords = FileUtilities.GatherDisassociationData(this);
 
-
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
            
             bool bDisAssoicatedFile = FileUtilities.DisassociateFile(mruRecords);
             if (bDisAssoicatedFile)
             {
                 //we were able to disasociate the file (sometimes we can't because it is open in a different instance of visio...
-                ProjectUtilities.AdjustFileCount("Decrease");
+                FileUtilities.AdjustFileCount(ovDoc);
 
 
                 DataGridViewSelectedRowCollection colSelectedRows = dgvFileData.SelectedRows;

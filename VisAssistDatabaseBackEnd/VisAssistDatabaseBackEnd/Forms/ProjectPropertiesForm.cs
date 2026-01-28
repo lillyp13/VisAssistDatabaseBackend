@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -51,6 +52,7 @@ namespace VisAssistDatabaseBackEnd.Forms
 
                     if (bAssignedToProject)
                     {
+                        FileUtilities.AdjustFileCount(ovDoc);
                         ProjectUtilities.GetProjectInfoFromDatabase();
                         ProjectUtilities.PopulatePropertiesForm(this);
                         ShowDialog();
@@ -90,6 +92,20 @@ namespace VisAssistDatabaseBackEnd.Forms
            
             this.Close();
             
+        }
+
+        private void ProjectPropertiesForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            //the user is closing the form, check to see if we were going to be adding a project and if we are we need to clean up the file structrue that was created...
+            if (m_sAction == "Add")
+            {
+                //then remove the file structure... 
+                string sDirectory = Path.GetDirectoryName(m_sFilePath);
+                if (Directory.Exists(sDirectory))
+                {
+                    Directory.Delete(sDirectory, true); //delete recursively...
+                }
+            }
         }
     }
 }
