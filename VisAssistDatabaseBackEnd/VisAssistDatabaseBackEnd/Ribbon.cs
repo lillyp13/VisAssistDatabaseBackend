@@ -206,8 +206,7 @@ namespace VisAssistDatabaseBackEnd
                         bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
                         if (bIsFileAssignedToProject)
                         {
-
-
+                            //the file is assigned to a project 
                             FileUtilities.OpenFileForm();
                         }
                         else
