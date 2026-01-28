@@ -613,10 +613,15 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
 
                     ovNewDoc.DocumentSheet.Cells["User.ProjectID"].FormulaU = "\"" + sProjectID + "\"";
-                    ovNewDoc.SaveAs(sUniqueFilePath);
+                    
                     if (!bDocIsOpen)
                     {
+                        ovNewDoc.SaveAs(sUniqueFilePath);
                         ovNewDoc.Close(); //only close the document if we opened it...
+                    }
+                    else
+                    {
+                        ovNewDoc.Save(); //the document is already in the file location and was not already open...
                     }
 
 
