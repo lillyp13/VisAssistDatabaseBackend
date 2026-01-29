@@ -574,7 +574,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
         }
 
-        private static string GeneratePageID(string sProjectID, string sFileID, string sPageName, DateTime now)
+        internal static string GeneratePageID(string sProjectID, string sFileID, string sPageName, DateTime now)
         {
             //project: sDirectoryPath + "Dwg - Cover Pages" + project name and created date
             //file: projectID + filepath + created date
