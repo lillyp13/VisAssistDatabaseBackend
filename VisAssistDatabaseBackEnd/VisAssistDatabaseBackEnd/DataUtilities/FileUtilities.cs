@@ -388,7 +388,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         if (bAssociatedFile)
                         {
                             //save the current file
-                            ovDoc.Save();
+                            ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                            if(ovDoc != null)
+                            {
+                                ovDoc.Save();
+                            }
+                            
                             MessageBox.Show("Databases successfully associated!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
@@ -775,9 +780,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     if (bCopiedDoc)
                     {
-                        //we copied the doc so we want to save to the uniquefilepath
-                        ovNewDoc.SaveAs(sUniqueFilePath);
+                        //save as and close the new file in the new location as well as save and close the original file we opened...
+                        ovNewDoc.SaveAs(sUniqueFilePath); //ovNewDoc is the copied assoicated file
                         ovNewDoc.Close(); //only close the document if we opened it...
+                        ovDoc.Save(); //ovDoc is the file that the user picked ot associate..
+                        ovDoc.Close();
                     }
                     else
                     {
