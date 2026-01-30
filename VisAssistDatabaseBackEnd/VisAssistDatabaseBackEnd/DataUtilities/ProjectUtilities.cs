@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Permissions;
@@ -67,6 +68,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static MultipleRecordUpdates m_mruRecordsToCompare = new MultipleRecordUpdates();
         public static MultipleRecordUpdates m_mruRecordsToUpdate = new MultipleRecordUpdates();
 
+       
 
         //SEEDING
         internal static void AddProjectInfoSeeding()
@@ -150,7 +152,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in AddProjectInfo " + ex.Message, "VisAssist");
             }
@@ -177,7 +179,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         cmd.ExecuteNonQuery();
                     }
 
-                  
+
 
 
 
@@ -223,10 +225,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-
-
+                string sVisAssistFolder = Path.GetDirectoryName(sFilePath);
+                string sFileName = Path.GetFileName(sFilePath);
+                string sHiddenProjectFolder = Path.Combine(sVisAssistFolder, "Project Files", sFileName);
                 //this needs to create the new visio file now and then we can add the database...
-                FileUtilities.AddCoverPageDocument(sFilePath);
+                FileUtilities.AddCoverPageDocument(sHiddenProjectFolder);
 
 
                 MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
@@ -241,7 +244,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //i need a record for the file that was created in Add
 
                 sFilePath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
-                string sFileName = ovDoc.Name;
+                sFileName = ovDoc.Name;
                 sFilePath = sFilePath + sFileName;
 
 
@@ -266,26 +269,32 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 //// Reopen it so Visio refreshes its internal cache
                 ovDoc = ovDoc.Application.Documents.Open(sFilePath);
+
+                string sProjectID = m_mruRecordsToCompare.ruRecords[0].sId.ToString();
+                FileUtilities.AddLaunchFile(ovDoc, sProjectID, sFilePath);
+                
                 //ovDoc.SaveAs(sFilePath);
                 ovDoc.Saved = true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in AddNewProject " + ex.Message, "VisAssist");
             }
 
         }
 
+        
+
         internal static string AddProjectFileStructure()
         {
             try
             {
 
-
+                //ask the user where to save the new VisAssist file structure
                 using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
                 {
                     folderdialog.IsFolderPicker = true;
-                    folderdialog.Title = "Select a folder to create the VisAssist project structure";
+                    folderdialog.Title = "Select a folder to create the VisAssist Project";
 
                     if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
                     {
@@ -294,7 +303,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         string sVisAssist = "VisAssist";
                         string sProjectFolderPath = Path.Combine(sBasePath, sVisAssist);
 
-                        // If VisAssist already exists, append -1, -2, -3, etc.
+                        // If VisAssist already exists, append -1, -2, -3...
                         int iCounter = 1;
                         while (Directory.Exists(sProjectFolderPath))
                         {
@@ -305,26 +314,27 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         // Create the unique project folder
                         Directory.CreateDirectory(sProjectFolderPath);
 
+                        //create a hidden directory for the Visio files...
+                        string sProjectFilePath = Path.Combine(sProjectFolderPath, "Project Files");
+                        Directory.CreateDirectory(sProjectFilePath);
+                        File.SetAttributes(sProjectFilePath, File.GetAttributes(sProjectFilePath) | FileAttributes.Hidden);
+
+                        //build the visio file name using our general Cover Pages
                         string sClassAFilePath = Path.Combine(sProjectFolderPath, "Dwg - Cover Pages.vsdx");
 
-                        //now we need to create a hidden folder that will contain the database.. put it in sProjectFolderPath -name it Dwg - sProjectName DB...
-
+                        //now we need to create a hidden folder that will contain the database..
                         string sDbFolderPath = Path.Combine(sProjectFolderPath, "DB");
-
-                        // Create the folder
                         Directory.CreateDirectory(sDbFolderPath);
-
-                        // Make it hidden
                         File.SetAttributes(sDbFolderPath, File.GetAttributes(sDbFolderPath) | FileAttributes.Hidden);
 
-                        // Path to the database inside the hidden folder
+                        // Bind to the database inside the hidden folder
                         DatabaseConfig.DatabasePath = Path.Combine(sDbFolderPath, "VisAssistBackEnd.db");
 
                         return sClassAFilePath;
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
 
             {
                 MessageBox.Show("Error in AddProjectFileStructure " + ex.Message, "VisAssist");
@@ -336,6 +346,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void DeleteProject()
         {
+
             // i want to delete the project entireley so i will see if i can delete the folder (if everything in it is closed...)
             //open a folder dialog box and have the user point to the folder they want to delete
             //try to delete it-if we can't catch the exception and tell the user hey you need to close all the files in that project before i delete the project...
@@ -890,6 +901,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+
+        //gets the project name from the NameForm after asking the user what to name the Project
         internal static string GetProjectName()
         {
             using (NameForm oForm = new NameForm())
@@ -908,9 +921,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-       
-       
 
+
+        //generates a unique ID for the Project
         internal static string GenerateProjectID(string sDirectoryPath, DateTime createdDate, string sProjectName)
         {
 
@@ -932,6 +945,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+
+        /// <summary>
+        /// if the file is not opened in another instance of visio, clear the projectID
+        /// </summary>
+        /// <param name="mruRecords"></param>
+        /// <returns></returns>
         internal static bool ClearProjectID(MultipleRecordUpdates mruRecords)
         {
             try
@@ -974,13 +993,106 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in ClearProjectID " + ex.Message, "VisAssist");
             }
             return false;
         }
 
+        internal static void OpenProject()
+        {
+            //open a folder dialog for the user to choose a VisAssist Folder
+            
+            try
+            {
+
+                using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
+                {
+                    folderdialog.IsFolderPicker = true;
+                    folderdialog.Title = "Select a folder to open the VisAssist project";
+
+                    if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
+                    {
+                        string sFolderPath = folderdialog.FileName; // folder path
+
+                        string[] sSubFolders = Directory.GetDirectories(sFolderPath);
+                        string[] sSubFolderNames = sSubFolders.Select(f => Path.GetFileName(f)).ToArray();
+                        //there should be two subFolders: DB and ProjectFiles confirm this...
+                        bool bHasDBSubFolder = sSubFolderNames.Contains("DB", StringComparer.OrdinalIgnoreCase);
+                        bool bHasProjectFilesSubFolder = sSubFolderNames.Contains("Project Files", StringComparer.OrdinalIgnoreCase);
+
+                        if (bHasDBSubFolder && bHasProjectFilesSubFolder)
+                        {
+                            //we are good we have the DB and the Project Files folder
+                            bool bDBExists = FileUtilities.DoesDBFileExist(sFolderPath);
+
+                            if (bDBExists)
+                            {
+                                sFolderPath = Path.Combine(sFolderPath, "Project Files");
+                                FileUtilities.GetFilesInProject(sFolderPath);
+
+                                //will need to add the launch file later if it didn't exist...once we've opened a file
+                                FileUtilities.OpenFileForm("Project"); 
+
+                            }
+                        }
+                        else
+                        {
+                            //this is not a proper folder
+                            MessageBox.Show("This is not a VisAssist folder.", "VisAssist");
+                        }
+
+                        
+
+
+                    }
+                }
+
+                //open the fileForm and populate it with the files in the project for the user to open 
+
+               
+            }
+            catch (Exception ex)
+
+            {
+                MessageBox.Show("Error in AddProjectFileStructure " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static string GetProjectID(string sDBPath)
+        {
+            try
+            {
+
+              
+                string sProjectID = "";
+                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    //logging here
+                    sqliteconConnection.Open();
+                    string sSQL = "SELECT Id FROM project_table LIMIT 1"; //get the only record in the proejct_table...
+
+                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                    {
+                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
+                        {
+                            if (sqlitereadReader.Read())
+                            {
+                                sProjectID = sqlitereadReader["Id"]?.ToString();
+                                return sProjectID;
+                            }
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in GetProjectID " + ex.Message, "VisAssist");
+            }
+            return "";
+        }
     }
 }
 

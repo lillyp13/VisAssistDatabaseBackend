@@ -321,25 +321,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sqliteconConnection))
                     {
-
-                        //if this is the files_table i need to add the pk value
-                        //if (sTableName == DataProcessingUtilities.SqlTables.FilesTable.sFilesTable)
-                        //{
-                        //    for (int i = 0; i < mruRecords.ruRecords.Count; i++)
-                        //    {
-                        //        RecordUpdate ruRecord = mruRecords.ruRecords[i]; 
-
-                        //        if(ruRecord.odictColumnValues == null)
-                        //        {
-                        //            ruRecord.odictColumnValues = new Dictionary<string, string>();
-                        //        }
-
-                        //        if(!ruRecord.odictColumnValues.ContainsKey(DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK))
-                        //        {
-                        //            ruRecord.odictColumnValues.Add(SqlTables.FilesTable.sFilesTablePK, ruRecord.sId);
-                        //        }
-                        //    }
-                        //}
+                        //add the PK...
                         DataProcessingUtilities.SqlTables.TryGetPrimaryKey(sTableName, out string sPK);
                         
                         foreach(RecordUpdate ruRecord in mruRecords.ruRecords)

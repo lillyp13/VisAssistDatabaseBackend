@@ -65,24 +65,24 @@ namespace VisAssistDatabaseBackEnd.Forms
 
         private void btnDisassociate_Click(object sender, EventArgs e)
         {
-            MultipleRecordUpdates mruRecords = FileUtilities.GatherDisassociationData(this);
+            //MultipleRecordUpdates mruRecords = FileUtilities.GatherDisassociationData(this);
 
-            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            //Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
            
-            bool bDisAssoicatedFile = FileUtilities.DisassociateFile(mruRecords);
-            if (bDisAssoicatedFile)
-            {
-                //we were able to disasociate the file (sometimes we can't because it is open in a different instance of visio...
-                FileUtilities.AdjustFileCount(ovDoc);
+            //bool bDisAssoicatedFile = FileUtilities.DisassociateFile(mruRecords);
+            //if (bDisAssoicatedFile)
+            //{
+            //    //we were able to disasociate the file (sometimes we can't because it is open in a different instance of visio...
+            //    FileUtilities.AdjustFileCount(ovDoc);
 
 
-                DataGridViewSelectedRowCollection colSelectedRows = dgvFileData.SelectedRows;
+            //    DataGridViewSelectedRowCollection colSelectedRows = dgvFileData.SelectedRows;
 
-                foreach (DataGridViewRow dgvRow in colSelectedRows)
-                {
-                    dgvFileData.Rows.Remove(dgvRow);
-                }
-            }
+            //    foreach (DataGridViewRow dgvRow in colSelectedRows)
+            //    {
+            //        dgvFileData.Rows.Remove(dgvRow);
+            //    }
+            //}
 
         }
     }

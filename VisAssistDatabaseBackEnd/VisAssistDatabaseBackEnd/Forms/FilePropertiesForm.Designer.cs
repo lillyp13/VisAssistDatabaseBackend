@@ -46,7 +46,6 @@
             this.btnAddFile = new System.Windows.Forms.Button();
             this.btnUpdateFile = new System.Windows.Forms.Button();
             this.btnDeleteFile = new System.Windows.Forms.Button();
-            this.btnDisassociate = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dgvFileData)).BeginInit();
             this.SuspendLayout();
             // 
@@ -180,22 +179,11 @@
             this.btnDeleteFile.UseVisualStyleBackColor = true;
             this.btnDeleteFile.Click += new System.EventHandler(this.btnDeleteFile_Click);
             // 
-            // btnDisassociate
-            // 
-            this.btnDisassociate.Location = new System.Drawing.Point(1461, 195);
-            this.btnDisassociate.Name = "btnDisassociate";
-            this.btnDisassociate.Size = new System.Drawing.Size(111, 24);
-            this.btnDisassociate.TabIndex = 4;
-            this.btnDisassociate.Text = "Disassociate File";
-            this.btnDisassociate.UseVisualStyleBackColor = true;
-            this.btnDisassociate.Click += new System.EventHandler(this.btnDisassociate_Click);
-            // 
             // FilePropertiesForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1669, 390);
-            this.Controls.Add(this.btnDisassociate);
             this.Controls.Add(this.btnDeleteFile);
             this.Controls.Add(this.btnUpdateFile);
             this.Controls.Add(this.btnAddFile);
@@ -228,6 +216,5 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn AllowDuplicateTags;
         private System.Windows.Forms.DataGridViewTextBoxColumn ShowPointData;
         public System.Windows.Forms.Button btnDeleteFile;
-        public System.Windows.Forms.Button btnDisassociate;
     }
 }

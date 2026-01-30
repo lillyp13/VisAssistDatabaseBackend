@@ -18,3 +18,4 @@ C:\ADConcepts\VisAssistDatbaseBackEnd\VisAssistDatabaseBackEnd\VisAssistDatabase
 C:\ADConcepts\VisAssistDatbaseBackEnd\VisAssistDatabaseBackEnd\VisAssistDatabaseBackEnd\obj\Debug\VisAssistDatabaseBackEnd.Forms.PagesForm.resources
 C:\ADConcepts\VisAssistDatbaseBackEnd\VisAssistDatabaseBackEnd\VisAssistDatabaseBackEnd\bin\Debug\WindowsAPICodePack.Shell.CommonFileDialogs.dll
 C:\ADConcepts\VisAssistDatbaseBackEnd\VisAssistDatabaseBackEnd\VisAssistDatabaseBackEnd\obj\Debug\VisAssistDatabaseBackEnd.Forms.NameForm.resources
+C:\ADConcepts\VisAssistDatbaseBackEnd\VisAssistDatabaseBackEnd\VisAssistDatabaseBackEnd\obj\Debug\VisAssistDatabaseBackEnd.Forms.FilesForm.resources
