@@ -47,30 +47,37 @@ namespace VisAssistDatabaseBackEnd
             {
 
 
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
-
-                DatabaseConfig.BindToActiveDocument(sFolderPath);
-
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
-                if (bDoesDBExist)
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if(sFolderPath != "")
                 {
+                    DatabaseConfig.BindToActiveDocument(sFolderPath);
 
-                    bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
-                    if (bIsFileAssignedToProject)
+                    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+                    if (bDoesDBExist)
                     {
 
+                        bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                        if (bIsFileAssignedToProject)
+                        {
 
-                        PageUtilities.AddSeedPage();
+
+                            PageUtilities.AddSeedPage();
+                        }
+                        else
+                        {
+                            MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                        }
                     }
                     else
-                    {
-                        MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                    { //the db doesn't exist. orphan the file...
+                        MessageBox.Show("The db file doesn't exist.", "VisAssist");
                     }
                 }
                 else
-                { //the db doesn't exist. orphan the file...
-                    MessageBox.Show("The db file doesn't exist.", "VisAssist");
+                {
+                    MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
+              
             }
 
 
@@ -124,32 +131,40 @@ namespace VisAssistDatabaseBackEnd
             if (ovDoc != null)
             {
 
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
-                DatabaseConfig.BindToActiveDocument(sFolderPath);
-
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
-                if (bDoesDBExist)
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if(sFolderPath != "")
                 {
-                    bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable);
-                    if (bDoesTableExist)
+                    DatabaseConfig.BindToActiveDocument(sFolderPath);
+
+                    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+                    if (bDoesDBExist)
                     {
-
-                        bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
-                        if (bIsFileAssignedToProject)
+                        bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable);
+                        if (bDoesTableExist)
                         {
-                            PageUtilities.OpenPagesForm();
-                        }
-                        else
-                        {
-                            MessageBox.Show("This file is not assigned to a project.", "VisAssist");
-                        }
 
+                            bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                            if (bIsFileAssignedToProject)
+                            {
+                                PageUtilities.OpenPagesForm();
+                            }
+                            else
+                            {
+                                MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                            }
+
+                        }
+                    }
+                    else
+                    { //the db doesn't exist. orphan the file...
+                        MessageBox.Show("The db file doesn't exist.", "VisAssist");
                     }
                 }
                 else
-                { //the db doesn't exist. orphan the file...
-                    MessageBox.Show("The db file doesn't exist.", "VisAssist");
+                {
+                    MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
+               
             }
 
         }
@@ -161,28 +176,38 @@ namespace VisAssistDatabaseBackEnd
 
         private void btnGetProjectInfo_Click(object sender, RibbonControlEventArgs e)
         {
-
+                
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
-                sFolderPath = Path.GetDirectoryName(sFolderPath); //get the path before the Project Files
-                DatabaseConfig.BindToActiveDocument(sFolderPath);
-
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
-                if (bDoesDBExist)
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if(sFolderPath != "")
                 {
-                    string sAction = "Update";
-                    ProjectUtilities.OpenProjectForm(sAction, "", "");
-                    // ProjectUtilities.GetProjectInfo();
+                    bool bHasNecessaryFolders = FileUtilities.CheckIfSubFoldersExist(sFolderPath); //i dont think we need to always check this, I know when we choose to copy, or open a project (i think it is only for when we need to confirm that a folder path that was given to use is a visassist project...
+                    if (bHasNecessaryFolders)
+                    {
+                        DatabaseConfig.BindToActiveDocument(sFolderPath);
+
+                        bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+                        if (bDoesDBExist)
+                        {
+                            string sAction = "Update";
+                            ProjectUtilities.OpenProjectForm(sAction, "", "");
+                            // ProjectUtilities.GetProjectInfo();
+                        }
+                        else
+                        {
+                            //the db doesn't exist. orphan the file...
+                            MessageBox.Show("The db file doesn't exist.", "VisAssist");
+                        }
+                    }
                 }
                 else
                 {
-                    //the db doesn't exist. orphan the file...
-                    MessageBox.Show("The db file doesn't exist.", "VisAssist");
-
-
+                    MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
+
+               
             }
 
         }
@@ -192,37 +217,44 @@ namespace VisAssistDatabaseBackEnd
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
-                sFolderPath = Path.GetDirectoryName(sFolderPath);//get the path before the Project Files folder...
-                DatabaseConfig.BindToActiveDocument(sFolderPath);
-
-
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
-                if (bDoesDBExist)
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if(sFolderPath != "")
                 {
-                    bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
+                    DatabaseConfig.BindToActiveDocument(sFolderPath);
+
+
+                    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
                     if (bDoesDBExist)
                     {
+                        bool bDoesTableExist = DataProcessingUtilities.DoesTableHaveAnyRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
+                        if (bDoesDBExist)
+                        {
 
-                        bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
-                        if (bIsFileAssignedToProject)
-                        {
-                            //the file is assigned to a project 
-                            FileUtilities.OpenFilePropertiesForm();
+                            bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                            if (bIsFileAssignedToProject)
+                            {
+                                //the file is assigned to a project 
+                                FileUtilities.OpenFilePropertiesForm();
+                            }
+                            else
+                            {
+                                MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                            }
                         }
-                        else
-                        {
-                            MessageBox.Show("This file is not assigned to a project.", "VisAssist");
-                        }
+
+
                     }
-
-
+                    else
+                    {
+                        //the db doesn't exist. orphan the file...
+                        MessageBox.Show("The db file doesn't exist.", "VisAssist");
+                    }
                 }
                 else
                 {
-                    //the db doesn't exist. orphan the file...
-                    MessageBox.Show("The db file doesn't exist.", "VisAssist");
+                    MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
+                
             }
 
         }
@@ -238,7 +270,7 @@ namespace VisAssistDatabaseBackEnd
             if (sFilePath != null)
             {
 
-                string sProjectName = ProjectUtilities.GetProjectName();
+                string sProjectName = ProjectUtilities.GetProjectNameFromForm();
 
                 if (sProjectName != null && sProjectName != "")
                 {
@@ -271,29 +303,36 @@ namespace VisAssistDatabaseBackEnd
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
-                sFolderPath = Path.GetDirectoryName(sFolderPath);//get the path before the Project Files folder...
-                DatabaseConfig.BindToActiveDocument(sFolderPath);
-
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
-                if (bDoesDBExist)
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if(sFolderPath != "")
                 {
+                    DatabaseConfig.BindToActiveDocument(sFolderPath);
 
-                    bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
-                    if (bIsFileAssignedToProject)
+                    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+                    if (bDoesDBExist)
                     {
-                        FileUtilities.AddNewFile();
+
+                        bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                        if (bIsFileAssignedToProject)
+                        {
+                            FileUtilities.AddNewFile();
+                        }
+                        else
+                        {
+                            MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                        }
                     }
                     else
                     {
-                        MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                        //the db doesn't exist. orphan the file...
+                        MessageBox.Show("The db file doesn't exist.", "VisAssist");
                     }
                 }
                 else
                 {
-                    //the db doesn't exist. orphan the file...
-                    MessageBox.Show("The db file doesn't exist.", "VisAssist");
+                    MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
+               
             }
 
         }
@@ -303,62 +342,82 @@ namespace VisAssistDatabaseBackEnd
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
-                sFolderPath = Path.GetDirectoryName(sFolderPath);//get the path before the Project Files folder...
-                DatabaseConfig.BindToActiveDocument(sFolderPath);
-
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
-                if (bDoesDBExist)
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if(sFolderPath != "")
                 {
+                    DatabaseConfig.BindToActiveDocument(sFolderPath);
 
-                    bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
-                    if (bIsFileAssignedToProject)
+                    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+                    if (bDoesDBExist)
                     {
-                        FileUtilities.OpenFilePropertiesForm();
+
+                        bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+                        if (bIsFileAssignedToProject)
+                        {
+                            FileUtilities.OpenFilePropertiesForm();
+                        }
+                        else
+                        {
+                            MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                        }
+
                     }
                     else
                     {
-                        MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+                        //the db doesn't exist. orphan the file...
+                        MessageBox.Show("The db file doesn't exist.", "VisAssist");
                     }
-
                 }
                 else
                 {
-                    //the db doesn't exist. orphan the file...
-                    MessageBox.Show("The db file doesn't exist.", "VisAssist");
+                    MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
+                
             }
         }
 
         private void btnDisAssociateFile_Click(object sender, RibbonControlEventArgs e)
         {
-            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-            if (ovDoc != null)
-            {
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
+            //Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            //if (ovDoc != null)
+            //{
+            //    string sFolderPath = "";
+            //    string sClass = ovDoc.DocumentSheet.Cells["User.Class"].get_ResultStr(0);
 
-                DatabaseConfig.BindToActiveDocument(sFolderPath);
+            //    if (sClass == "Launch")
+            //    {
+            //        //this is the launch file ..access the db folder from here...
+            //        sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
+            //    }
+            //    else
+            //    {
+            //        //it is either File or Cover Page we can access the folder path to the db the same way
+            //        sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
+            //        sFolderPath = Path.GetDirectoryName(sFolderPath); //get the path before the Project Files
+            //    }
 
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
-                if (bDoesDBExist)
-                {
+            //    DatabaseConfig.BindToActiveDocument(sFolderPath);
 
-                    bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
-                    if (bIsFileAssignedToProject)
-                    {
-                        FileUtilities.OpenFilePropertiesForm();
-                    }
-                    else
-                    {
-                        MessageBox.Show("This file is not assigned to a project.", "VisAssist");
-                    }
-                }
-                else
-                {
-                    //the db doesn't exist. orphan the file...
-                    MessageBox.Show("The db file doesn't exist.", "VisAssist");
-                }
-            }
+            //    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+            //    if (bDoesDBExist)
+            //    {
+
+            //        bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
+            //        if (bIsFileAssignedToProject)
+            //        {
+            //            FileUtilities.OpenFilePropertiesForm();
+            //        }
+            //        else
+            //        {
+            //            MessageBox.Show("This file is not assigned to a project.", "VisAssist");
+            //        }
+            //    }
+            //    else
+            //    {
+            //        //the db doesn't exist. orphan the file...
+            //        MessageBox.Show("The db file doesn't exist.", "VisAssist");
+            //    }
+            //}
         }
 
 
@@ -368,34 +427,30 @@ namespace VisAssistDatabaseBackEnd
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
-                sFolderPath = Path.GetDirectoryName(sFolderPath);//get the path before the Project Files folder...
-                DatabaseConfig.BindToActiveDocument(sFolderPath);
-
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
-                if (bDoesDBExist)
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if(sFolderPath != "")
                 {
+                    DatabaseConfig.BindToActiveDocument(sFolderPath);
 
-                    // bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
-                    //if (bIsFileAssignedToProject)
-                    // {
+                    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+                    if (bDoesDBExist)
+                    {
 
-                    //All files should be assigned we no longer have orphaned files...
-                   // FileUtilities.WhichFileToAssociate();
-                  FileUtilities.WhichFileToAssociateNew();
-                    
-                    //}
-                    //else
-                    //{
-                    // MessageBox.Show("This file is not assigned to a project. Use the Associate Orphaned File button", "VisAssist");
-                    //}
+                        FileUtilities.WhichFileToCopy();
+
+                    }
+                    else
+                    {
+                        //the db doesn't exist, orphan the file 
+
+                        MessageBox.Show("The database does not exist.", "VisAssist");
+                    }
                 }
                 else
                 {
-                    //the db doesn't exist, orphan the file 
-                    // FileUtilities.OrphanFile(sFolderPath);
-                    MessageBox.Show("The database does not exist.", "VisAssist");
+                    MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
+               
             }
         }
 
@@ -458,34 +513,42 @@ namespace VisAssistDatabaseBackEnd
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
-                bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
 
-                if (bDoesDBExist)
+                if (sFolderPath != "")
                 {
-                    bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(Globals.ThisAddIn.Application.ActiveDocument);
-                    if (bIsFileAssignedToProject)
+                    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sFolderPath);
+
+                    if (bDoesDBExist)
                     {
-                        sFolderPath = Path.GetDirectoryName(sFolderPath);//get the path before the Project Files folder...
-                        DatabaseConfig.BindToActiveDocument(sFolderPath);
-                        //open the naem form witn the current visio file name and allow them to change it...
-                        string sCurrentName = Globals.ThisAddIn.Application.ActiveDocument.Name;
-                        //get the string that is inside "Dwg - .vsdx"...
-
-                        sCurrentName = FileUtilities.ExtractNameFromVisioFile(sCurrentName);
-
-                        string sFileName = FileUtilities.GetFileName(sCurrentName);
-
-                        if (sFileName != null && sFileName != "")
+                        bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(Globals.ThisAddIn.Application.ActiveDocument);
+                        if (bIsFileAssignedToProject)
                         {
-                            FileUtilities.UpdateFileName(sFileName);
+                            sFolderPath = Path.GetDirectoryName(sFolderPath);//get the path before the Project Files folder...
+                            DatabaseConfig.BindToActiveDocument(sFolderPath);
+                            //open the naem form witn the current visio file name and allow them to change it...
+                            string sCurrentName = Globals.ThisAddIn.Application.ActiveDocument.Name;
+                            //get the string that is inside "Dwg - .vsdx"...
+
+                            sCurrentName = FileUtilities.ExtractNameFromVisioFile(sCurrentName);
+
+                            string sFileName = FileUtilities.GetFileNameFromForm(sCurrentName);
+
+                            if (sFileName != null && sFileName != "")
+                            {
+                                FileUtilities.UpdateFileName(sFileName);
+                            }
                         }
+                    }
+                    else
+                    {
+                        //the db doesn't exist. orphan the file...
+                        MessageBox.Show("The db file doesn't exist.", "VisAssist");
                     }
                 }
                 else
                 {
-                    //the db doesn't exist. orphan the file...
-                    MessageBox.Show("The db file doesn't exist.", "VisAssist");
+                    MessageBox.Show("Couldn't find the folder path.", "VisAssist");
                 }
 
             }
@@ -503,28 +566,40 @@ namespace VisAssistDatabaseBackEnd
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
-                string sFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
-
-                //we need to determine if we are coming from the launch file or a different file...
-                string sSource = "";
-                if (ovDoc.Name == "LaunchFile.vsdx") //this is our general launch file
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if (sFolderPath != "")
                 {
-                    sSource = "Launch";
+                    //we need to determine if we are coming from the launch file or a different file...
+                    string sSource = "";
+                    if (ovDoc.Name == "LaunchFile.vsdx") //this is our general launch file
+                    {
+                        sSource = "Launch";
+
+                    }
+                    else
+                    {
+                        sSource = "File";
+
+                    }
+
+                    string sProjectFolderPath = Path.Combine(sFolderPath, "Project Files");
+                    FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sProjectFolderPath);
+                    FileUtilities.PopulateFilesOutsideProjectFilesFolderDictionaryBasedOnDirectory(sFolderPath);
+                    FileUtilities.OpenFileForm(sSource); //true we are launching this from the launch file...
+                    FileUtilities.CheckForLaunchFile(sFolderPath);
                 }
                 else
                 {
-                    sSource = "File";
+                    MessageBox.Show("Couldn't find the folder path.", "VisAssist");
                 }
-                FileUtilities.GetFilesInProject(sFolderPath);
-                FileUtilities.OpenFileForm(sSource); //true we are launching this from the launch file...
             }
             else
             {
-               // MessageBox.Show("Please open a VisAssit Project first.", "VisAssist");
+                MessageBox.Show("Please open a VisAssist Project first.", "VisAssist");
 
 
                 //OR WE COULD HAVE THEM OPEN THE PROJECT AND PICK THE FILE LIKE THAT...I THINK WE SHOULD
-                ProjectUtilities.OpenProject();
+                //ProjectUtilities.OpenProject();
             }
         }
     }

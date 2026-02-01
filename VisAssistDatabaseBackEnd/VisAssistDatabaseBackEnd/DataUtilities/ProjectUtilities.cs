@@ -134,7 +134,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 //there is no record in the project_Table yet so let's go add it...
                                 //we have the data the user wants to add in the projectPropertiesForm
                                 m_dictProjectInfoToCompare.Clear(); //clear this before populating it in GatherProjectPropertiesInfo
-                                ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm, ovDoc);
+                                ProjectUtilities.GatherProjectPropertiesInfoFromForm(projectPropertiesForm, ovDoc);
 
 
                                 //if (m_dictProjectInfoToUpdate.Count > 0)
@@ -157,8 +157,40 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 MessageBox.Show("Error in AddProjectInfo " + ex.Message, "VisAssist");
             }
         }
+        internal static void UpdateProjectInfo(ProjectPropertiesForm projectPropertiesForm)
+        {
+            try
+            {
+                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                if (m_mruRecordsToCompare.ruRecords != null)
+                {
+                    m_mruRecordsToCompare.ruRecords.Clear();
+                }
 
-        //takes the information off the properties form to addd a new project
+
+                ProjectUtilities.GatherProjectPropertiesInfoFromForm(projectPropertiesForm, ovDoc);
+
+                m_mruRecordsToUpdate = DataProcessingUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
+
+                if (m_mruRecordsToUpdate.ruRecords.Count > 0)
+                {
+
+                    DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsToUpdate);
+
+                    ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
+
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in UpdateProjectInfo " + ex.Message, "VisAssist");
+            }
+        }
+
+
+
+        
+
         internal static void DeleteProjectInfo()
         {
             try
@@ -190,36 +222,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 MessageBox.Show("Error in DeleteProjectInfo " + ex.Message, "VisAssist");
             }
         }
-        internal static void UpdateProjectInfo(ProjectPropertiesForm projectPropertiesForm)
-        {
-            try
-            {
-                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-                if (m_mruRecordsToCompare.ruRecords != null)
-                {
-                    m_mruRecordsToCompare.ruRecords.Clear();
-                }
 
-
-                ProjectUtilities.GatherProjectPropertiesInfo(projectPropertiesForm, ovDoc);
-
-                m_mruRecordsToUpdate = DataProcessingUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
-
-                if (m_mruRecordsToUpdate.ruRecords.Count > 0)
-                {
-
-                    DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsToUpdate);
-
-                    ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
-
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in UpdateProjectInfo " + ex.Message, "VisAssist");
-            }
-        }
-
+        //HELPER FUNCTIONS
 
         internal static void AddNewProject(ProjectPropertiesForm projectPropertiesForm, string sFilePath)
         {
@@ -252,6 +256,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 oFileRecord = FileUtilities.AddFileToDatabase(ovDoc, sFilePath, m_mruRecordsToCompare.ruRecords[0].sId);
 
                 FileUtilities.AddUserCellsToDocument(oFileRecord, ovDoc);
+                //because we are creating the CoverPageDocument we will populate the class with Cover Page
+                ovDoc.DocumentSheet.Cells["User.Class"].Formula = "\"" + "Cover Page" + "\"";
 
                 //this just adds stuff like the version and class, not sure what else needs to go to the page level right now
                 PageUtilities.AddUserCellsToPage(ovPage);
@@ -271,8 +277,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 ovDoc = ovDoc.Application.Documents.Open(sFilePath);
 
                 string sProjectID = m_mruRecordsToCompare.ruRecords[0].sId.ToString();
-                FileUtilities.AddLaunchFile(ovDoc, sProjectID, sFilePath);
-                
+
+                FileUtilities.AddLaunchFile(ovDoc, sProjectID, sVisAssistFolder);
+
                 //ovDoc.SaveAs(sFilePath);
                 ovDoc.Saved = true;
             }
@@ -282,8 +289,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
 
         }
-
-        
 
         internal static string AddProjectFileStructure()
         {
@@ -343,7 +348,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-
         internal static void DeleteProject()
         {
 
@@ -357,11 +361,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
                 {
-                    string sProjectFolderPath = folderdialog.FileName;
+                    string sVisAssistFolder = folderdialog.FileName;
+
+                    bool bHasNecessaryFolders = FileUtilities.CheckIfSubFoldersExist(sVisAssistFolder);
 
                     try
                     {
                         bool bAllFilesUnlocked = true;
+                        string sProjectFolderPath = Path.Combine(sVisAssistFolder, "Project Files");
                         foreach (string sFilePath in Directory.GetFiles(sProjectFolderPath, "*", SearchOption.AllDirectories))
                         {
                             bool bIsFileLocked = FileUtilities.IsFileLocked(sFilePath);
@@ -371,17 +378,20 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 break;
                             }
                         }
+
+                        //MAY ALSO NEED TO CONFIRM THAT THE LAUNCH FILE IS ALSO NOTM OPEN...
+
                         //if this files name is VisAssistBackEnd.db delete this last if we were succesfully in deleting the other projects
                         // Attempt to delete entire project folder
                         if (bAllFilesUnlocked)
                         {
-                            Directory.Delete(sProjectFolderPath, true);
+                            Directory.Delete(sVisAssistFolder, true);
                             MessageBox.Show("Project deleted successfully.", "VisAssist", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
                         {
                             //a file in the folder is locked...
-                            MessageBox.Show("Unable to delete the project folder.\n\n" +
+                            MessageBox.Show("Unable to delete the project folder because the file is locked.\n\n" +
                             "Please make sure all Visio documents and related files in this project are closed, then try again.",
                             "VisAssist",
                             MessageBoxButtons.OK,
@@ -409,7 +419,364 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        //Helper Functions
+        internal static void GetProjectInfoFromDatabase()
+        {
+            try
+            {
+                //logging statement placeholder
+                //RECORDS USING MUTLIPLE RECORD UPDATES
+                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
+
+
+                string sId = ""; // default for "new project"
+                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
+
+                // string sSql = @"SELECT * FROM project_table LIMIT 1";
+                string sSql = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable + " LIMIT 1";
+
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
+                    {
+
+                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
+                        {
+                            if (sqlitereadReader.Read())
+                            {
+                                // Existing project
+                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                                {
+                                    string sColumnName = sqlitereadReader.GetName(i);
+
+                                    if (sColumnName.Equals(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        sId = sqlitereadReader.GetValue(i).ToString();
+                                        continue; // PK not included in update dictionary
+                                    }
+
+                                    odictColumnValues[sColumnName] = sqlitereadReader.IsDBNull(i) ? null : sqlitereadReader.GetValue(i).ToString();
+                                }
+                            }
+                            else
+                            {
+                                // No project exists → build empty record from schema
+                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                                {
+                                    string sColumnName = sqlitereadReader.GetName(i);
+
+                                    if (sColumnName.Equals(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
+                                        continue;
+
+                                    odictColumnValues[sColumnName] = null;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Build RecordUpdate
+                RecordUpdate ru = new RecordUpdate();
+                ru.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK;
+                ru.sId = sId;
+                ru.odictColumnValues = odictColumnValues;
+
+                lstRecords.Add(ru);
+
+                // Store in MultipleRecordUpdates
+                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetProjectInfoFromDatabase " + ex.Message, "ViAssist");
+            }
+
+        }
+        internal static string GetProjectIDFromDatabase(string sDBPath)
+        {
+            try
+            {
+
+
+                string sProjectID = "";
+                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    //logging here
+                    sqliteconConnection.Open();
+                    string sSQL = "SELECT Id FROM project_table LIMIT 1"; //get the only record in the proejct_table...
+
+                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                    {
+                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
+                        {
+                            if (sqlitereadReader.Read())
+                            {
+                                sProjectID = sqlitereadReader["Id"]?.ToString();
+                                return sProjectID;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetProjectID " + ex.Message, "VisAssist");
+            }
+            return "";
+        }
+
+
+
+
+        internal static string GenerateProjectID(string sDirectoryPath, DateTime createdDate, string sProjectName)
+        {
+            //generates a unique ID for the Project
+            //project: sDirectoryPath + "Dwg - Cover Pages" + project name and created date
+            //file: projectID + filepath + created date
+            //page: ProjectID + FileID + page name + created date
+
+            string input = sDirectoryPath + "Dwg - Cover Pages.vsdx" + sProjectName + createdDate.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] bytehashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in bytehashBytes)
+                {
+                    sb.Append(b.ToString("x2")); // hex
+                }
+
+                return sb.ToString();
+            }
+        }
+
+
+        //FORMS
+        internal static void OpenProject()
+        {
+            //open a folder dialog for the user to choose a VisAssist Folder
+            
+            try
+            {
+
+                using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
+                {
+                    folderdialog.IsFolderPicker = true;
+                    folderdialog.Title = "Select a folder to open the VisAssist project";
+
+                    if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
+                    {
+                        string sFolderPath = folderdialog.FileName; // folder path
+
+                        string[] sSubFolders = Directory.GetDirectories(sFolderPath);
+                        string[] sSubFolderNames = sSubFolders.Select(f => Path.GetFileName(f)).ToArray();
+                        //there should be two subFolders: DB and ProjectFiles confirm this...
+                        bool bHasDBSubFolder = sSubFolderNames.Contains("DB", StringComparer.OrdinalIgnoreCase);
+                        bool bHasProjectFilesSubFolder = sSubFolderNames.Contains("Project Files", StringComparer.OrdinalIgnoreCase);
+
+                        if (bHasDBSubFolder && bHasProjectFilesSubFolder)
+                        {
+                            //we are good we have the DB and the Project Files folder
+                            bool bDBExists = FileUtilities.DoesDBFileExist(sFolderPath);
+
+                            if (bDBExists)
+                            {
+                                string sProjectFolderPath = Path.Combine(sFolderPath, "Project Files");
+                                FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sProjectFolderPath);
+                                FileUtilities.PopulateFilesOutsideProjectFilesFolderDictionaryBasedOnDirectory(sFolderPath);
+                                //will need to add the launch file later if it didn't exist...once we've opened a file
+                                FileUtilities.OpenFileForm("Project");
+
+                                FileUtilities.CheckForLaunchFile(sFolderPath);
+
+                            }
+                        }
+                        else
+                        {
+                            //this is not a proper folder
+                            MessageBox.Show("This is not a VisAssist folder.", "VisAssist");
+                        }
+
+                        
+
+
+                    }
+                }
+
+                //open the fileForm and populate it with the files in the project for the user to open 
+
+               
+            }
+            catch (Exception ex)
+
+            {
+                MessageBox.Show("Error in AddProjectFileStructure " + ex.Message, "VisAssist");
+            }
+        }
+        internal static string GetProjectNameFromForm()
+        {
+            //gets the project name from the NameForm after asking the user what to name the Project
+            using (NameForm oForm = new NameForm())
+            {
+                oForm.ControlBox = false;
+                oForm.Text = "Project Name";
+                oForm.PromptText = "Project Name";
+                if (oForm.ShowDialog() == DialogResult.OK)
+                {
+                    string sTrimmedName = oForm.sName?.Trim();
+                    return sTrimmedName;
+                }
+            }
+            return null;
+        }
+        //this just goes through each text box on the form and builds up a dictionary based on the values on the form currently (so that we can compare with the values in the db)
+        private static void GatherProjectPropertiesInfoFromForm(ProjectPropertiesForm projectPropertiesForm, Visio.Document ovDoc)
+        {
+            try
+            {
+
+
+                //this just creates the dictionary to compare...
+                string sID = projectPropertiesForm.txtID.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("Id", sID);
+
+                string sProjectName = projectPropertiesForm.txtProjectName.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ProjectName", sProjectName);
+
+                string sCustomerName = projectPropertiesForm.txtCustomerName.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("CustomerName", sCustomerName);
+
+                string sCreatedDate = projectPropertiesForm.txtCreatedDate.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("CreatedDate", sCreatedDate);
+
+                string sModifiedDate = projectPropertiesForm.txtLastModifiedDate.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("LastModifiedDate", sModifiedDate);
+
+                string sJobName = projectPropertiesForm.txtJobName.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobName", sJobName);
+
+                string sJobNumber = projectPropertiesForm.txtJobNumber.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobNumber", sJobNumber);
+
+                string sJobCity = projectPropertiesForm.txtJobCity.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobCity", sJobCity);
+
+                string sJobState = projectPropertiesForm.txtJobState.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobState", sJobState);
+
+                string sJobStreetAddress1 = projectPropertiesForm.txtJobStreetAddress1.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobStreetAddress1", sJobStreetAddress1);
+
+                string sJobStreetAddress2 = projectPropertiesForm.txtJobStreetAddress2.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobStreetAddress2", sJobStreetAddress2);
+
+                string sJobZipCode = projectPropertiesForm.txtJobZipCode.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("JobZipCode", sJobZipCode);
+
+                string sControlContractorName = projectPropertiesForm.txtControlContractorName.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorName", sControlContractorName);
+
+                string sControlContractorCity = projectPropertiesForm.txtControlContractorCity.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorCity", sControlContractorCity);
+
+                string sControlContractorState = projectPropertiesForm.txtControlContractorState.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorState", sControlContractorState);
+
+                string sControlContractorStreetAdress1 = projectPropertiesForm.txtControlContractorStreetAddress1.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorStreetAddress1", sControlContractorStreetAdress1);
+
+                string sControlContractorStreetAddress2 = projectPropertiesForm.txtControlContractorStreetAddress2.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorStreetAddress2", sControlContractorStreetAddress2);
+
+                string sControlContractorZipCode = projectPropertiesForm.txtControlContractorZipCode.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorZipCode", sControlContractorZipCode);
+
+                string sControlContractorPhone = projectPropertiesForm.txtControlContractorPhone.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorPhone", sControlContractorPhone);
+
+                string sControlContractorEmail = projectPropertiesForm.txtControlContractorEmail.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ControlContractorEmail", sControlContractorEmail);
+
+                string sMechanicalEngineer = projectPropertiesForm.txtMechanicalEngineer.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("MechanicalEngineer", sMechanicalEngineer);
+
+                string sMechanicalContractor = projectPropertiesForm.txtMechanicalContractor.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("MechanicalContractor", sMechanicalContractor);
+
+                string sDesignedBy = projectPropertiesForm.txtDesignedBy.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("DesignedBy", sDesignedBy);
+
+                string sReviwedBy = projectPropertiesForm.txtReviewBy.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("ReviewedBy", sReviwedBy);
+
+                string sFileCount = projectPropertiesForm.txtFileCount.Text.TrimEnd();
+                m_dictProjectInfoToCompare.Add("FileCount", sFileCount);
+
+
+                string sPrimarykey = "Id";
+
+                // Build column dictionary (exclude Id)
+                Dictionary<string, string> oDictToUpdate = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (KeyValuePair<string, string> sBaseItem in m_dictProjectInfoToCompare)
+                {
+                    if (!sBaseItem.Key.Equals(sPrimarykey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        oDictToUpdate[sBaseItem.Key] = sBaseItem.Value;
+                    }
+
+                }
+
+                // Single project, always Id = 1
+                //depending on if the project already existed we either need to get the prjoect id or create the project id
+                string sProjectID = "";
+                if (ovDoc.DocumentSheet.CellExists["User.ProjectID", 0] == -1)
+                {
+                    sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                }
+
+                if (sProjectID == "")
+                {
+                    //we are adding a project for the first time there isn't a projectId assigned yet...
+                    string sDirectoryPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
+                    //the created date doesn't exist yet...
+                    DateTime dtCreatedDate = DateTime.Now;
+                    oDictToUpdate["CreatedDate"] = dtCreatedDate.ToString("yyyy-MM-dd HH:mm:ss");
+                    sProjectID = ProjectUtilities.GenerateProjectID(sDirectoryPath, dtCreatedDate, m_dictProjectInfoToCompare["ProjectName"]);
+                }
+
+
+                RecordUpdate record = new RecordUpdate();
+                record.sPrimaryKeyColumn = sPrimarykey;
+                record.sId = sProjectID;
+                record.odictColumnValues = oDictToUpdate;
+
+                m_mruRecordsToCompare = new MultipleRecordUpdates(new List<RecordUpdate> { record });
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GatherProjectPropertiesInfo " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static void OpenProjectForm(string sAction, string sProjectName, string sFilePath)
+        {
+            try
+            {
+                ProjectPropertiesForm oNewForm = new ProjectPropertiesForm();
+                oNewForm.Display(sAction, sProjectName, sFilePath);
+                //oNewForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in OpenProjectForm " + ex.Message, "VisAssist");
+            }
+        }
 
         internal static void PopulatePropertiesForm(ProjectPropertiesForm projectPropertiesForm)
         {
@@ -428,19 +795,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //THIS IS USING A DICTIONARY
 
                     m_dictProjectInfoToCompare.Clear();
-                    //we have m_lstProjectInfo 
-                    //get the txtId textbox on the projectpropertiesform
-                    //if (m_dictProjectInfoBase.Count > 0)
-                    //{
-                    //if(m_dictProjectInfoBase["Id"] != null)
-                    //{
-                    //    projectPropertiesForm.txtID.Text = m_dictProjectInfoBase["Id"].ToString();
-                    //}
-                    //else
-                    //{
-                    //    projectPropertiesForm.txtID.Text = "1"; //this will be the first and only record in the project
-                    //}
-                    //prefill the id with 1 because this will be our first project (this would not be on the form for the user to touch or mess with...)
+
                     projectPropertiesForm.txtID.Text = m_mruRecordsBase.ruRecords[0].sId;
 
 
@@ -677,422 +1032,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        internal static void GetProjectInfoFromDatabase()
-        {
-            try
-            {
-                //logging statement placeholder
-                //RECORDS USING MUTLIPLE RECORD UPDATES
-                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
 
-
-                string sId = ""; // default for "new project"
-                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
-
-                // string sSql = @"SELECT * FROM project_table LIMIT 1";
-                string sSql = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable + " LIMIT 1";
-
-                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-                {
-                    sqliteconConnection.Open();
-
-                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
-                    {
-
-                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
-                        {
-                            if (sqlitereadReader.Read())
-                            {
-                                // Existing project
-                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
-                                {
-                                    string sColumnName = sqlitereadReader.GetName(i);
-
-                                    if (sColumnName.Equals(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        sId = sqlitereadReader.GetValue(i).ToString();
-                                        continue; // PK not included in update dictionary
-                                    }
-
-                                    odictColumnValues[sColumnName] = sqlitereadReader.IsDBNull(i) ? null : sqlitereadReader.GetValue(i).ToString();
-                                }
-                            }
-                            else
-                            {
-                                // No project exists → build empty record from schema
-                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
-                                {
-                                    string sColumnName = sqlitereadReader.GetName(i);
-
-                                    if (sColumnName.Equals(DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK, StringComparison.OrdinalIgnoreCase))
-                                        continue;
-
-                                    odictColumnValues[sColumnName] = null;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Build RecordUpdate
-                RecordUpdate ru = new RecordUpdate();
-                ru.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.ProjectTable.sProjectTablePK;
-                ru.sId = sId;
-                ru.odictColumnValues = odictColumnValues;
-
-                lstRecords.Add(ru);
-
-                // Store in MultipleRecordUpdates
-                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
-
-
-
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in GetProjectInfoFromDatabase " + ex.Message, "ViAssist");
-            }
-
-        }
-
-        internal static void OpenProjectForm(string sAction, string sProjectName, string sFilePath)
-        {
-            try
-            {
-                ProjectPropertiesForm oNewForm = new ProjectPropertiesForm();
-                oNewForm.Display(sAction, sProjectName, sFilePath);
-                //oNewForm.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in OpenProjectForm " + ex.Message, "VisAssist");
-            }
-        }
-
-
-        //this just goes through each text box on the form and builds up a dictionary based on the values on the form currently (so that we can compare with the values in the db)
-        private static void GatherProjectPropertiesInfo(ProjectPropertiesForm projectPropertiesForm, Visio.Document ovDoc)
-        {
-            try
-            {
-
-
-                //this just creates the dictionary to compare...
-                string sID = projectPropertiesForm.txtID.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("Id", sID);
-
-                string sProjectName = projectPropertiesForm.txtProjectName.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ProjectName", sProjectName);
-
-                string sCustomerName = projectPropertiesForm.txtCustomerName.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("CustomerName", sCustomerName);
-
-                string sCreatedDate = projectPropertiesForm.txtCreatedDate.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("CreatedDate", sCreatedDate);
-
-                string sModifiedDate = projectPropertiesForm.txtLastModifiedDate.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("LastModifiedDate", sModifiedDate);
-
-                string sJobName = projectPropertiesForm.txtJobName.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("JobName", sJobName);
-
-                string sJobNumber = projectPropertiesForm.txtJobNumber.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("JobNumber", sJobNumber);
-
-                string sJobCity = projectPropertiesForm.txtJobCity.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("JobCity", sJobCity);
-
-                string sJobState = projectPropertiesForm.txtJobState.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("JobState", sJobState);
-
-                string sJobStreetAddress1 = projectPropertiesForm.txtJobStreetAddress1.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("JobStreetAddress1", sJobStreetAddress1);
-
-                string sJobStreetAddress2 = projectPropertiesForm.txtJobStreetAddress2.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("JobStreetAddress2", sJobStreetAddress2);
-
-                string sJobZipCode = projectPropertiesForm.txtJobZipCode.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("JobZipCode", sJobZipCode);
-
-                string sControlContractorName = projectPropertiesForm.txtControlContractorName.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ControlContractorName", sControlContractorName);
-
-                string sControlContractorCity = projectPropertiesForm.txtControlContractorCity.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ControlContractorCity", sControlContractorCity);
-
-                string sControlContractorState = projectPropertiesForm.txtControlContractorState.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ControlContractorState", sControlContractorState);
-
-                string sControlContractorStreetAdress1 = projectPropertiesForm.txtControlContractorStreetAddress1.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ControlContractorStreetAddress1", sControlContractorStreetAdress1);
-
-                string sControlContractorStreetAddress2 = projectPropertiesForm.txtControlContractorStreetAddress2.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ControlContractorStreetAddress2", sControlContractorStreetAddress2);
-
-                string sControlContractorZipCode = projectPropertiesForm.txtControlContractorZipCode.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ControlContractorZipCode", sControlContractorZipCode);
-
-                string sControlContractorPhone = projectPropertiesForm.txtControlContractorPhone.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ControlContractorPhone", sControlContractorPhone);
-
-                string sControlContractorEmail = projectPropertiesForm.txtControlContractorEmail.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ControlContractorEmail", sControlContractorEmail);
-
-                string sMechanicalEngineer = projectPropertiesForm.txtMechanicalEngineer.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("MechanicalEngineer", sMechanicalEngineer);
-
-                string sMechanicalContractor = projectPropertiesForm.txtMechanicalContractor.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("MechanicalContractor", sMechanicalContractor);
-
-                string sDesignedBy = projectPropertiesForm.txtDesignedBy.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("DesignedBy", sDesignedBy);
-
-                string sReviwedBy = projectPropertiesForm.txtReviewBy.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("ReviewedBy", sReviwedBy);
-
-                string sFileCount = projectPropertiesForm.txtFileCount.Text.TrimEnd();
-                m_dictProjectInfoToCompare.Add("FileCount", sFileCount);
-
-
-                string sPrimarykey = "Id";
-
-                // Build column dictionary (exclude Id)
-                Dictionary<string, string> oDictToUpdate = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (KeyValuePair<string, string> sBaseItem in m_dictProjectInfoToCompare)
-                {
-                    if (!sBaseItem.Key.Equals(sPrimarykey, StringComparison.OrdinalIgnoreCase))
-                    {
-                        oDictToUpdate[sBaseItem.Key] = sBaseItem.Value;
-                    }
-
-                }
-
-                // Single project, always Id = 1
-                //depending on if the project already existed we either need to get the prjoect id or create the project id
-                string sProjectID = "";
-                if (ovDoc.DocumentSheet.CellExists["User.ProjectID", 0] == -1)
-                {
-                    sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                }
-
-                if (sProjectID == "")
-                {
-                    //we are adding a project for the first time there isn't a projectId assigned yet...
-                    string sDirectoryPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
-                    //the created date doesn't exist yet...
-                    DateTime dtCreatedDate = DateTime.Now;
-                    oDictToUpdate["CreatedDate"] = dtCreatedDate.ToString("yyyy-MM-dd HH:mm:ss");
-                    sProjectID = ProjectUtilities.GenerateProjectID(sDirectoryPath, dtCreatedDate, m_dictProjectInfoToCompare["ProjectName"]);
-                }
-
-
-                RecordUpdate record = new RecordUpdate();
-                record.sPrimaryKeyColumn = sPrimarykey;
-                record.sId = sProjectID;
-                record.odictColumnValues = oDictToUpdate;
-
-                m_mruRecordsToCompare = new MultipleRecordUpdates(new List<RecordUpdate> { record });
-
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in GatherProjectPropertiesInfo " + ex.Message, "VisAssist");
-            }
-        }
-
-
-        //gets the project name from the NameForm after asking the user what to name the Project
-        internal static string GetProjectName()
-        {
-            using (NameForm oForm = new NameForm())
-            {
-                oForm.ControlBox = false;
-                oForm.Text = "Project Name";
-                oForm.PromptText = "Project Name";
-                if (oForm.ShowDialog() == DialogResult.OK)
-                {
-                    string sTrimmedName = oForm.sName?.Trim();
-                    return sTrimmedName;
-                }
-            }
-            return null;
-        }
-
-
-
-
-
-        //generates a unique ID for the Project
-        internal static string GenerateProjectID(string sDirectoryPath, DateTime createdDate, string sProjectName)
-        {
-
-            //project: sDirectoryPath + "Dwg - Cover Pages" + project name and created date
-            //file: projectID + filepath + created date
-            //page: ProjectID + FileID + page name + created date
-
-            string input = sDirectoryPath + "Dwg - Cover Pages.vsdx" + sProjectName + createdDate.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
-            using (SHA256 sha = SHA256.Create())
-            {
-                byte[] bytehashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
-                StringBuilder sb = new StringBuilder();
-                foreach (byte b in bytehashBytes)
-                {
-                    sb.Append(b.ToString("x2")); // hex
-                }
-
-                return sb.ToString();
-            }
-        }
-
-
-        /// <summary>
-        /// if the file is not opened in another instance of visio, clear the projectID
-        /// </summary>
-        /// <param name="mruRecords"></param>
-        /// <returns></returns>
-        internal static bool ClearProjectID(MultipleRecordUpdates mruRecords)
-        {
-            try
-            {
-                foreach (RecordUpdate ruUpdated in mruRecords.ruRecords)
-                {
-                    Visio.Application ovApp = Globals.ThisAddIn.Application;
-                    string sFilePath = ruUpdated.odictColumnValues["FilePath"];
-
-                    Visio.Document ovDoc = FileUtilities.IsVisioFileOpen(ovApp, sFilePath);
-                    if (ovDoc == null)
-                    {
-                        //the document is not open in the current instance of visio-check to see if it is open/locked 
-                        bool bFileLocked = FileUtilities.IsFileLocked(sFilePath);
-                        if (bFileLocked)
-                        {
-                            //the file is open in another instance...we want to close it and re open it in our instance of visio i think we need to tell them they need to close it before we disassociate it...
-                            ///otherwise we might run into cached docuemnts errors...
-                            return false;
-                        }
-                        else
-                        {
-
-                            ovDoc = ovApp.Documents.Open(sFilePath);
-                            ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"\"";
-                            ovDoc.SaveAs(sFilePath);
-                            ovDoc.Close();
-                            return true;
-                        }
-                    }
-                    else
-                    {
-                        //the document is already openend 
-                        ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"\"";
-                        ovDoc.SaveAs(sFilePath);
-                    }
-
-
-
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in ClearProjectID " + ex.Message, "VisAssist");
-            }
-            return false;
-        }
-
-        internal static void OpenProject()
-        {
-            //open a folder dialog for the user to choose a VisAssist Folder
-            
-            try
-            {
-
-                using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
-                {
-                    folderdialog.IsFolderPicker = true;
-                    folderdialog.Title = "Select a folder to open the VisAssist project";
-
-                    if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
-                    {
-                        string sFolderPath = folderdialog.FileName; // folder path
-
-                        string[] sSubFolders = Directory.GetDirectories(sFolderPath);
-                        string[] sSubFolderNames = sSubFolders.Select(f => Path.GetFileName(f)).ToArray();
-                        //there should be two subFolders: DB and ProjectFiles confirm this...
-                        bool bHasDBSubFolder = sSubFolderNames.Contains("DB", StringComparer.OrdinalIgnoreCase);
-                        bool bHasProjectFilesSubFolder = sSubFolderNames.Contains("Project Files", StringComparer.OrdinalIgnoreCase);
-
-                        if (bHasDBSubFolder && bHasProjectFilesSubFolder)
-                        {
-                            //we are good we have the DB and the Project Files folder
-                            bool bDBExists = FileUtilities.DoesDBFileExist(sFolderPath);
-
-                            if (bDBExists)
-                            {
-                                sFolderPath = Path.Combine(sFolderPath, "Project Files");
-                                FileUtilities.GetFilesInProject(sFolderPath);
-
-                                //will need to add the launch file later if it didn't exist...once we've opened a file
-                                FileUtilities.OpenFileForm("Project"); 
-
-                            }
-                        }
-                        else
-                        {
-                            //this is not a proper folder
-                            MessageBox.Show("This is not a VisAssist folder.", "VisAssist");
-                        }
-
-                        
-
-
-                    }
-                }
-
-                //open the fileForm and populate it with the files in the project for the user to open 
-
-               
-            }
-            catch (Exception ex)
-
-            {
-                MessageBox.Show("Error in AddProjectFileStructure " + ex.Message, "VisAssist");
-            }
-        }
-
-        internal static string GetProjectID(string sDBPath)
-        {
-            try
-            {
-
-              
-                string sProjectID = "";
-                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
-                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-                {
-                    //logging here
-                    sqliteconConnection.Open();
-                    string sSQL = "SELECT Id FROM project_table LIMIT 1"; //get the only record in the proejct_table...
-
-                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
-                    {
-                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
-                        {
-                            if (sqlitereadReader.Read())
-                            {
-                                sProjectID = sqlitereadReader["Id"]?.ToString();
-                                return sProjectID;
-                            }
-                        }
-                    }
-                }
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in GetProjectID " + ex.Message, "VisAssist");
-            }
-            return "";
-        }
     }
 }
 

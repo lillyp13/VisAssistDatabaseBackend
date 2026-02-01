@@ -524,7 +524,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
-
+        //wondering if i should move some of the get information from database in here....
 
 
     }

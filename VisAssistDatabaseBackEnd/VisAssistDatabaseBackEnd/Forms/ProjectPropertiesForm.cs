@@ -52,7 +52,7 @@ namespace VisAssistDatabaseBackEnd.Forms
 
                     if (bAssignedToProject)
                     {
-                        FileUtilities.AdjustFileCount(ovDoc);
+                        FileUtilities.AdjustFileCountInDB(ovDoc);
                         ProjectUtilities.GetProjectInfoFromDatabase();
                         ProjectUtilities.PopulatePropertiesForm(this);
                         ShowDialog();

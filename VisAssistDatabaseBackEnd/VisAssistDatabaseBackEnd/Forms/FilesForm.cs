@@ -48,19 +48,33 @@ namespace VisAssistDatabaseBackEnd.Forms
                     MessageBox.Show("Please select a file to copy.", "VisAssist");
                     return;
                 }
-                DataGridViewRow dgvSelectedRow = dgvFiles.SelectedRows[0];
-                string sFileName = dgvSelectedRow.Cells[0].Value?.ToString();
 
-                //we are not opening the file we are going to copy it
-                string sDocName = FileUtilities.CopyFile(sFileName);
-                if (sDocName == "")
-                {
-                    MessageBox.Show("Could not copy file " + sFileName, "VisAssist");
-                }
-                else
-                {
-                    MessageBox.Show("Successfully copied the file " + sDocName + ".", "VisAssist");
-                }
+
+                FileUtilities.CopyFile(this);
+                //DataGridViewRow dgvSelectedRow = dgvFiles.SelectedRows[0];
+                //string sOldFileName = dgvSelectedRow.Cells[0].Value?.ToString();
+
+                //string sExtractedFileName = FileUtilities.ExtractNameFromVisioFile(sOldFileName);
+
+                //string sNewFileName = FileUtilities.GetFileName(sExtractedFileName);
+
+
+                //if (sNewFileName != "" && sNewFileName != null)
+                //{
+                //    //need to add the Dwg - and the .vsdx on the file name
+                //    //we are not opening the file we are going to copy it
+                //    sNewFileName = FileUtilities.FormatFileName(sNewFileName);
+
+                //    string sDocName = FileUtilities.CopyFile(sOldFileName, sNewFileName);
+                //    if (sDocName == "")
+                //    {
+                //        MessageBox.Show("Could not copy file " + sOldFileName, "VisAssist");
+                //    }
+                //    else
+                //    {
+                //        MessageBox.Show("Successfully copied the file " + sDocName + ".", "VisAssist");
+                //    }
+                //}
 
             }
             else
@@ -74,6 +88,7 @@ namespace VisAssistDatabaseBackEnd.Forms
                 string sFileName = dgvSelectedRow.Cells[0].Value?.ToString();
 
                 FileUtilities.OpenFile(sFileName, m_sSource);
+
                 
             }
 
