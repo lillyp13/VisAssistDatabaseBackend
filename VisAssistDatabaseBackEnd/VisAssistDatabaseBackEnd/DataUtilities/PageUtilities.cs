@@ -35,7 +35,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
         //CRUD Actions
-        internal static void DeletePage(PagesForm pagesForm)
+        internal static void DeletePageBasedOnForm(PagesForm pagesForm)
         {
             //get the selected row in the filePropertiesForm.dgvFileData to determine which file to delete
 
@@ -70,6 +70,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 pagesForm.dgvPages.Rows.Remove(dgvRow);
             }
 
+        }
+
+        internal static void DeletePage(Visio.Page ovPage, string sProjectID)
+        {
+            MultipleRecordUpdates mruRecordUpdates = BuildPageInformation(ovPage, sProjectID);
+            // Call delete
+            DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, mruRecordUpdates);
         }
         internal static void DeleteAllPages()
         {
@@ -201,11 +208,16 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void AddPageToDatabase(Visio.Page ovPage, string sProjectID)
         {
 
-            MultipleRecordUpdates oPageRecord = new MultipleRecordUpdates();
-            oPageRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
+            MultipleRecordUpdates oPageRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
             DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, oPageRecord);
         }
 
+        internal static void UpdatePageInDatabase(Visio.Page ovPage, string sProjectID)
+        {
+
+            MultipleRecordUpdates oPageRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
+            DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.PagesTable.sPagesTable, oPageRecord);
+        }
 
         internal static void UpdateCurrentPage(PagesForm pagesForm)
         {
@@ -594,17 +606,35 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void AddUserCellsToPage(Visio.Page ovPage)
+        internal static bool AddUserCellsToPage(Visio.Page ovPage)
         {
-            //Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
-            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Version", 0); //not quite sure what the value of this is...
-            ovPage.PageSheet.Cells["User.Version"].Formula = "\"v1\""; //might want to pull the format string for visio fromm VisAssist...
-            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageClass", 0);
-            ovPage.PageSheet.Cells["User.PageClass"].Formula = "\"Working\"";//might want to pull the format string for visio fromm VisAssist...
-            ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "CreatedDate", 0);
-            ovPage.PageSheet.Cells["User.CreatedDate"].Formula = "\"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\"";
-            //ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0); // i will add this later when i am building the page information...
-
+            try
+            {
+                bool bCellsAdded = false;
+                //Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
+                if (ovPage.PageSheet.CellExists["User.Version", 0] == 0)
+                {
+                    bCellsAdded = true;
+                    ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Version", 0); //not quite sure what the value of this is...
+                    ovPage.PageSheet.Cells["User.Version"].Formula = "\"v1\""; //might want to pull the format string for visio fromm VisAssist...
+                }
+                if (ovPage.PageSheet.CellExists["User.PageClass", 0] == 0)
+                {
+                    ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageClass", 0);
+                    ovPage.PageSheet.Cells["User.PageClass"].Formula = "\"Working\"";//might want to pull the format string for visio fromm VisAssist...
+                }
+                if (ovPage.PageSheet.CellExists["User.PageClass", 0] == 0)
+                {
+                    ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "CreatedDate", 0);
+                    ovPage.PageSheet.Cells["User.CreatedDate"].Formula = "\"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\"";
+                }
+                return bCellsAdded;
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in AddUserCellsToPage " + ex.Message, "VisAssist");
+            }
+            return false;
 
         }
 

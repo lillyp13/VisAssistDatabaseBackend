@@ -59,7 +59,7 @@ namespace VisAssistDatabaseBackEnd.Forms
         private void btnDeletePage_Click(object sender, EventArgs e)
         {
             //delete the page that is selected
-            PageUtilities.DeletePage(this);
+            PageUtilities.DeletePageBasedOnForm(this);
         }
 
         private void btnGetCurrentPage_Click(object sender, EventArgs e)

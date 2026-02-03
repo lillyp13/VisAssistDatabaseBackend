@@ -316,6 +316,7 @@ namespace VisAssistDatabaseBackEnd
                         if (bIsFileAssignedToProject)
                         {
                             FileUtilities.AddNewFile();
+                           
                         }
                         else
                         {

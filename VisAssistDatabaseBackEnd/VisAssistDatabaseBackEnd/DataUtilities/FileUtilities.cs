@@ -134,6 +134,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     PageUtilities.AddPageToDatabase(ovPage, "");
 
                     FileUtilities.AdjustFileCountInDB(ovDoc);
+                    VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpened(ovDoc, false);
 
                     ovDoc.SaveAs(sFilePath);
                 }
@@ -144,7 +145,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
 
         }
-       
+
         internal static MultipleRecordUpdates AddFileToDatabase(Visio.Document ovDoc, string sFilePath, string sProjectID)
         {
             //builds up the file information based on the visio object and runs the sql to add to the db
@@ -620,19 +621,28 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         //VISIO DOCUMENTS
         internal static void AddLaunchFile(Visio.Document ovDoc, string sProjectID, string sFolder)
         {
-            //sFolder should be at the Begining of our VisAssist project
-            //we also need to create the launchfile...create a new visio file and add the ProjectID to the docuemntshapesheet.
-            Visio.Document ovLaunchDoc = ovDoc.Application.Documents.Add("");
-            ovLaunchDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ProjectID", 0);
-            ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
-            //add a user Cell for the class to be Launch
-            ovLaunchDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Class", 0);
-            ovLaunchDoc.DocumentSheet.Cells["User.Class"].Formula = "\"" + "Launch" + "\"";
-            //string sFolder = Path.GetDirectoryName(sFilePath); //get the path before the file name
-            // sFolder = Path.GetDirectoryName(sFolder); //get the path before the hidden Project Files folder
-            string sLaunchFilePath = Path.Combine(sFolder, "LaunchFile.vsdx");
-            ovLaunchDoc.SaveAs(sLaunchFilePath);
-            ovLaunchDoc.Close();
+            try
+            {
+
+
+                //sFolder should be at the Begining of our VisAssist project
+                //we also need to create the launchfile...create a new visio file and add the ProjectID to the docuemntshapesheet.
+                Visio.Document ovLaunchDoc = ovDoc.Application.Documents.Add("");
+                ovLaunchDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ProjectID", 0);
+                ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
+                //add a user Cell for the class to be Launch
+                ovLaunchDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Class", 0);
+                ovLaunchDoc.DocumentSheet.Cells["User.Class"].Formula = "\"" + "Launch" + "\"";
+                //string sFolder = Path.GetDirectoryName(sFilePath); //get the path before the file name
+                // sFolder = Path.GetDirectoryName(sFolder); //get the path before the hidden Project Files folder
+                string sLaunchFilePath = Path.Combine(sFolder, "LaunchFile.vsdx");
+                ovLaunchDoc.SaveAs(sLaunchFilePath);
+                ovLaunchDoc.Close();
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in AddLaunchFile " + ex.Message, "VisAssist");
+            }
 
         }
 
@@ -755,8 +765,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-
-
                 //Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
                 ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ProjectID", 0);
                 ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + oFileRecord.ruRecords[0].odictColumnValues["ProjectID"] + "\"";
@@ -780,155 +788,164 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void OpenFile(string sFileName, string sSource)
         {
-
-            Visio.Document ovCurrentDoc = Globals.ThisAddIn.Application.ActiveDocument;
-            if (ovCurrentDoc != null)
+            try
             {
-                string sCurrentDocName = ovCurrentDoc.Name;
-                if (sCurrentDocName == sFileName)
+                Visio.Document ovCurrentDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                if (ovCurrentDoc != null)
                 {
-                    //they pressed the document they are currently on to open 
-                    MessageBox.Show("You chose the current file that is open please pick a different file.", "VisAssist");
-                    return;
+                    string sCurrentDocName = ovCurrentDoc.Name;
+                    if (sCurrentDocName == sFileName)
+                    {
+                        //they pressed the document they are currently on to open 
+                        MessageBox.Show("You chose the current file that is open please pick a different file.", "VisAssist");
+                        return;
+                    }
                 }
-            }
-            //use the sFileName to get the file path from m_dictFiles..
-            string sFilePath = m_dictProjectFiles[sFileName];
+                //use the sFileName to get the file path from m_dictFiles..
+                string sFilePath = m_dictProjectFiles[sFileName];
 
-            if (System.IO.File.Exists(sFilePath))
-            {
-                //open the file 
-                Visio.Application ovApp = Globals.ThisAddIn.Application;
-                Visio.Document ovDoc = null;
-
-
-                //we need to get the projectid from the database
-                //get the database path from the filepath...
-                string sProjectFolderPath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
-                string sPathToBind = Path.GetDirectoryName(sProjectFolderPath).TrimEnd(Path.DirectorySeparatorChar);
-                string sDBPath = Path.Combine(sProjectFolderPath, "DB", "VisAssistBackEnd.db");
-
-                //before we get the projectID from the db we need to bind the doucment to the db...
-                DatabaseConfig.BindToActiveDocument(sPathToBind);
-                string sProjectID = ProjectUtilities.GetProjectIDFromDatabase(sDBPath);
-
-
-                switch (sSource)
+                if (System.IO.File.Exists(sFilePath))
                 {
-                    case "Launch":
-                        {
-                            //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
-                            ovDoc = IsVisioFileOpen(ovApp, sFilePath);
-                            if (ovDoc != null)
-                            {
-                                //the file is open already in our instance of visio so bring it forward..
-                                foreach (Visio.Window ovWindow in ovApp.Windows)
-                                {
-                                    if (ovWindow.Document == ovDoc)
-                                    {
-                                        ovWindow.Activate();
-                                        break;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                //our current application doens't have this file open
-                                //check to see if the file is used by a different application
-                                bool bIsFileLocked = IsFileLocked(sFilePath);
-                                if (bIsFileLocked)
-                                {
-                                    //the file is open in another instance of visio sorry we can't open this 
-                                    MessageBox.Show("Sorry this file is used by another application and cannot be opened at this time.", "VisAssist");
-                                    return;
-                                }
-                                else
-                                {
-                                    //the file is  not opened and is not locked...
-                                    ovDoc = ovApp.Documents.Open(sFilePath);
-                                    //we are coming from the ribbon button open file from the launch file...
-                                    // coming from the launch file so we want to close it...
-                                    //loop through the documents in ovApp for the launchfile for this filepath...
-                                    string sProjectFilePath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
-                                    string sLaunchFilePath = Path.GetDirectoryName(sProjectFilePath.TrimEnd(Path.DirectorySeparatorChar)); //get the folder path before the hidden Project Files folder
-                                    sLaunchFilePath = Path.Combine(sLaunchFilePath, "LaunchFile.vsdx");
+                    //open the file 
+                    Visio.Application ovApp = Globals.ThisAddIn.Application;
+                    Visio.Document ovDoc = null;
 
-                                    foreach (Visio.Document ovDocToCheck in ovApp.Documents)
-                                    {
-                                        string sDocToCheckPath = FileUtilities.ReturnFileStructurePath(ovDocToCheck.Path);
-                                        sDocToCheckPath = Path.Combine(sDocToCheckPath, ovDocToCheck.Name);
 
-                                        if (sDocToCheckPath == sLaunchFilePath)
+                    //we need to get the projectid from the database
+                    //get the database path from the filepath...
+                    string sProjectFolderPath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
+                    string sPathToBind = Path.GetDirectoryName(sProjectFolderPath).TrimEnd(Path.DirectorySeparatorChar);
+                    string sDBPath = Path.Combine(sProjectFolderPath, "DB", "VisAssistBackEnd.db");
+
+                    //before we get the projectID from the db we need to bind the doucment to the db...
+                    DatabaseConfig.BindToActiveDocument(sPathToBind);
+                    string sProjectID = ProjectUtilities.GetProjectIDFromDatabase(sDBPath);
+
+
+                    switch (sSource)
+                    {
+                        case "Launch":
+                            {
+                                //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
+                                ovDoc = IsVisioFileOpen(ovApp, sFilePath);
+                                if (ovDoc != null)
+                                {
+                                    //the file is open already in our instance of visio so bring it forward..
+                                    foreach (Visio.Window ovWindow in ovApp.Windows)
+                                    {
+                                        if (ovWindow.Document == ovDoc)
                                         {
-                                            //this is the file we want to close
-                                            ovDocToCheck.Save();
-                                            ovDocToCheck.Close();
+                                            ovWindow.Activate();
+                                            break;
                                         }
                                     }
                                 }
-                            }
+                                else
+                                {
+                                    //our current application doens't have this file open
+                                    //check to see if the file is used by a different application
+                                    bool bIsFileLocked = IsFileLocked(sFilePath);
+                                    if (bIsFileLocked)
+                                    {
+                                        //the file is open in another instance of visio sorry we can't open this 
+                                        MessageBox.Show("Sorry this file is used by another application and cannot be opened at this time.", "VisAssist");
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        //the file is  not opened and is not locked...
+                                        ovDoc = ovApp.Documents.Open(sFilePath);
+                                        //we are coming from the ribbon button open file from the launch file...
+                                        // coming from the launch file so we want to close it...
+                                        //loop through the documents in ovApp for the launchfile for this filepath...
+                                        string sProjectFilePath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
+                                        string sLaunchFilePath = Path.GetDirectoryName(sProjectFilePath.TrimEnd(Path.DirectorySeparatorChar)); //get the folder path before the hidden Project Files folder
+                                        sLaunchFilePath = Path.Combine(sLaunchFilePath, "LaunchFile.vsdx");
 
-                            break;
-                        }
-                    case "Project":
-                        {
-                            ovDoc = IsVisioFileOpen(ovApp, sFilePath);
-                            if (ovDoc != null)
-                            {
-                                //the file is open alread in our instance of visio so bring it forward..
+                                        foreach (Visio.Document ovDocToCheck in ovApp.Documents)
+                                        {
+                                            string sDocToCheckPath = FileUtilities.ReturnFileStructurePath(ovDocToCheck.Path);
+                                            sDocToCheckPath = Path.Combine(sDocToCheckPath, ovDocToCheck.Name);
+
+                                            if (sDocToCheckPath == sLaunchFilePath)
+                                            {
+                                                //this is the file we want to close
+                                                ovDocToCheck.Save();
+                                                ovDocToCheck.Close();
+                                            }
+                                        }
+                                    }
+                                }
+
+                                break;
                             }
-                            else
+                        case "Project":
                             {
-                                //our current application doens't have this file open
-                                //check to see if the file is used by a different application
+                                ovDoc = IsVisioFileOpen(ovApp, sFilePath);
+                                if (ovDoc != null)
+                                {
+                                    //the file is open alread in our instance of visio so bring it forward..
+                                }
+                                else
+                                {
+                                    //our current application doens't have this file open
+                                    //check to see if the file is used by a different application
+                                    bool bIsFileLocked = IsFileLocked(sFilePath);
+                                    if (bIsFileLocked)
+                                    {
+                                        //the file is locked
+                                        MessageBox.Show("Sorry this file is used by another application and cannot be opened at this time.", "VisAssist");
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
+                                        ovDoc = ovApp.Documents.Open(sFilePath);
+                                    }
+
+                                }
+
+
+
+
+                                break;
+                            }
+                        case "File":
+                            {
+                                //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
+                                //we are coming from the ribbon button open file not from the launch file
+                                //need to open a new instance of visio and open the file 
+
                                 bool bIsFileLocked = IsFileLocked(sFilePath);
                                 if (bIsFileLocked)
                                 {
                                     //the file is locked
                                     MessageBox.Show("Sorry this file is used by another application and cannot be opened at this time.", "VisAssist");
+
                                     return;
                                 }
                                 else
                                 {
+                                    Visio.Application ovNewApp = new Visio.Application();
+                                    ovNewApp.Visible = true;
+
                                     //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
-                                    ovDoc = ovApp.Documents.Open(sFilePath);
+                                    ovDoc = ovNewApp.Documents.Open(sFilePath);
                                 }
 
+                                break;
                             }
 
+                    }
+                    string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                    DatabaseConfig.BindToActiveDocument(sFolderPath);
 
-
-
-                            break;
-                        }
-                    case "File":
-                        {
-                            //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
-                            //we are coming from the ribbon button open file not from the launch file
-                            //need to open a new instance of visio and open the file 
-
-                            bool bIsFileLocked = IsFileLocked(sFilePath);
-                            if (bIsFileLocked)
-                            {
-                                //the file is locked
-                                MessageBox.Show("Sorry this file is used by another application and cannot be opened at this time.", "VisAssist");
-
-                                return;
-                            }
-                            else
-                            {
-                                Visio.Application ovNewApp = new Visio.Application();
-                                ovNewApp.Visible = true;
-
-                                //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
-                                ovDoc = ovNewApp.Documents.Open(sFilePath);
-                            }
-
-                            break;
-                        }
-
+                    VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpened(ovDoc, false);
                 }
-
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in OpenFile " + ex.Message, "VisAssist");
             }
         }
 
@@ -936,8 +953,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-
-
                 //i need to go through and upate the fileID and the page ids and shapes ids...
                 string sNewFileID = GenerateFileID(sProjectID, sDestFilePath, DateTime.Now);
                 if (ovDoc.DocumentSheet.CellExists["User.FileID", 0] == 0)
@@ -1043,6 +1058,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void CopyFile(FilesForm filesForm)
         {
+            Visio.Document ovCurrentDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            string sFolderPathOriginal = GetFolderPath(ovCurrentDoc);
+            sFolderPathOriginal = Path.Combine(sFolderPathOriginal, "Project Files");
             DataGridViewRow dgvSelectedRow = filesForm.dgvFiles.SelectedRows[0];
             string sOldFileName = dgvSelectedRow.Cells[0].Value?.ToString();
 
@@ -1059,9 +1077,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 string sFilePath = m_dictProjectFiles[sOldFileName];
 
-                string sFolderPath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
+                string sFolderPathOfOtherFile = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
 
-                string sDocName = OpenFilesToCopy(sFilePath, sFolderPath, sNewFileName);
+                string sDocName = OpenFilesToCopy(sFilePath, sFolderPathOfOtherFile, sNewFileName, sFolderPathOriginal);
                 if (sDocName == "")
                 {
                     MessageBox.Show("Could not copy file " + sOldFileName, "VisAssist");
@@ -1076,9 +1094,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         /// this checks to see how we need to open the document to copy and takes different steps to output a temporary file that will be updated and copied in AddCopiedFile
         /// </summary>
         /// <param name="sFilePath"></param>
-        /// <param name="sFolderPath"></param>
+        /// <param name="sFolderPathOfOtherFile"></param>
         /// <returns></returns>
-        internal static string OpenFilesToCopy(string sFilePath, string sFolderPath, string sNewFileName)
+        internal static string OpenFilesToCopy(string sFilePath, string sFolderPathOfOtherFile, string sNewFileName, string sFolderPathOriginal)
         {
             string sDocName = "";
             try
@@ -1131,8 +1149,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             ovDocToCopy.Save();
                             ovDocToCopy.Close();
 
+                           
                             //copy the file
-                            sDocName = AddCopiedFile(sFolderPath, sFilePath, sProjectID, ovDocToCopy, sTempFilePath, sNewFileName);
+                            sDocName = AddCopiedFile(sFolderPathOriginal, sFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
                             //save and close the temp file now that we are done with it we can also trash it (we already used it to make a copy in copyfile)
                             ovTempDoc.Save();
                             ovTempDoc.Close();
@@ -1156,11 +1175,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             sTempFilePath = Path.Combine(sTempFolder, sTempFileName);
 
                             //open the temporary document
-                            Visio.Document ovTempDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)Visio.VisOpenSaveArgs.visOpenRW);
+                            Visio.Document ovTempDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
 
                             //the file is open in a different instance of visio so we need to make a copy of the file and associate the copied file...
                             //bAssociatedFile = AssociateFileOpenInDifferentVisioInstance(sDestFilePath, sFolderPath, sFileName, sFilePath, sTempFilePath);
-                            sDocName = AddCopiedFile(sFolderPath, sTempFilePath, sProjectID, ovDocToCopy, sTempFilePath, sNewFileName);
+                            sDocName = AddCopiedFile(sFolderPathOriginal, sTempFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
 
                             ovTempDoc.Save();
                             ovTempDoc.Close();
@@ -1182,10 +1201,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         //make a copy to the temporary folder
                         System.IO.File.Copy(sFilePath, sTempFilePath, true);
                         //open the temporary document
-                        Visio.Document ovTempDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)Visio.VisOpenSaveArgs.visOpenRW);
+                        Visio.Document ovTempDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
 
                         //copy the file
-                        sDocName = AddCopiedFile(sFolderPath, sFilePath, sProjectID, ovDoc, sTempFilePath, sNewFileName); //we are associating a file that is already open
+                        sDocName = AddCopiedFile(sFolderPathOriginal, sFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName); //we are associating a file that is already open
 
                         //save, close, and delete the temp file...
                         ovTempDoc.Save();
@@ -1232,6 +1251,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 if (ovTempDoc != null)
                 {
+                   
                     //update all the ids in the visio document
                     UpdateIDs(ovTempDoc, sDestFilePath, sProjectID);
 
@@ -1265,7 +1285,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //make the final copy from the temporary file location to the destination file structure with the new name...
                     System.IO.File.Copy(sTempFilePath, sUniqueFilePath, true);
 
-                    //open the document that we just made a copy of 
+                    //open the document that we just made a copy of --not sure why or if we need to open it, we adjust the temp doc and then make a copy of that to the correct file structure...
                     ovNewDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sUniqueFilePath, (short)Visio.VisOpenSaveArgs.visOpenHidden);
 
                     string sDocName = ovNewDoc.Name;
@@ -1553,47 +1573,55 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             //sFolderPath should be where the VisAssist Project starts...
 
-
-            Visio.Document ovCurrentDocument = Globals.ThisAddIn.Application.ActiveDocument;
-
-            //string sFolderPath = GetFolderPath(ovCurrentDocument);
-            string sProjectID = ovCurrentDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-
-            //check if the launch file for this project exists...
-            PopulateFilesOutsideProjectFilesFolderDictionaryBasedOnDirectory(sFolderPath);
-            if (m_dictFilesOutsideProjectFolder.Count == 1)
+            try
             {
-                //a launch file exists, make sure it has the correct project id...
-                //open the launch file and check the projectID to make sure it matches sProjectID otherwise delete it and add the correct launch file
-                FileUtilities.CheckIfLaunchFileBelongsToProject(sProjectID, ovCurrentDocument);
-            }
-            else
-            {
-                //there is either no launch file or too many launch files
-                if (m_dictFilesOutsideProjectFolder.Count == 0)
+                Visio.Document ovCurrentDocument = Globals.ThisAddIn.Application.ActiveDocument;
+                if (ovCurrentDocument != null)
                 {
-                    //there is no launch file, go ahead and create it for the document 
-                    FileUtilities.AddLaunchFile(ovCurrentDocument, sProjectID, sFolderPath);
-                }
-                else
-                {
-                    if (m_dictFilesOutsideProjectFolder.Count > 1)
+                    //string sFolderPath = GetFolderPath(ovCurrentDocument);
+                    string sProjectID = ovCurrentDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+
+                    //check if the launch file for this project exists...
+                    PopulateFilesOutsideProjectFilesFolderDictionaryBasedOnDirectory(sFolderPath);
+                    if (m_dictFilesOutsideProjectFolder.Count == 1)
                     {
-                        //we have too many launch files, need to delete them all and create a new one, (but make sure we can delete the old ones..
-                        bool bOkToDeleteLaunchFiles = FileUtilities.CanWeDeleteAllLaunchFiles();
-                        if (bOkToDeleteLaunchFiles)
+                        //a launch file exists, make sure it has the correct project id...
+                        //open the launch file and check the projectID to make sure it matches sProjectID otherwise delete it and add the correct launch file
+                        FileUtilities.CheckIfLaunchFileBelongsToProject(sProjectID, ovCurrentDocument);
+                    }
+                    else
+                    {
+                        //there is either no launch file or too many launch files
+                        if (m_dictFilesOutsideProjectFolder.Count == 0)
                         {
-                            //we successfully have none of the launch files open now, so let's delete them all
-                            FileUtilities.DeleteAllLaunchFiles(); //go ahead and delete all the launch files in the oDictLaunchFiles
-                                                                  //now add the correct launch file
+                            //there is no launch file, go ahead and create it for the document 
                             FileUtilities.AddLaunchFile(ovCurrentDocument, sProjectID, sFolderPath);
                         }
+                        else
+                        {
+                            if (m_dictFilesOutsideProjectFolder.Count > 1)
+                            {
+                                //we have too many launch files, need to delete them all and create a new one, (but make sure we can delete the old ones..
+                                bool bOkToDeleteLaunchFiles = FileUtilities.CanWeDeleteAllLaunchFiles();
+                                if (bOkToDeleteLaunchFiles)
+                                {
+                                    //we successfully have none of the launch files open now, so let's delete them all
+                                    FileUtilities.DeleteAllLaunchFiles(); //go ahead and delete all the launch files in the oDictLaunchFiles
+                                                                          //now add the correct launch file
+                                    FileUtilities.AddLaunchFile(ovCurrentDocument, sProjectID, sFolderPath);
+                                }
 
+                            }
+                        }
                     }
                 }
             }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in CheckForLaunchFile " + ex.Message, "VisAssist");
+            }
         }
-       
+
         internal static bool CheckIfSubFoldersExist(string sFolderPath)
         {
             //the sFolderPath should point to the beginning of our VisAssist Project
@@ -1949,90 +1977,109 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         private static bool CanWeDeleteAllLaunchFiles()
         {
-            //need to make sure that each file in oDictLaunch Files is either open in our instance or closed (not locked/open in another application)
-            //if the file is open in our instance of visio save and close it...
-            //if all the files pass this test return true
-            Visio.Application ovApp = Globals.ThisAddIn.Application;
-            Visio.Document ovDoc;
-            foreach (KeyValuePair<string, string> kvp in m_dictFilesOutsideProjectFolder)
-            {
-                string sFileName = kvp.Key;
-                string sFilePath = kvp.Value;
+            //the launch files may be open if they are in a weird state where the user has launched visio but havn't clicked anything on the fileForm (still on launch file)
 
-                ovDoc = IsVisioFileOpen(ovApp, sFilePath);
-                if (ovDoc != null)
+            try
+            {
+
+
+                //need to make sure that each file in oDictLaunch Files is either open in our instance or closed (not locked/open in another application)
+                //if the file is open in our instance of visio save and close it...
+                //if all the files pass this test return true
+                Visio.Application ovApp = Globals.ThisAddIn.Application;
+                Visio.Document ovDoc;
+                foreach (KeyValuePair<string, string> kvp in m_dictFilesOutsideProjectFolder)
                 {
-                    //it is open in our intance 
-                    ovDoc.Save();
-                    ovDoc.Close();
-                }
-                else
-                {
-                    bool bIsFileLocked = IsFileLocked(sFilePath);
-                    if (bIsFileLocked)
+                    string sFileName = kvp.Key;
+                    string sFilePath = kvp.Value;
+
+                    ovDoc = IsVisioFileOpen(ovApp, sFilePath);
+                    if (ovDoc != null)
                     {
-                        return false; //one of the files is locked...
+
+                        ovDoc.Save();
+                        ovDoc.Close();
+                    }
+                    else
+                    {
+                        bool bIsFileLocked = IsFileLocked(sFilePath);
+                        if (bIsFileLocked)
+                        {
+                            return false; //one of the files is locked...
+                        }
                     }
                 }
+                return true;
             }
-            return true;
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in CanWeDeleteAllLaunchFiles " + ex.Message, "VisAssist");
+            }
+            return false;
         }
 
         private static void CheckIfLaunchFileBelongsToProject(string sProjectID, Visio.Document ovDoc)
         {
-            //we should only have one thing in the dictionary but we want to open that launch file and check to see if the projectID matches the sProjectID
-            KeyValuePair<string, string> sLaunchFileItem = m_dictFilesOutsideProjectFolder.First();
-            string sFilePath = sLaunchFileItem.Value.ToString();
-            //need to check to see if the launch file is already open, or if it is locked..
-            Visio.Document ovLaunchDoc = IsVisioFileOpen(Globals.ThisAddIn.Application, sFilePath);
-            string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
-            string sLaunchFilePath = Path.Combine(sFolderPath, "LaunchFile.vsdx");
-            string sProjectIDofLaunchDoc = "";
-
-
-            if (ovLaunchDoc != null)
+            try
             {
-                //this is open in our instance check it...
-                sProjectIDofLaunchDoc = ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                //we should only have one thing in the dictionary but we want to open that launch file and check to see if the projectID matches the sProjectID
+                KeyValuePair<string, string> sLaunchFileItem = m_dictFilesOutsideProjectFolder.First();
+                string sFilePath = sLaunchFileItem.Value.ToString();
+                //need to check to see if the launch file is already open, or if it is locked..
+                Visio.Document ovLaunchDoc = IsVisioFileOpen(Globals.ThisAddIn.Application, sFilePath);
+                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                string sLaunchFilePath = Path.Combine(sFolderPath, "LaunchFile.vsdx");
+                string sProjectIDofLaunchDoc = "";
 
-                if (sProjectIDofLaunchDoc != sProjectID)
-                {
-                    //these don't match we need to delete it and create a new one, but it is already open in our instance so we need to close it and then delete it and create a new one...
-                    ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
-                    ovLaunchDoc.Save();
 
-
-                }
-                else
+                if (ovLaunchDoc != null)
                 {
-                    // they are equal this is the correct launch file for the project, nothing to update
-                    //no need to close or save becuase it was already open just leave it open...
-                }
-            }
-            else
-            {
-                //the launch file isn't open in our instance 
-                bool bIsFileLocked = FileUtilities.IsFileLocked(sFilePath);
-                if (bIsFileLocked)
-                {
-                    //the file is locked, we cannot proceed with deleting the launch file, not sure what we should do here at this time...
-                }
-                else
-                {
-                    //the file is not locked, open it check the project id and then update if need be
-                    ovLaunchDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
+                    //this is open in our instance check it...
                     sProjectIDofLaunchDoc = ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+
                     if (sProjectIDofLaunchDoc != sProjectID)
                     {
+                        //these don't match we need to delete it and create a new one, but it is already open in our instance so we need to close it and then delete it and create a new one...
                         ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
                         ovLaunchDoc.Save();
-                        ovLaunchDoc.Close();
-
-
 
 
                     }
+                    else
+                    {
+                        // they are equal this is the correct launch file for the project, nothing to update
+                        //no need to close or save becuase it was already open just leave it open...
+                    }
                 }
+                else
+                {
+                    //the launch file isn't open in our instance 
+                    bool bIsFileLocked = FileUtilities.IsFileLocked(sFilePath);
+                    if (bIsFileLocked)
+                    {
+                        //the file is locked, we cannot proceed with deleting the launch file, not sure what we should do here at this time...
+                    }
+                    else
+                    {
+                        //the file is not locked, open it check the project id and then update if need be
+                        ovLaunchDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
+                        sProjectIDofLaunchDoc = ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                        if (sProjectIDofLaunchDoc != sProjectID)
+                        {
+                            ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
+                            ovLaunchDoc.Save();
+                            ovLaunchDoc.Close();
+
+
+
+
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in CheckIfLaunchFileBelongsToProject " + ex.Message, "VisAssist");
             }
         }
 

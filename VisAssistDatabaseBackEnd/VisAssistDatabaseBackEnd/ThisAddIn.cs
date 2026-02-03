@@ -8,20 +8,448 @@ using Office = Microsoft.Office.Core;
 using System.Data.SQLite;
 using System.IO;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using System.Threading.Tasks;
+using System.Threading;
+using System.Windows.Forms;
+using System.Runtime.InteropServices;
+using Microsoft.Office.Interop.Visio;
+using static System.Net.Mime.MediaTypeNames;
+using System.Diagnostics;
 
 namespace VisAssistDatabaseBackEnd
 {
     public partial class ThisAddIn
     {
+        public VisioEventSink m_appSink;
+        private List<Visio.Event> m_VisioEvents = new List<Visio.Event>();
+        private List<Visio.Event> m_VisioAppEvents = new List<Visio.Event>();
+
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
-           
+            //add the higher level events...
+            VisioEvents_Connect();
+
+            foreach (Visio.Document doc in this.Application.Documents)
+            {
+                if (doc.Type == Visio.VisDocumentTypes.visTypeDrawing)
+                {
+                    VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
+
+                    
+                }
+            }
         }
+
+        public const short visEvtAdd = -0x8000;
+        internal void StartSinksForDoc(Visio.Document ovDocument)
+        {
+            try
+            {
+                // Ensure a single sink instance
+                if (m_appSink == null)
+                {
+                    m_appSink = new VisioEventSink(OnVisioEvent);
+                }
+
+                // Get document-level and application-level event lists
+                Visio.EventList docEventList = ovDocument.EventList;
+                Visio.EventList appEventList = this.Application.EventList;
+
+                // ---- Document-level events ----
+
+                short pageAddedEventCode = unchecked((short)((short)Visio.VisEventCodes.visEvtAdd | (short)Visio.VisEventCodes.visEvtPage));
+
+                // Hook the event on the document's Pages collection
+                Visio.Event pageAddedEvent = ovDocument.EventList.AddAdvise(
+                    pageAddedEventCode,
+                    m_appSink,
+                    string.Empty,
+                    string.Empty
+                );
+
+                // Add to your list to prevent GC
+                m_VisioEvents.Add(pageAddedEvent);
+
+
+                //// Shape Added
+                //m_appEvents.Add(docEventList.AddAdvise(
+                //     (short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtShape),
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+                //// Shape Deleted
+                //m_appEvents.Add(docEventList.AddAdvise(
+                //   (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtShape),
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+                // Page Changed
+                Visio.Event pagechangedAddedEvent = ovDocument.EventList.AddAdvise(
+                     (short)((short)Visio.VisEventCodes.visEvtMod + (short)Visio.VisEventCodes.visEvtPage),
+                    m_appSink,
+                    string.Empty,
+                    string.Empty
+                    );
+
+
+                short pageModifiedEventCode = unchecked((short)((short)Visio.VisEventCodes.visEvtMod | (short)Visio.VisEventCodes.visEvtPage));
+
+                Visio.Event pageModifiedEvent = docEventList.AddAdvise(
+                    pageModifiedEventCode,
+                    m_appSink,
+                    string.Empty,
+                    string.Empty
+                );
+
+                m_VisioEvents.Add(pageModifiedEvent);
+                // Page Added
+                //m_appEvents.Add(docEventList.AddAdvise(
+                //(short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtPage),
+                //m_appSink,
+                //string.Empty,
+                //string.Empty));
+                // ✅ Correct
+                //m_VisioEvents.Add(docEventList.AddAdvise(
+                //    (short)((short)visEvtAdd | (short)Visio.VisEventCodes.visEvtPage),
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+                // Correct PageAdded event
+
+                // Check if we already registered this event with this sink
+                //Visio.Event evt3 = docEventList.AddAdvise(
+                //   (short)((short)Visio.VisEventCodes.visEvtPage + (short)VisioEvent.visEvtAdd),
+                //   m_appSink,
+                //   string.Empty,
+                //   string.Empty);
+                //m_VisioEvents.Add(evt3);
+
+
+
+                //// Cell Modified (with custom property filter)
+                //var evtCellModified = docEventList.AddAdvise(
+                //    (short)((short)Visio.VisEventCodes.visEvtCell + (short)Visio.VisEventCodes.visEvtMod),
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty);
+                //m_appEvents.Add(evtCellModified);
+
+                //// Filter only custom property cells
+                //System.Array filterArray = Array.CreateInstance(typeof(short), 7);
+                //filterArray.SetValue((short)Visio.VisSectionIndices.visSectionProp, 0);
+                //filterArray.SetValue((short)Visio.VisRowIndices.visRowFirst, 1);
+                //filterArray.SetValue((short)Visio.VisCellIndices.visCustPropsValue, 2);
+                //filterArray.SetValue((short)Visio.VisSectionIndices.visSectionProp, 3);
+                //filterArray.SetValue((short)Visio.VisRowIndices.visRowLast, 4);
+                //filterArray.SetValue((short)Visio.VisCellIndices.visCustPropsValue, 5);
+                //filterArray.SetValue((short)1, 6); // true
+                //evtCellModified.SetFilterSRC(ref filterArray);
+
+                //// Connections Added
+                //m_appEvents.Add(docEventList.AddAdvise(
+                //    (short)(visEvtAdd + (short)Visio.VisEventCodes.visEvtConnect),
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+                //// Connections Deleted
+                //m_appEvents.Add(docEventList.AddAdvise(
+                //    (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtConnect),
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+                //// Shape Link Added
+                //m_appEvents.Add(docEventList.AddAdvise(
+                //    (short)Visio.VisEventCodes.visEvtShapeLinkAdded,
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+                //// Document Deleted (Before Close)
+                //m_appEvents.Add(docEventList.AddAdvise(
+                //     (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtDoc),
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+                // Page Deleted
+                m_VisioEvents.Add(docEventList.AddAdvise(
+                   (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage),
+                    m_appSink,
+                    string.Empty,
+                    string.Empty));
+
+                //// Query Cancel Page Delete
+                //m_appEvents.Add(docEventList.AddAdvise(
+                //    (short)Visio.VisEventCodes.visEvtCodeQueryCancelPageDel,
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+                //// Document Modified
+                m_VisioEvents.Add(docEventList.AddAdvise(
+                    (short)(short)Visio.VisEventCodes.visEvtDoc + (short)Visio.VisEventCodes.visEvtMod,
+                    m_appSink,
+                    string.Empty,
+                    string.Empty));
+
+                //// ---- Application-level events ----
+
+                //// Visio Is Idle
+                m_VisioAppEvents.Add(appEventList.AddAdvise(
+                    (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtIdle,
+                    m_appSink,
+                    string.Empty,
+                    string.Empty));
+
+                //// No Events Pending
+                //m_appEvents.Add(appEventList.AddAdvise(
+                //    (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtNonePending,
+                //    m_appSink,
+                //    string.Empty,
+                //    string.Empty));
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in StartSinksForDoc: " + ex.Message, "VisAssist");
+            }
+        }
+
+
+
+        public void VisioEvents_Connect()
+        {
+            var app = this.Application;
+            var eventList = app.EventList;
+
+            m_appSink = new  VisioEventSink(OnVisioEvent);
+
+            //event marker
+            m_VisioAppEvents.Add(
+                eventList.AddAdvise(
+                    (short)(Visio.VisEventCodes.visEvtApp | Visio.VisEventCodes.visEvtMarker),
+                    m_appSink,
+                    "",
+                    "")
+            );
+
+            //query cancel
+            m_VisioAppEvents.Add(
+                eventList.AddAdvise(
+                    (short)Visio.VisEventCodes.visEvtCodeQueryCancelSelDel,
+                    m_appSink,
+                    "",
+                    "")
+            );
+            //this is the docuemnt opened
+            m_VisioAppEvents.Add(
+                eventList.AddAdvise(
+                    (short)Visio.VisEventCodes.visEvtCodeDocOpen,
+                    m_appSink,
+                    "",
+                    "")
+            );
+        }
+
+
+
+        private static volatile bool m_visioIsIdle = false;
+
+        private bool OnVisioEvent(
+    short eventCode,
+    object source,
+    int eventID,
+    int eventSequenceNumber,
+    object subject,
+    object moreInformation)
+        {
+            //var code = (Visio.VisEventCodes)eventCode;
+
+            //if ((code & Visio.VisEventCodes.visEvtMarker) != 0)
+            //{
+            //    // Marker hit
+            //    return true;
+            //}
+
+            //if (code == Visio.VisEventCodes.visEvtCodeDocOpen)
+            //{
+            //    var doc = subject as Visio.Document;
+            //    if (doc != null)
+            //    {
+            //        // visio is already open and we are now going to opne a doucment...
+            //        VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
+            //    }
+            //    // Document opened
+            //    return true;
+            //}
+
+            //return true;
+
+
+            bool bCancelEvent = false;
+
+            switch (eventCode)
+            {
+                //ShapeAdded -32704
+                case (short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtShape):
+                    {
+                       // OnShapeAdded((Visio.Shape)subject);
+                        break;
+                    }
+
+                //ShapeDeleted 16448
+                case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtShape):
+                    {
+                       // OnShapeDeleted((Visio.Shape)subject);
+                        break;
+                    }
+
+
+                //PageDeleted
+                case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage):
+                    {
+                        VisAssistDatabaseBackEnd.DataUtilities.Application.OnPageDeleted((Visio.Page)subject);
+                        break;
+                    }
+
+                //PageAdded -32752
+                case (short)((short)VisioEvents.visEvtAdd + (short)Visio.VisEventCodes.visEvtPage):
+                    {
+                       VisAssistDatabaseBackEnd.DataUtilities.Application.OnPageAdded((Visio.Page)subject);
+                        break;
+                    }
+
+                //Cell Changed / modified 10240
+                case (short)((short)Visio.VisEventCodes.visEvtCell + (short)Visio.VisEventCodes.visEvtMod):
+                    {
+                        //VisioApplication_CellChanged((Visio.Cell)subject);
+                        break;
+                    }
+
+                //page changed / modified 8208
+                case (short)((short)VisEventCodes.visEvtMod + (short)Visio.VisEventCodes.visEvtPage):
+                    {
+                        VisAssistDatabaseBackEnd.DataUtilities.Application.OnPageChanged((Visio.Page)subject);
+                        break;
+                    }
+
+                //ConnectionsAdded - 32512
+                case (short)(((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtConnect)):
+                    {
+                        
+                        //OnConnectionsAddded((Visio.Connects)subject);
+                        break;
+                    }
+
+                //ConnectionsDeleted 16640
+                case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtConnect):
+                    {
+                        //OnConnectionsDeleted((Visio.Connects)subject);
+                        break;
+                    }
+
+                //LinkAdded Event
+
+
+                //BeforeDocumentClose 16386
+                case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtDoc):
+                    {
+
+                       // OnBeforeDocumentClosed((Visio.Document)subject);
+
+                        break;
+                    }
+
+
+                //QueryCancelPageDelete 500
+                case (short)((short)Visio.VisEventCodes.visEvtCodeQueryCancelPageDel):
+                    {
+                       // bCancelEvent = OnCheckBeforePageDeleted((Visio.Page)subject);
+                        //OnBeforePageDelete((Visio.Page)subject);
+
+                        break;
+                    }
+
+                //NoEventsPending 4608
+                case (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtNonePending:
+                    {
+                       // OnNoEventsPending((Visio.Application)subject);
+                        break;
+                    }
+
+                //IsIdle 5120
+                case (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtIdle:
+                    {
+                        //VisAssistDatabaseBackEnd.DataUtilities.Application.OnVisioIsIdle((Visio.Application)subject);
+                        m_visioIsIdle = true;
+                        break;
+                    }
+
+                case (short)(short)Visio.VisEventCodes.visEvtDoc + (short)Visio.VisEventCodes.visEvtMod:
+                    {
+                       VisAssistDatabaseBackEnd.DataUtilities.Application.OnDocumentChanged((Visio.Document)subject);
+                        break;
+                    }
+
+                case (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtMarker:
+                    {
+                        //Visio.Application ovApplication = Application.GetInstance.m_visioApplication;
+
+                       // string sContextString = (string)moreInformation;
+
+                        //VisioApplication_MarkerEvent(ovApplication, eventSequenceNumber, sContextString);
+
+                        break;
+                    }
+                case (short)Visio.VisEventCodes.visEvtCodeQueryCancelSelDel:
+                    {
+                       // Visio.Selection ovSelection = (Visio.Selection)subject;
+                       // VisioApplication_SelectionDeleted(ovSelection);
+
+                        break;
+                    }
+                case (short)Visio.VisEventCodes.visEvtCodeDocOpen:
+                    {
+                        var doc = subject as Visio.Document;
+                        if (doc != null)
+                        {
+                            // visio is already open and we are now going to opne a doucment...
+                            VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
+                        }
+                        //OnDocumentOpened((Visio.Document)subject);
+                        break;
+                    }
+
+                //we don't do anything on ondocumentcreated
+                //case (short)Visio.VisEventCodes.visEvtCodeDocCreate:
+                //    {
+                //        OnDocumentCreated((Visio.Document)subject);
+                //        break;
+                //    }
+
+                default:
+                    {
+                        break;
+                    }
+
+
+            }
+            return bCancelEvent;
+        }
+
 
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {
         }
+
+        
+
 
         #region VSTO generated code
 
