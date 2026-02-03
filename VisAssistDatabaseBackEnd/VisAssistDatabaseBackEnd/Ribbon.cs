@@ -1,6 +1,7 @@
 ﻿using Microsoft.Office.Tools.Ribbon;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,7 @@ using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using VisAssistDatabaseBackEnd.Forms;
+using VisAssistDatabaseBackEnd.Project_Manifest;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd
@@ -276,6 +278,12 @@ namespace VisAssistDatabaseBackEnd
                 {
                     string sAction = "Add";
                     ProjectUtilities.OpenProjectForm(sAction, sProjectName, sFilePath);
+
+                    //Create Manifest - after the project form is complete we can create the manifest file...
+                    string sProjectFolderPath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar); // I would like to add a more universal way to get the project folder path
+                    string sDBPath = Path.Combine(sProjectFolderPath, "DB", "VisAssistBackEnd.db"); // I would like to add a more universal way to get the db path
+                    string sProjectId = ProjectUtilities.GetProjectID(sDBPath);
+                    ProjectManifest.CreateManifest(sProjectName, sProjectId, sProjectFolderPath);
                 }
                 else
                 {

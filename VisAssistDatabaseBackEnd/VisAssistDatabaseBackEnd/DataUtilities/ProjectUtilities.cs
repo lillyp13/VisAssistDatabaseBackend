@@ -11,6 +11,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
+using VisAssistDatabaseBackEnd.Project_Manifest;
 using WindowsAPICodePack.Dialogs;
 using static VisAssistDatabaseBackEnd.DataUtilities.DataProcessingUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
