@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using VisAssistDatabaseBackEnd.DataUtilities;
 
 namespace VisAssistDatabaseBackEnd.Project_Manifest
 {
@@ -22,17 +23,17 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
 
         }
 
-        public static void CreateManifest(string projectName, string projectId, string projectPath)
+        public static void CreateManifest(string sProjectName, string sProjectID, string sProjectPath)
         {
             //Logging added here to track manifest creation issues
 
             try
             {
-                sProjectName = projectName;
-                sProjectPath = projectPath;
-                sProjectId = projectId;
+                ProjectManifest.sProjectName = sProjectName;
+                ProjectManifest.sProjectPath = sProjectPath;
+                sProjectId = sProjectID;
 
-                string sManifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
+                string sManifestDirectoryPath = Path.Combine(sProjectPath, sManifestDirectoryName);
                 Directory.CreateDirectory(sManifestDirectoryPath);
                 ProtectManifestDirectory(sManifestDirectoryPath);
                 CreateManifestFile();
@@ -47,17 +48,26 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             }
         }
 
-        public static void CheckForManifestIntegrity(string projectName, string projectId, string projectPath)
+        public static void CheckForManifestIntegrity(string sProjectPath)
         {
             //Logging added here
 
             try
             {
-                bool bManifestValid = ManifestValidations(projectPath);
+                DatabaseConfig.BindToActiveDocument(sProjectPath);
+                string sProjectName = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("ProjectName");
+                string sProjectID = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("Id");
+
+                bool bManifestValid = ManifestValidations(sProjectPath);
                 if (!bManifestValid)
                 {
-                    DeleteManifestDirectory(projectPath);
-                    CreateManifest(projectName, projectId, projectPath);
+                    bool bManifestDirectoryExists = ManifestDirectoryExists(sProjectPath);
+                    if(bManifestDirectoryExists)
+                    {
+                        DeleteManifestDirectory(sProjectPath);
+                    }
+                    
+                    CreateManifest(sProjectName, sProjectID, sProjectPath);
                 }
 
                 //Logging: Manifest integrity check passed
@@ -71,15 +81,15 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
 
         }
 
-        public static bool ManifestValidations(string projectPath)
+        public static bool ManifestValidations(string sProjectPath)
         {
             //Logging added here
 
-            string sManifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
-            bool bManifestDirectoryExists = ManifestDirectoryExists(projectPath);
+            string sManifestDirectoryPath = Path.Combine(sProjectPath, sManifestDirectoryName);
+            bool bManifestDirectoryExists = ManifestDirectoryExists(sProjectPath);
             bool bManifestFileExists = ManifestFileExists(sManifestDirectoryPath);
-            Dictionary<string, string> dictManifestData = ReadManifestFile(projectPath);
-            bool bIsValidVisAssistProject = IsVisAssistProject(dictManifestData);
+
+           
 
             try
             {
@@ -87,6 +97,10 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
                 {
                     if (bManifestFileExists)
                     {
+                        //we can only read manifestfile if the file exts....using the file to check if it is a visassist project but if they don't exist we need to abort earleir....
+                        Dictionary<string, string> oDictManifestData = ReadManifestFile(sProjectPath);
+                        bool bIsValidVisAssistProject = IsVisAssistProject(oDictManifestData);
+
                         if (bIsValidVisAssistProject)
                         {
                             //the manifest file exists and is valid, so we can return
@@ -118,32 +132,32 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             }
         }
 
-        public static bool ManifestDirectoryExists(string projectPath)
+        public static bool ManifestDirectoryExists(string sProjectPath)
         {
             //Logging added here
 
-            string sManifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
+            string sManifestDirectoryPath = Path.Combine(sProjectPath, sManifestDirectoryName);
             return Directory.Exists(sManifestDirectoryPath);
         }
 
-        public static bool ManifestFileExists(string manifestDirectoryPath)
+        public static bool ManifestFileExists(string sManifestDirectoryPath)
         {
             //Logging added here
 
-            string sManifestFilePath = Path.Combine(manifestDirectoryPath, sManifestFileName);
+            string sManifestFilePath = Path.Combine(sManifestDirectoryPath, sManifestFileName);
             return File.Exists(sManifestFilePath);
         }
 
-        public static bool IsVisAssistProject(Dictionary<string, string> manifestData)
+        public static bool IsVisAssistProject(Dictionary<string, string> oDictManifestData)
         {
             //Logging added here
 
             try
             {
-                if (manifestData == null || manifestData.Count == 0) return false;
-                if (manifestData.ContainsKey("ApplicationName") && manifestData["ApplicationName"] == sApplicationName)
+                if (oDictManifestData == null || oDictManifestData.Count == 0) return false;
+                if (oDictManifestData.ContainsKey("ApplicationName") && oDictManifestData["ApplicationName"] == sApplicationName)
                 {
-                    if (manifestData.ContainsKey("ProjectId") && !string.IsNullOrEmpty(manifestData["ProjectId"]))
+                    if (oDictManifestData.ContainsKey("ProjectId") && !string.IsNullOrEmpty(oDictManifestData["ProjectId"]))
                         //Logging: Manifest corresponds to a valid VisAssist project
                         return true;
                 }
@@ -159,7 +173,7 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             }
         }
 
-        public static Dictionary<string, string> ReadManifestFile(string projectFolderPath)
+        public static Dictionary<string, string> ReadManifestFile(string sProjectFolderPath)
         {
             // Using the project folder path here so that this method can be called from anywhere
 
@@ -167,20 +181,20 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
 
             try
             {
-                string sManifestFilePath = Path.Combine(projectFolderPath, sManifestDirectoryName, sManifestFileName);
+                string sManifestFilePath = Path.Combine(sProjectFolderPath, sManifestDirectoryName, sManifestFileName);
                 string jsonString = File.ReadAllText(sManifestFilePath);
                 var data = JsonConvert.DeserializeObject<dynamic>(jsonString);
 
                 //return a ProjectManifest dictionary populated with the data from the JSON file
-                Dictionary<string, string> manifestData = new Dictionary<string, string>();
+                Dictionary<string, string> oDictManifestData = new Dictionary<string, string>();
                 foreach (var item in data)
                 {
-                    manifestData.Add(item.Name, item.Value.ToString());
+                    oDictManifestData.Add(item.Name, item.Value.ToString());
                 }
 
                 //Logging: Manifest file read successfully
 
-                return manifestData;
+                return oDictManifestData;
             }
             catch (Exception ex)
             {
@@ -189,14 +203,14 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             }
         }
 
-        private static void ProtectManifestDirectory(string manifestDirectoryPath)
+        private static void ProtectManifestDirectory(string sManifestDirectoryPath)
         {
             //Logging added here
 
             try
             {
                 //set the directory as hidden
-                File.SetAttributes(manifestDirectoryPath, File.GetAttributes(manifestDirectoryPath) | FileAttributes.Hidden);
+                File.SetAttributes(sManifestDirectoryPath, File.GetAttributes(sManifestDirectoryPath) | FileAttributes.Hidden);
 
                 //Logging: Manifest directory protected
             }
@@ -207,13 +221,13 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             }
         }
 
-        public static void DeleteManifestDirectory(string projectPath)
+        public static void DeleteManifestDirectory(string sProjectPath)
         {
             //Logging added here
 
             try
             {
-                string sManifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
+                string sManifestDirectoryPath = Path.Combine(sProjectPath, sManifestDirectoryName);
                 Directory.Delete(sManifestDirectoryPath, true);
 
                 //Logging: Manifest directory deleted
@@ -245,7 +259,7 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             }
         }
 
-        private static void WriteJsonFile(string manifestFilePath)
+        private static void WriteJsonFile(string sManifestFilePath)
         {
             //Logging added here
 
@@ -261,8 +275,8 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
                     ImportantNote = sImportantNote
                 };
 
-                string jsonString = JsonConvert.SerializeObject(data, Formatting.Indented);
-                File.WriteAllText(manifestFilePath, jsonString);
+                string sjsonString = JsonConvert.SerializeObject(data, Formatting.Indented);
+                File.WriteAllText(sManifestFilePath, sjsonString);
 
                 //Logging: JSON written to manifest file successfully
             }

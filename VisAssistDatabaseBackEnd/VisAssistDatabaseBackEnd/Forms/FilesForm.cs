@@ -29,13 +29,7 @@ namespace VisAssistDatabaseBackEnd.Forms
         {
             FileUtilities.PopulateFilesForm(this);
             m_sSource = sSource;
-            //m_dictFiles = oDictFiles;
-            //dgvFiles.Rows.Clear();
-            ////populate the dgvFiles with the file names in the oDictFiles 
-            //foreach (string sFileName in oDictFiles.Keys)
-            //{
-            //    dgvFiles.Rows.Add(sFileName);
-            //}
+            
         }
 
         private void btnOpen_Click(object sender, EventArgs e)
@@ -51,30 +45,7 @@ namespace VisAssistDatabaseBackEnd.Forms
 
 
                 FileUtilities.CopyFile(this);
-                //DataGridViewRow dgvSelectedRow = dgvFiles.SelectedRows[0];
-                //string sOldFileName = dgvSelectedRow.Cells[0].Value?.ToString();
-
-                //string sExtractedFileName = FileUtilities.ExtractNameFromVisioFile(sOldFileName);
-
-                //string sNewFileName = FileUtilities.GetFileName(sExtractedFileName);
-
-
-                //if (sNewFileName != "" && sNewFileName != null)
-                //{
-                //    //need to add the Dwg - and the .vsdx on the file name
-                //    //we are not opening the file we are going to copy it
-                //    sNewFileName = FileUtilities.FormatFileName(sNewFileName);
-
-                //    string sDocName = FileUtilities.CopyFile(sOldFileName, sNewFileName);
-                //    if (sDocName == "")
-                //    {
-                //        MessageBox.Show("Could not copy file " + sOldFileName, "VisAssist");
-                //    }
-                //    else
-                //    {
-                //        MessageBox.Show("Successfully copied the file " + sDocName + ".", "VisAssist");
-                //    }
-                //}
+                
 
             }
             else

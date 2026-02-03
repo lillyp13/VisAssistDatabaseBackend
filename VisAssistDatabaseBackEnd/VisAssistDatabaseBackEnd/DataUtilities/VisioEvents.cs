@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-
+using VisAssistDatabaseBackEnd.Project_Manifest;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
@@ -316,17 +316,18 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     //this is a VisAssist project
                     sClass = ovThisVisioDocument.DocumentSheet.Cells["User.Class"].get_ResultStr(0);
-
+                    string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovThisVisioDocument);
 
                     if (sClass == "Launch")
                     {
                         //we have a launch file
                         //we want to open the file form for this project...
-                        string sFolderPath = FileUtilities.GetFolderPath(ovThisVisioDocument);
-                        string sProjectFolderPath = System.IO.Path.Combine(sFolderPath, "Project Files");
-                        FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sProjectFolderPath);
+                        
+                        FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sVisAssistFolderPath);
                         FileUtilities.OpenFileForm("Launch");
                     }
+                    
+                    ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
 
                 }
                 //otherwise this is not a visassist project...

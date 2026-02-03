@@ -1,4 +1,5 @@
-﻿using Microsoft.Office.Tools.Ribbon;
+﻿using Microsoft.Office.Interop.Visio;
+using Microsoft.Office.Tools.Ribbon;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -280,16 +281,16 @@ namespace VisAssistDatabaseBackEnd
                     ProjectUtilities.OpenProjectForm(sAction, sProjectName, sFilePath);
 
                     //Create Manifest - after the project form is complete we can create the manifest file...
-                    string sProjectFolderPath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar); // I would like to add a more universal way to get the project folder path
-                    string sDBPath = Path.Combine(sProjectFolderPath, "DB", "VisAssistBackEnd.db"); // I would like to add a more universal way to get the db path
-                    string sProjectId = ProjectUtilities.GetProjectID(sDBPath);
+                    string sProjectFolderPath = System.IO.Path.GetDirectoryName(sFilePath).TrimEnd(System.IO.Path.DirectorySeparatorChar); // I would like to add a more universal way to get the project folder path
+                   // string sDBPath = System.IO.Path.Combine(sProjectFolderPath, "DB", "VisAssistBackEnd.db"); // I would like to add a more universal way to get the db path
+                    string sProjectId = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("Id");
                     ProjectManifest.CreateManifest(sProjectName, sProjectId, sProjectFolderPath);
                 }
                 else
                 {
                     //otherwise the user cancelled the project name...
                     //we need to delete the folder that we created because no file or project was added
-                    string sDirectory = Path.GetDirectoryName(sFilePath);
+                    string sDirectory = System.IO.Path.GetDirectoryName(sFilePath);
                     if (Directory.Exists(sDirectory))
                     {
                         Directory.Delete(sDirectory, true); //delete recursively...
@@ -533,7 +534,7 @@ namespace VisAssistDatabaseBackEnd
                         bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(Globals.ThisAddIn.Application.ActiveDocument);
                         if (bIsFileAssignedToProject)
                         {
-                            sFolderPath = Path.GetDirectoryName(sFolderPath);//get the path before the Project Files folder...
+                            sFolderPath = System.IO.Path.GetDirectoryName(sFolderPath);//get the path before the Project Files folder...
                             DatabaseConfig.BindToActiveDocument(sFolderPath);
                             //open the naem form witn the current visio file name and allow them to change it...
                             string sCurrentName = Globals.ThisAddIn.Application.ActiveDocument.Name;
@@ -575,8 +576,8 @@ namespace VisAssistDatabaseBackEnd
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
-                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                if (sFolderPath != "")
+                string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                if (sVisAssistFolderPath != "")
                 {
                     //we need to determine if we are coming from the launch file or a different file...
                     string sSource = "";
@@ -591,11 +592,15 @@ namespace VisAssistDatabaseBackEnd
 
                     }
 
-                    string sProjectFolderPath = Path.Combine(sFolderPath, "Project Files");
-                    FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sProjectFolderPath);
-                    FileUtilities.PopulateFilesOutsideProjectFilesFolderDictionaryBasedOnDirectory(sFolderPath);
+                    FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sVisAssistFolderPath);
+                    FileUtilities.PopulateFilesOutsideProjectFilesFolderDictionaryBasedOnDirectory(sVisAssistFolderPath);
+
                     FileUtilities.OpenFileForm(sSource); //true we are launching this from the launch file...
-                    FileUtilities.CheckForLaunchFile(sFolderPath);
+
+                    FileUtilities.CheckForLaunchFile(sVisAssistFolderPath);
+
+                    
+                  
                 }
                 else
                 {

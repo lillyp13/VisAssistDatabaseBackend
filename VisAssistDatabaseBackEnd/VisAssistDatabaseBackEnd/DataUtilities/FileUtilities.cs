@@ -16,6 +16,7 @@ using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
+using VisAssistDatabaseBackEnd.Project_Manifest;
 using WindowsAPICodePack.Dialogs;
 using static System.Net.WebRequestMethods;
 using Visio = Microsoft.Office.Interop.Visio;
@@ -134,6 +135,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     PageUtilities.AddPageToDatabase(ovPage, "");
 
                     FileUtilities.AdjustFileCountInDB(ovDoc);
+
+                    //need to attach the doucment level events to the doucment we just created and opened...
                     VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpened(ovDoc, false);
 
                     ovDoc.SaveAs(sFilePath);
@@ -619,7 +622,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
         //VISIO DOCUMENTS
-        internal static void AddLaunchFile(Visio.Document ovDoc, string sProjectID, string sFolder)
+        internal static void AddLaunchFile(Visio.Document ovDoc, string sProjectID, string sVisAssistFolderPath)
         {
             try
             {
@@ -633,13 +636,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //add a user Cell for the class to be Launch
                 ovLaunchDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Class", 0);
                 ovLaunchDoc.DocumentSheet.Cells["User.Class"].Formula = "\"" + "Launch" + "\"";
-                //string sFolder = Path.GetDirectoryName(sFilePath); //get the path before the file name
-                // sFolder = Path.GetDirectoryName(sFolder); //get the path before the hidden Project Files folder
-                string sLaunchFilePath = Path.Combine(sFolder, "LaunchFile.vsdx");
+                
+
+                string sLaunchFilePath = Path.Combine(sVisAssistFolderPath, "LaunchFile.vsdx");
                 ovLaunchDoc.SaveAs(sLaunchFilePath);
                 ovLaunchDoc.Close();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in AddLaunchFile " + ex.Message, "VisAssist");
             }
@@ -814,12 +817,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //we need to get the projectid from the database
                     //get the database path from the filepath...
                     string sProjectFolderPath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
-                    string sPathToBind = Path.GetDirectoryName(sProjectFolderPath).TrimEnd(Path.DirectorySeparatorChar);
-                    string sDBPath = Path.Combine(sProjectFolderPath, "DB", "VisAssistBackEnd.db");
+                    string sVisAssistFolderPath = Path.GetDirectoryName(sProjectFolderPath).TrimEnd(Path.DirectorySeparatorChar);
+
 
                     //before we get the projectID from the db we need to bind the doucment to the db...
-                    DatabaseConfig.BindToActiveDocument(sPathToBind);
-                    string sProjectID = ProjectUtilities.GetProjectIDFromDatabase(sDBPath);
+                    DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+                    string sProjectID = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("Id");
 
 
                     switch (sSource)
@@ -940,10 +943,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
                     DatabaseConfig.BindToActiveDocument(sFolderPath);
 
+                    //need to attach the doucment level events to the doucment we just created and opened...
                     VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpened(ovDoc, false);
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in OpenFile " + ex.Message, "VisAssist");
             }
@@ -1013,20 +1017,25 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
                     {
-                        string sFolderPath = folderdialog.FileName;
+                        string sVisAssistFolderPath = folderdialog.FileName;
 
-                        bool bHasNecessaryFolders = FileUtilities.CheckIfSubFoldersExist(sFolderPath);
+                        bool bHasNecessaryFolders = FileUtilities.CheckIfSubFoldersExist(sVisAssistFolderPath);
                         //Open the FilesForm based on the project the user wants to find a file to copy...
 
                         if (bHasNecessaryFolders)
                         {
+                           
+
+                            //make sure the folder/files the user wants to copy is apart of a good stable visassist project
+                            ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
+
                             //we are good we have the DB and the Project Files folder
-                            bool bDBExists = FileUtilities.DoesDBFileExist(sFolderPath);
+                            bool bDBExists = FileUtilities.DoesDBFileExist(sVisAssistFolderPath);
 
                             if (bDBExists)
                             {
-                                sFolderPath = Path.Combine(sFolderPath, "Project Files");
-                                FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sFolderPath);
+
+                                FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sVisAssistFolderPath);
 
                                 //we also want to confirm that they 
 
@@ -1077,9 +1086,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 string sFilePath = m_dictProjectFiles[sOldFileName];
 
-                string sFolderPathOfOtherFile = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
+               // string sFolderPathOfOtherFile = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
 
-                string sDocName = OpenFilesToCopy(sFilePath, sFolderPathOfOtherFile, sNewFileName, sFolderPathOriginal);
+                string sDocName = OpenFilesToCopy(sFilePath, sNewFileName, sFolderPathOriginal);
                 if (sDocName == "")
                 {
                     MessageBox.Show("Could not copy file " + sOldFileName, "VisAssist");
@@ -1096,7 +1105,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         /// <param name="sFilePath"></param>
         /// <param name="sFolderPathOfOtherFile"></param>
         /// <returns></returns>
-        internal static string OpenFilesToCopy(string sFilePath, string sFolderPathOfOtherFile, string sNewFileName, string sFolderPathOriginal)
+        internal static string OpenFilesToCopy(string sFilePath, string sNewFileName, string sFolderPathOriginal)
         {
             string sDocName = "";
             try
@@ -1136,6 +1145,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             //bCloseDocument = true;
 
                             //open the specified sFilePath given by the user
+                            //before we opne the temporary doc we want to turn off events...
+                            Globals.ThisAddIn.Application.EventsEnabled = 0;
                             Visio.Document ovDocToCopy = Globals.ThisAddIn.Application.Documents.OpenEx(sFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
                             //create the temporary file that we will add the new IDs into and move into the correct file structure
                             sTempFolder = Path.GetTempPath();
@@ -1149,13 +1160,16 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             ovDocToCopy.Save();
                             ovDocToCopy.Close();
 
-                           
+
                             //copy the file
                             sDocName = AddCopiedFile(sFolderPathOriginal, sFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
                             //save and close the temp file now that we are done with it we can also trash it (we already used it to make a copy in copyfile)
                             ovTempDoc.Save();
                             ovTempDoc.Close();
                             System.IO.File.Delete(sTempFilePath);
+
+                            //turn events back on 
+                            Globals.ThisAddIn.Application.EventsEnabled = -1;
                         }
                         else
                         {
@@ -1165,6 +1179,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             sTempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_" + sFileName);
                             System.IO.File.Copy(sFilePath, sTempFilePath, true);
 
+                            //turn events off before opening the temp docs...
+                            Globals.ThisAddIn.Application.EventsEnabled = 0;
                             //open the temporary doc instead of the sFilePath given by the user
                             Visio.Document ovDocToCopy = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
 
@@ -1186,6 +1202,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             System.IO.File.Delete(sTempFilePath);
                             ovCurrentDoc.Save();
 
+                            //turn events back on 
+                            Globals.ThisAddIn.Application.EventsEnabled = -1;
                         }
 
 
@@ -1201,6 +1219,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         //make a copy to the temporary folder
                         System.IO.File.Copy(sFilePath, sTempFilePath, true);
                         //open the temporary document
+                        //turn evnets off before opening the temp file...
+                        Globals.ThisAddIn.Application.EventsEnabled = 0;
                         Visio.Document ovTempDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
 
                         //copy the file
@@ -1211,6 +1231,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         ovTempDoc.Close();
                         System.IO.File.Delete(sTempFilePath);// bAssociatedFile = AssociateFileOpenInOurVisioInstanceNew(ovDoc, sFolderPath, sFileName, sFilePath, sProjectID);
 
+                        //turn events back on 
+                        Globals.ThisAddIn.Application.EventsEnabled = -1;
                     }
 
 
@@ -1226,20 +1248,25 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 MessageBox.Show("Error in OpenFilesToAssociate " + ex.Message, "VisAssist");
             }
+            finally
+            {
+                //turn events back on 
+                Globals.ThisAddIn.Application.EventsEnabled = -1;
+            }
             return sDocName;
         }
 
         /// <summary>
         /// this adds the new file to the database with the new ids as well as saves it to the correct file structure...
         /// </summary>
-        /// <param name="sFolderPath"></param>
+        /// <param name="sProjectFolderPath"></param>
         /// <param name="sFileName"></param>
         /// <param name="sFilePath"></param>
         /// <param name="sProjectID"></param>
         /// <param name="ovTempDoc"></param>
         /// <param name="sTempFilePath"></param>
         /// <returns></returns>
-        private static string AddCopiedFile(string sFolderPath, string sFilePath, string sProjectID, Visio.Document ovTempDoc, string sTempFilePath, string sNewFileName)
+        private static string AddCopiedFile(string sProjectFolderPath, string sFilePath, string sProjectID, Visio.Document ovTempDoc, string sTempFilePath, string sNewFileName)
         {
             try
             {
@@ -1247,11 +1274,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
                 //close the original document to copyp because we are going to copy the ovTempDoc instead...
-                string sDestFilePath = Path.Combine(sFolderPath, sNewFileName);
+                string sDestFilePath = Path.Combine(sProjectFolderPath, sNewFileName);
 
                 if (ovTempDoc != null)
                 {
-                   
+
                     //update all the ids in the visio document
                     UpdateIDs(ovTempDoc, sDestFilePath, sProjectID);
 
@@ -1510,17 +1537,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
                 if (ovDoc != null)
                 {
-                    string sFileStructure = FileUtilities.ReturnFileStructurePath(ovDoc.Path);
+                    string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
 
-                    string sDBPath = Path.Combine(sFileStructure, ovDoc.Name);
 
-                    //loop thorugh each file in the sFileStructure folder check if the file name exists in the db...
-                    //string[] sFiles = Directory.GetFiles(sFileStructure);
-                    //                string[] sFiles = Directory.GetFiles(sFileStructure)
-                    //.Where(f => !Path.GetFileName(f).StartsWith("~") &&
-                    //            !Path.GetExtension(f).Equals(".~vsdx", StringComparison.OrdinalIgnoreCase)).ToArray();
-
-                    PopulateProjectFilesDictionaryBasedOnDirectory(sFileStructure); //populates m_dictFiles
+                    PopulateProjectFilesDictionaryBasedOnDirectory(sVisAssistFolderPath); //populates m_dictFiles
 
                     using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                     {
@@ -1616,7 +1636,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in CheckForLaunchFile " + ex.Message, "VisAssist");
             }
@@ -1908,17 +1928,19 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
         /// <summary>
-        /// this folder path should be at the Project Files
+        /// this folder path should be at the root VisAssist ...
         /// </summary>
         /// <param name="sFolderPath"></param>
         internal static void PopulateProjectFilesDictionaryBasedOnDirectory(string sFolderPath)
         {
+            string sProjectFolderPath = Path.Combine(sFolderPath, "Project Files");
+
             m_dictProjectFiles.Clear();
             //the db exists 
             //gather the files 
 
             m_dictProjectFiles =
-      Directory.GetFiles(sFolderPath)
+      Directory.GetFiles(sProjectFolderPath)
           .Where(f =>
               !Path.GetFileName(f).StartsWith("~") &&
               !Path.GetExtension(f).Equals(".~vsdx", StringComparison.OrdinalIgnoreCase)
@@ -2011,7 +2033,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
                 return true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in CanWeDeleteAllLaunchFiles " + ex.Message, "VisAssist");
             }
@@ -2062,24 +2084,29 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     else
                     {
                         //the file is not locked, open it check the project id and then update if need be
+                        //turn off events before opening and checking the launch file..
+                        Globals.ThisAddIn.Application.EventsEnabled = 0;
                         ovLaunchDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
                         sProjectIDofLaunchDoc = ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
                         if (sProjectIDofLaunchDoc != sProjectID)
                         {
                             ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
                             ovLaunchDoc.Save();
-                            ovLaunchDoc.Close();
-
-
-
-
                         }
+                        //close the doucment when done looking at the projectID
+                        ovLaunchDoc.Close();
+                        //turn events back on 
+                        Globals.ThisAddIn.Application.EventsEnabled = -1;
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in CheckIfLaunchFileBelongsToProject " + ex.Message, "VisAssist");
+            }
+            finally
+            {
+                Globals.ThisAddIn.Application.EventsEnabled = -1;
             }
         }
 
