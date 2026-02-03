@@ -252,13 +252,6 @@ namespace VisAssistDatabaseBackEnd
                     string sDBPath = Path.Combine(sProjectFolderPath, "DB", "VisAssistBackEnd.db"); // I would like to add a more universal way to get the db path
                     string sProjectId = ProjectUtilities.GetProjectID(sDBPath);
                     ProjectManifest.CreateManifest(sProjectName, sProjectId, sProjectFolderPath);
-
-                    Dictionary<string, string> dictManifest = new Dictionary<string, string>();
-                    dictManifest = ProjectManifest.ReadManifestFile(sProjectFolderPath);
-                    foreach (KeyValuePair<string, string> kvp in dictManifest)
-                    {
-                        Debug.Print("Key: " + kvp.Key + " Value: " + kvp.Value);
-                    }
                 }
                 else
                 {

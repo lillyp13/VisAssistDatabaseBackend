@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using Newtonsoft.Json;
 
 namespace VisAssistDatabaseBackEnd.Project_Manifest
 {
@@ -25,54 +24,62 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
 
         public static void CreateManifest(string projectName, string projectId, string projectPath)
         {
-            /*
-             We need to do a number of checks here:
-            1. Check if the manifest directory exists
-                    a. If it does, check if the manifest file exists
-                        i. If it does, check if it's valid
-                            - If it's valid, return. Validity requires checking for the required fields ProjectId & ApplicationName. ProjectId must match the provided projectId.
-                            - If it's not valid, delete the manifest directory and recreate it
-                        ii. If it doesn't, delete the manifest directory and recreate it
-                    b. If it doesn't, create the manifest directory and the manifest file
+            //Logging added here to track manifest creation issues
 
-            These checks will likely need to be broken up into separate methods for clarity and maintainability.
-            Here is a possible breakdown:
-                1. ManifestDirectoryExists(string projectPath): bool
-                2. ManifestFileExists(string manifestDirectoryPath): bool
-                3. IsManifestFileValid(string manifestFilePath): bool
-             */
             try
             {
                 sProjectName = projectName;
                 sProjectPath = projectPath;
                 sProjectId = projectId;
-                bool bManifestValid = ManifestValidations(projectPath);
 
-                if (bManifestValid)
-                {
-                    //the manifest file exists and is valid, so we can return
-                    return;
-                }
-
-                //if we reach here, we need to create the manifest directory and file
-                string manifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
-                Directory.CreateDirectory(manifestDirectoryPath);
-                ProtectManifestDirectory(manifestDirectoryPath);
+                string sManifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
+                Directory.CreateDirectory(sManifestDirectoryPath);
+                ProtectManifestDirectory(sManifestDirectoryPath);
                 CreateManifestFile();
+
+                //Logging: Manifest created successfully
             }
             catch (Exception ex)
             {
+                //Logging: Manifest creation failed
+
                 throw new Exception("Failed to create manifest directory: " + ex.Message);
             }
         }
 
+        public static void CheckForManifestIntegrity(string projectName, string projectId, string projectPath)
+        {
+            //Logging added here
+
+            try
+            {
+                bool bManifestValid = ManifestValidations(projectPath);
+                if (!bManifestValid)
+                {
+                    DeleteManifestDirectory(projectPath);
+                    CreateManifest(projectName, projectId, projectPath);
+                }
+
+                //Logging: Manifest integrity check passed
+            }
+            catch (Exception ex)
+            {
+                //Logging: Manifest integrity check failed
+
+                throw new Exception("Failed while checking manifest integrity: " + ex.Message);
+            }
+
+        }
+
         public static bool ManifestValidations(string projectPath)
         {
-            string manifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
+            //Logging added here
+
+            string sManifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
             bool bManifestDirectoryExists = ManifestDirectoryExists(projectPath);
-            bool bManifestFileExists = ManifestFileExists(manifestDirectoryPath);
+            bool bManifestFileExists = ManifestFileExists(sManifestDirectoryPath);
             Dictionary<string, string> dictManifestData = ReadManifestFile(projectPath);
-            bool isValidVisAssistProject = IsVisAssistProject(dictManifestData);
+            bool bIsValidVisAssistProject = IsVisAssistProject(dictManifestData);
 
             try
             {
@@ -80,108 +87,190 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
                 {
                     if (bManifestFileExists)
                     {
-                        if (isValidVisAssistProject)
+                        if (bIsValidVisAssistProject)
                         {
                             //the manifest file exists and is valid, so we can return
+
+                            //Logging: Manifest structure is valid
+
                             return true;
                         }
+
+                        //Logging: Manifest file is invalid
+
                         return false;
                     }
+
+                    //Logging: Manifest file does not exist
+
                     return false;
                 }
+
+                //Logging: Manifest directory does not exist
+
                 return false;
             }
             catch (Exception ex)
             {
+                //Logging: Manifest structure validation failed
+
                 throw new Exception("Failed while validating Manifest structure." + ex.Message);
             }
         }
 
         public static bool ManifestDirectoryExists(string projectPath)
         {
-            string manifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
-            return Directory.Exists(manifestDirectoryPath);
+            //Logging added here
+
+            string sManifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
+            return Directory.Exists(sManifestDirectoryPath);
         }
 
         public static bool ManifestFileExists(string manifestDirectoryPath)
         {
-            string manifestFilePath = Path.Combine(manifestDirectoryPath, sManifestFileName);
-            return File.Exists(manifestFilePath);
+            //Logging added here
+
+            string sManifestFilePath = Path.Combine(manifestDirectoryPath, sManifestFileName);
+            return File.Exists(sManifestFilePath);
         }
 
         public static bool IsVisAssistProject(Dictionary<string, string> manifestData)
         {
-            if (manifestData == null || manifestData.Count == 0) return false;
-            if (manifestData.ContainsKey("ApplicationName") && manifestData["ApplicationName"] == sApplicationName)
+            //Logging added here
+
+            try
             {
-                if (manifestData.ContainsKey("ProjectId") && !string.IsNullOrEmpty(manifestData["ProjectId"]))
-                    return true;
+                if (manifestData == null || manifestData.Count == 0) return false;
+                if (manifestData.ContainsKey("ApplicationName") && manifestData["ApplicationName"] == sApplicationName)
+                {
+                    if (manifestData.ContainsKey("ProjectId") && !string.IsNullOrEmpty(manifestData["ProjectId"]))
+                        //Logging: Manifest corresponds to a valid VisAssist project
+                        return true;
+                }
+
+                //Logging: Manifest does not correspond to a valid VisAssist project
+
+                return false;
             }
-            return false;
+            catch (Exception ex)
+            {
+                //Logging: Failed to validate VisAssist project
+                throw new Exception("Failed to validate VisAssist project from manifest data: " + ex.Message);
+            }
         }
 
         public static Dictionary<string, string> ReadManifestFile(string projectFolderPath)
         {
-            /* 
-             * Using the project folder path here so that this method can be called from anywhere
-             */
+            // Using the project folder path here so that this method can be called from anywhere
 
-            string manifestDirectoryPath = Path.Combine(projectFolderPath, sManifestDirectoryName);
-            string manifestFilePath = Path.Combine(manifestDirectoryPath, sManifestFileName);
-            string jsonString = File.ReadAllText(manifestFilePath);
-            var data = JsonConvert.DeserializeObject<dynamic>(jsonString);
+            //Logging added here
 
-            //return a ProjectManifest dictionary populated with the data from the JSON file
-            Dictionary<string, string> manifestData = new Dictionary<string, string>();
-            foreach (var item in data)
+            try
             {
-                manifestData.Add(item.Name, item.Value.ToString());
+                string sManifestFilePath = Path.Combine(projectFolderPath, sManifestDirectoryName, sManifestFileName);
+                string jsonString = File.ReadAllText(sManifestFilePath);
+                var data = JsonConvert.DeserializeObject<dynamic>(jsonString);
+
+                //return a ProjectManifest dictionary populated with the data from the JSON file
+                Dictionary<string, string> manifestData = new Dictionary<string, string>();
+                foreach (var item in data)
+                {
+                    manifestData.Add(item.Name, item.Value.ToString());
+                }
+
+                //Logging: Manifest file read successfully
+
+                return manifestData;
             }
-            return manifestData;
+            catch (Exception ex)
+            {
+                //Logging: Failed to read manifest file
+                throw new Exception("Failed to read manifest file: " + ex.Message);
+            }
         }
 
         private static void ProtectManifestDirectory(string manifestDirectoryPath)
         {
-            //set the directory as hidden
-            File.SetAttributes(manifestDirectoryPath, File.GetAttributes(manifestDirectoryPath) | FileAttributes.Hidden);
+            //Logging added here
+
+            try
+            {
+                //set the directory as hidden
+                File.SetAttributes(manifestDirectoryPath, File.GetAttributes(manifestDirectoryPath) | FileAttributes.Hidden);
+
+                //Logging: Manifest directory protected
+            }
+            catch (Exception ex)
+            {
+                //Logging: Failed to protect manifest directory
+                throw new Exception("Failed to protect manifest directory: " + ex.Message);
+            }
         }
 
         public static void DeleteManifestDirectory(string projectPath)
         {
-            string manifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
-            Directory.Delete(manifestDirectoryPath, true);
-        }
+            //Logging added here
 
-        public static void DeleteManifestFile(string manifestDirectoryPath)
-        {
-            string manifestFilePath = Path.Combine(manifestDirectoryPath, sManifestFileName);
-            File.Delete(manifestFilePath);
+            try
+            {
+                string sManifestDirectoryPath = Path.Combine(projectPath, sManifestDirectoryName);
+                Directory.Delete(sManifestDirectoryPath, true);
+
+                //Logging: Manifest directory deleted
+            }
+            catch (Exception ex)
+            {
+                //Logging: Failed to delete manifest directory
+                throw new Exception("Failed to delete manifest directory: " + ex.Message);
+            }
         }
 
         public static void CreateManifestFile()
         {
-            // Implementation for creating manifest file
-            string manifestDirectoryPath = Path.Combine(sProjectPath, sManifestDirectoryName);
-            string manifestFilePath = Path.Combine(manifestDirectoryPath, sManifestFileName);
-            File.Create(manifestFilePath).Dispose();
+            //Logging added here
 
-            WriteJsonFile(manifestFilePath);
+            try
+            {
+                string sManifestFilePath = Path.Combine(sProjectPath, sManifestDirectoryName, sManifestFileName);
+                File.Create(sManifestFilePath).Dispose();
+
+                WriteJsonFile(sManifestFilePath);
+
+                //Logging: Manifest file created successfully
+            }
+            catch (Exception ex)
+            {
+                //Logging: Failed to create manifest file
+                throw new Exception("Failed to create manifest file: " + ex.Message);
+            }
         }
 
         private static void WriteJsonFile(string manifestFilePath)
         {
-            var data = new
-            {
-                ApplicationName = sApplicationName,
-                Version = sVersion,
-                ProjectId = sProjectId,
-                CreatedOn = DateTime.Parse(DateTime.Now.ToString()),
-                CreatedBy = sCreatedBy,
-                ImportantNote = sImportantNote
-            };
+            //Logging added here
 
-            string jsonString = JsonConvert.SerializeObject(data, Formatting.Indented);
-            File.WriteAllText(manifestFilePath, jsonString);
+            try
+            {
+                var data = new
+                {
+                    ApplicationName = sApplicationName,
+                    Version = sVersion,
+                    ProjectId = sProjectId,
+                    CreatedOn = DateTime.Parse(DateTime.Now.ToString()),
+                    CreatedBy = sCreatedBy,
+                    ImportantNote = sImportantNote
+                };
+
+                string jsonString = JsonConvert.SerializeObject(data, Formatting.Indented);
+                File.WriteAllText(manifestFilePath, jsonString);
+
+                //Logging: JSON written to manifest file successfully
+            }
+            catch (Exception ex)
+            {
+                //Logging: Failed to write JSON to manifest file
+                throw new Exception("Failed to write JSON to manifest file: " + ex.Message);
+            }
         }
     }
 }
