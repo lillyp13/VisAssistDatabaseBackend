@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.Forms
 {
@@ -65,11 +66,26 @@ namespace VisAssistDatabaseBackEnd.Forms
 
             this.Close();
 
+
         }
 
         private void dgvFiles_DoubleClick(object sender, EventArgs e)
         {
             //the user double clicked on a row open that file...
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            //the user has decided to not open a file
+            //if we are coming from the launch file we need to close it
+            if(m_sSource == "Launch")
+            {
+                Visio.Document ovLaunchDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                ovLaunchDoc.Close();
+            }
+            
+            //close the form
+            this.Close();
         }
     }
 }

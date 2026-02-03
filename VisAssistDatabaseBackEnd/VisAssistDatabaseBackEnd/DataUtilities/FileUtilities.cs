@@ -256,10 +256,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //get the selected row in the filePropertiesForm.dgvFileData to determine which file to delete
             try
             {
-
-
-                //MultipleRecordUpdates mruRecords = DisassociateFile(filePropertiesForm);
-                MultipleRecordUpdates mruRecords = GatherDisassociationData(filePropertiesForm);
+                MultipleRecordUpdates mruRecords = GatherDeletionData(filePropertiesForm);
 
                 DataGridViewRow dgvFirstRow = filePropertiesForm.dgvFileData.Rows[0];
                 string sProjectID = dgvFirstRow.Cells["ProjectID"].Value.ToString();
@@ -268,8 +265,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 if (iRecordCount > 1)
                 {
-
-
                     if (mruRecords.ruRecords != null)
                     {
                         //go and actually delete the visio file itself 
@@ -289,8 +284,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     if (System.IO.File.Exists(sFilePath))
                                     {
                                         System.IO.File.Delete(sFilePath);
-                                        DisassociateFile(mruRecords);
-                                        //FileUtilities.AdjustFileCountInDB(ovDoc);-i do this in disassociate file...
+                                        DeleteFileFromDatabase(mruRecords);
+                                        
                                     }
 
                                 }
@@ -319,7 +314,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        internal static bool DisassociateFile(MultipleRecordUpdates mruRecords)
+        internal static bool DeleteFileFromDatabase(MultipleRecordUpdates mruRecords)
         {
             bool bDisasociatedFile = true;
             try
@@ -1427,7 +1422,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return null;
         }
 
-        internal static MultipleRecordUpdates GatherDisassociationData(FilePropertiesForm filePropertiesForm)
+        internal static MultipleRecordUpdates GatherDeletionData(FilePropertiesForm filePropertiesForm)
         {
             MultipleRecordUpdates mruRecords = new MultipleRecordUpdates();
             try
@@ -1458,7 +1453,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error in GatherDisassociationData " + ex.Message, "VisAssist");
+                MessageBox.Show("Error in GatherDeletionData " + ex.Message, "VisAssist");
             }
             return mruRecords;
         }
@@ -1479,7 +1474,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
 
 
-                List<RecordUpdate> lstFilesToDisassociate = new List<RecordUpdate>();
+                List<RecordUpdate> lstFilesToDelete = new List<RecordUpdate>();
                 foreach (RecordUpdate ruRecord in m_mruRecordsBase.ruRecords)
                 {
                     string sFilePath = ruRecord.odictColumnValues["FilePath"].ToString();
@@ -1492,22 +1487,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         ruRecordToDelete.odictColumnValues = ruRecord.odictColumnValues;
 
 
-                        lstFilesToDisassociate.Add(ruRecordToDelete);
+                        lstFilesToDelete.Add(ruRecordToDelete);
                     }
                 }
-                MultipleRecordUpdates mruRecordsToDisassociate = new MultipleRecordUpdates(lstFilesToDisassociate);
+                MultipleRecordUpdates mruRecordsToDeleted = new MultipleRecordUpdates(lstFilesToDelete);
 
-                if (mruRecordsToDisassociate.ruRecords.Count > 0)
+                if (mruRecordsToDeleted.ruRecords.Count > 0)
                 {
                     bCleanBaseRecords = true;
                     //we are going to disassociate the file..
-                    DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecordsToDisassociate);
+                    DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecordsToDeleted);
 
                     //we need to clean up our m_mruRecords again..
                     Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
                     FileUtilities.AdjustFileCountInDB(ovDoc);
 
-                    string sMessage = "The following files could not be found:\n\n" + string.Join("\n", lstFilesToDisassociate.Select(r => r.odictColumnValues["FilePath"])) + "\n\nThese files will be dissociated from the database";
+                    string sMessage = "The following files could not be found:\n\n" + string.Join("\n", lstFilesToDelete.Select(r => r.odictColumnValues["FilePath"])) + "\n\nThese files will be dissociated from the database";
 
 
                     MessageBox.Show(sMessage, "VisAssist");
