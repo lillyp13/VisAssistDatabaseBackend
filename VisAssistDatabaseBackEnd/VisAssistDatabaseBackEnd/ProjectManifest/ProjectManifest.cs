@@ -187,6 +187,13 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
 
                 //return a ProjectManifest dictionary populated with the data from the JSON file
                 Dictionary<string, string> oDictManifestData = new Dictionary<string, string>();
+
+                if (data == null)
+                {
+                    //Logging: Manifest file is empty or invalid
+                    return oDictManifestData;
+                }
+
                 foreach (var item in data)
                 {
                     oDictManifestData.Add(item.Name, item.Value.ToString());
