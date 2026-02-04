@@ -22,8 +22,9 @@ namespace VisAssistDatabaseBackEnd
     public partial class ThisAddIn
     {
         public VisioEventSink m_appSink;
-        private List<Visio.Event> m_VisioEvents = new List<Visio.Event>();
-        private List<Visio.Event> m_VisioAppEvents = new List<Visio.Event>();
+        public List<Visio.Event> m_VisioEvents = new List<Visio.Event>();
+        public List<Visio.Event> m_VisioAppEvents = new List<Visio.Event>();
+        public List<DelayedEvent> m_delayedEvents = new List<DelayedEvent>();
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
@@ -94,6 +95,8 @@ namespace VisAssistDatabaseBackEnd
                     string.Empty
                     );
 
+                m_VisioEvents.Add(pagechangedAddedEvent);
+
 
                 short pageModifiedEventCode = unchecked((short)((short)Visio.VisEventCodes.visEvtMod | (short)Visio.VisEventCodes.visEvtPage));
 
@@ -105,6 +108,19 @@ namespace VisAssistDatabaseBackEnd
                 );
 
                 m_VisioEvents.Add(pageModifiedEvent);
+
+
+
+                ////Event Marker
+                //m_VisioEvents.Add(
+                //docEventList.AddAdvise(
+                //(short)Visio.VisEventCodes.visEvtMarker, // just marker
+                //m_appSink,
+                //"",  // moreInformation string
+                //""   // target object, usually empty for document-level marker
+                //));
+
+
                 // Page Added
                 //m_appEvents.Add(docEventList.AddAdvise(
                 //(short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtPage),
@@ -230,7 +246,7 @@ namespace VisAssistDatabaseBackEnd
 
             m_appSink = new  VisioEventSink(OnVisioEvent);
 
-            //event marker
+            ////event marker
             m_VisioAppEvents.Add(
                 eventList.AddAdvise(
                     (short)(Visio.VisEventCodes.visEvtApp | Visio.VisEventCodes.visEvtMarker),
@@ -314,7 +330,9 @@ namespace VisAssistDatabaseBackEnd
                 //PageDeleted
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage):
                     {
+                        
                         VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDeleted((Visio.Page)subject);
+
                         break;
                     }
 
@@ -387,9 +405,10 @@ namespace VisAssistDatabaseBackEnd
                 case (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtIdle:
                     {
                         //VisAssistDatabaseBackEnd.DataUtilities.Application.OnVisioIsIdle((Visio.Application)subject);
-                        m_visioIsIdle = true;
+                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnVisioIsIdle((Visio.Application)subject);
                         break;
                     }
+               
 
                 case (short)(short)Visio.VisEventCodes.visEvtDoc + (short)Visio.VisEventCodes.visEvtMod:
                     {
@@ -399,11 +418,39 @@ namespace VisAssistDatabaseBackEnd
 
                 case (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtMarker:
                     {
-                        //Visio.Application ovApplication = Application.GetInstance.m_visioApplication;
 
-                       // string sContextString = (string)moreInformation;
+                        string markerName = (string)moreInformation;
 
-                        //VisioApplication_MarkerEvent(ovApplication, eventSequenceNumber, sContextString);
+                        if (markerName.StartsWith("PageDeleted_"))
+                        {
+                            string pageID = markerName.Substring("PageDeleted_".Length);
+
+                            // Get the document (usually via subject or Globals)
+                            Visio.Document doc = Globals.ThisAddIn.Application.ActiveDocument;
+
+                            // Find the restored page
+                            Visio.Page restoredPage = null;
+                            foreach (Visio.Page p in doc.Pages)
+                            {
+                                string pID = p.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                                if (pID == pageID)
+                                {
+                                    restoredPage = p;
+                                    break;
+                                }
+                            }
+
+                            if (restoredPage != null)
+                            {
+                                // Call your OnPageAdded logic
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(restoredPage);
+                            }
+                        }
+                        // Visio.Application ovApplication = Globals.ThisAddIn.Application;
+
+                        // string sContextString = (string)moreInformation;
+
+                        //VisAssistDatabaseBackEnd.VisioUtilities.VisioHelper.VisioApplication_MarkerEvent(ovApplication, eventSequenceNumber, sContextString);
 
                         break;
                     }
@@ -443,7 +490,7 @@ namespace VisAssistDatabaseBackEnd
             return bCancelEvent;
         }
 
-
+       
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {

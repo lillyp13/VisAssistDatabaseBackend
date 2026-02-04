@@ -65,7 +65,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static MultipleRecordUpdates m_mruRecordsToCompare = new MultipleRecordUpdates();
         public static MultipleRecordUpdates m_mruRecordsToUpdate = new MultipleRecordUpdates();
 
-       
+
 
 
 
@@ -149,7 +149,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-        
+
 
         internal static void DeleteProjectInfo()
         {
@@ -189,25 +189,26 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-                
+
                 string sProjectFolderPath = Path.GetDirectoryName(sFilePath);
                 string sVisAssistFolderPath = Path.GetDirectoryName(sProjectFolderPath);
                 string sFileName = Path.GetFileName(sFilePath);
-               // string sHiddenProjectFolder = Path.Combine(sVisAssistFolder, "Project Files", sFileName);
+                // string sHiddenProjectFolder = Path.Combine(sVisAssistFolder, "Project Files", sFileName);
                 //this needs to create the new visio file now and then we can add the database...
-                FileUtilities.AddCoverPageDocument(sFilePath);
+                Visio.Document ovDoc = FileUtilities.AddCoverPageDocument(sFilePath);
 
+                Visio.Page ovPage = ovDoc.Pages[1];
 
                 MultipleRecordUpdates oFileRecord = new MultipleRecordUpdates();
                 //get the active docuent 
-                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-                Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
+                // Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                // Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
 
                 //we are adding a project for the first time create the database and the tables in it
                 DatabaseUtilities.InitializeDatabase(DatabaseConfig.DatabasePath);
                 //gather the information from the properties form to fill out the project information 
                 ProjectUtilities.AddProjectInfo(projectPropertiesForm, ovDoc);
-               
+
                 //add the file to the database: builds the file recored and runs the sql to the database, also increases the file count...
                 oFileRecord = FileUtilities.AddFileToDatabase(ovDoc, sFilePath, m_mruRecordsToCompare.ruRecords[0].sId);
 
@@ -291,8 +292,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         // Bind to the database inside the hidden folder
                         DatabaseConfig.DatabasePath = Path.Combine(sDbFolderPath, "VisAssistBackEnd.db");
 
+                        folderdialog.Dispose();
                         return sClassAFilePath;
                     }
+                    folderdialog.Dispose();
                 }
             }
             catch (Exception ex)
@@ -359,6 +362,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             );
                             }
 
+                            folderdialog.Dispose();
 
 
                         }
@@ -374,7 +378,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             );
                         }
                     }
+                    else
+                    {
+                        MessageBox.Show("Please pick a VisAssist Project.", "VisAssist");
+                        DeleteProject();
+                    }
+
                 }
+                folderdialog.Dispose();
             }
 
 
@@ -517,7 +528,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void OpenProject()
         {
             //open a folder dialog for the user to choose a VisAssist Folder
-            
+
             try
             {
 
@@ -542,7 +553,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                             if (bDBExists)
                             {
-                               
+
                                 FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sVisAssistFolderPath);
                                 FileUtilities.PopulateFilesOutsideProjectFilesFolderDictionaryBasedOnDirectory(sVisAssistFolderPath);
                                 //will need to add the launch file later if it didn't exist...once we've opened a file
@@ -551,22 +562,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 FileUtilities.CheckForLaunchFile(sVisAssistFolderPath);
 
                             }
+                            folderdialog.Dispose();
                         }
                         else
                         {
                             //this is not a proper folder
                             MessageBox.Show("This is not a VisAssist folder.", "VisAssist");
+                            OpenProject();
                         }
 
-                        
-
-
                     }
+                    folderdialog.Dispose();
                 }
 
                 //open the fileForm and populate it with the files in the project for the user to open 
 
-               
+
             }
             catch (Exception ex)
 
@@ -699,7 +710,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 if (sProjectID == "")
                 {
                     //we are adding a project for the first time there isn't a projectId assigned yet...
-                   
+
                     string sProjectFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
                     string sVisAssistFolderPath = Path.GetDirectoryName(sProjectFolderPath);
                     //the created date doesn't exist yet...
@@ -991,7 +1002,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-       
+
     }
 }
 

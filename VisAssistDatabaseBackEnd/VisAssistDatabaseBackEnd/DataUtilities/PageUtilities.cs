@@ -617,20 +617,23 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-                bool bCellsAdded = false;
+                bool bCellsAdded = true;
                 //Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
                 if (ovPage.PageSheet.CellExists["User.Version", 0] == 0)
                 {
-                    bCellsAdded = true;
                     ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Version", 0); //not quite sure what the value of this is...
                     ovPage.PageSheet.Cells["User.Version"].Formula = "\"v1\""; //might want to pull the format string for visio fromm VisAssist...
+                }
+                else
+                {
+                    bCellsAdded = false;
                 }
                 if (ovPage.PageSheet.CellExists["User.PageClass", 0] == 0)
                 {
                     ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageClass", 0);
                     ovPage.PageSheet.Cells["User.PageClass"].Formula = "\"Working\"";//might want to pull the format string for visio fromm VisAssist...
                 }
-                if (ovPage.PageSheet.CellExists["User.PageClass", 0] == 0)
+                if (ovPage.PageSheet.CellExists["User.CreatedDate", 0] == 0)
                 {
                     ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "CreatedDate", 0);
                     ovPage.PageSheet.Cells["User.CreatedDate"].Formula = "\"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\"";

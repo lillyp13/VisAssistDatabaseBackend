@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Project_Manifest;
 using Visio = Microsoft.Office.Interop.Visio;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using System.Runtime.CompilerServices;
 
 namespace VisAssistDatabaseBackEnd.VisioUtilities
 {
@@ -323,11 +324,11 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     {
                         //we have a launch file
                         //we want to open the file form for this project...
-                        
+
                         FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sVisAssistFolderPath);
                         FileUtilities.OpenFileForm("Launch");
                     }
-                    
+
                     ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
 
                 }
@@ -381,6 +382,80 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
 
 
+        }
+
+        internal static void VisioApplication_MarkerEvent(
+           Visio.Application ovVisioApplication,
+           int iSequenceNum,
+           string sContextString)
+        {
+            try
+            {
+
+                if (sContextString == "/action=processDelayedEvents")
+                {
+                    if (Globals.ThisAddIn.m_delayedEvents.Count > 0)
+                    {
+
+                        int iNumberOfEvents = Globals.ThisAddIn.m_delayedEvents.Count;
+                        for (int ithEvent = iNumberOfEvents; ithEvent < 0; ithEvent--)
+                        {
+                            DelayedEvent thisDelayedEvent = Globals.ThisAddIn.m_delayedEvents[ithEvent];
+                            Application.ProcessThisDelayedEvent(thisDelayedEvent);
+                            Globals.ThisAddIn.m_delayedEvents.RemoveAt(ithEvent);
+                        }
+
+                    }
+                }
+
+
+
+
+                //PULLED THIS FROM VISASSIST AND THIS IS FOR GETTING PERFORM ACTION TO BE CALLED (ANYTHING WE RIGHT CLICK..ex: opening IO Sheet, spec sheet...)
+                //// get the marker event context string from the last Visio event that fired
+                //string eventInfoFromVisio = ovVisioApplication.get_EventInfo((int)Visio.VisEventCodes.visEvtIdMostRecent);
+
+                //// make sure this markerevent has some arguments with it before we continue
+                //// this marker event could be infomation totally unrelated to this application
+                //if (eventInfoFromVisio != null &&
+                //    eventInfoFromVisio.Length > 0)
+                //{
+                //    Visio.Document visioDocument = null;
+                //    Visio.Page visioPage = null;
+                //    Visio.Shape visioShape = null;
+                //    string appArgValue = null;
+                //    string actionArgValue = null;
+                //    string sPartNumber = "";
+                //    string sNewManufacturer = "";
+
+                //    // get the specified Visio objects from the MarkerEvent context string
+                //    string[] additionalArgs = null;
+
+                //    VisioEvent.GetVisioObjectsFromAddonString(
+                //        eventInfoFromVisio,
+                //        ovVisioApplication,
+                //        out visioDocument,
+                //        out visioPage,
+                //        out visioShape,
+                //        out appArgValue,
+                //        out actionArgValue,
+                //        out sPartNumber,
+                //        out sNewManufacturer,
+                //        out additionalArgs);
+
+                //    // make sure this action is for this application before we proceed
+                //    if (appArgValue == this.ApplicationID)
+                //    {
+                //        // if this is an action at the application level we need to deal with it
+                //        // otherwise the default case passes it on to the Documents collection
+                //        PerformAction(actionArgValue, visioShape, ovVisioApplication.ActiveDocument, sPartNumber, sNewManufacturer);
+                //    }
+                //}
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show("Error in VisioApplication_MarkerEvent " + ex.Message, "VisAssist");
+            }
         }
     }
 

@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 using Visio = Microsoft.Office.Interop.Visio;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace VisAssistDatabaseBackEnd.VisioUtilities
 {
     internal class Application
     {
-
 
         //PAGE EVENTS
         internal static void OnPageAdded(Visio.Page ovVisioPage)
@@ -25,8 +25,8 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 string sProjectID = ovVisioPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
 
                 //add page user cells...
-                bool bAlreadyAdded = PageUtilities.AddUserCellsToPage(ovVisioPage);
-                if (!bAlreadyAdded)
+                bool bAdded = PageUtilities.AddUserCellsToPage(ovVisioPage);
+                if (bAdded)
                 {
                     //we haven't added the page yet...
                     PageUtilities.AddPageToDatabase(ovVisioPage, sProjectID);
@@ -60,6 +60,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         internal static void OnDocumentChanged(Visio.Document ovDocument)
         {
             //this is for page index changed: user has dragged the page and changed the DOCUMENT order
+            //it will probably also be used for when a shape has moved (grid location stuff...)
             try
             {
                 //is the only time this gets called when the user changes the page index by dragging pages around?
@@ -80,14 +81,81 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         {
             try
             {
+               
                 //user is deleting the page
                 string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
-                PageUtilities.DeletePage(ovPage, sProjectID);
+                //check if the pageID has already been removed from the db...
+                bool bRecordExists = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
+                if (bRecordExists)
+                {
+                    int undoScopeID = Globals.ThisAddIn.Application.BeginUndoScope("Delete Page");
+                    PageUtilities.DeletePage(ovPage, sProjectID);
+
+                    //have a delayed event that will call ondocumentchanged...
+                    DelayedEvent oDelayedEvent = new DelayedEvent();
+                    oDelayedEvent.sOperationType = "OnDocumentChanged";
+                    oDelayedEvent.ovDocument = ovPage.Document;
+                    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
+                    
+
+
+                    Globals.ThisAddIn.Application.EndUndoScope(undoScopeID, true);
+                }
+
+
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error in OnPageDeleted " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static void ProcessThisDelayedEvent(DelayedEvent oThisDelayedEvent)
+        {
+
+            try
+            {
+                if (oThisDelayedEvent.sOperationType == "OnDocumentChanged")
+                {
+                    Visio.Document ovDocument = oThisDelayedEvent.ovDocument;
+                    OnDocumentChanged(ovDocument);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in processThisDelayedEvnet " + ex.Message, "VisAssist");
+            }
+
+        }
+
+        internal static void OnVisioIsIdle(Visio.Application subject)
+        {
+
+            int iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
+
+            if (iNumberOfDelayedEvents > 0)
+            {
+
+
+                try
+                {
+
+                    for (int ithEvent = iNumberOfDelayedEvents; ithEvent > 0; ithEvent--)
+                    {
+                        DelayedEvent thisDelayedEvent = Globals.ThisAddIn.m_delayedEvents[ithEvent - 1];
+                        ProcessThisDelayedEvent(thisDelayedEvent);
+                        Globals.ThisAddIn.m_delayedEvents.Remove(thisDelayedEvent);
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error in OnVisioIsIdle " + ex.Message, "VisAssist");
+                }
             }
         }
     }

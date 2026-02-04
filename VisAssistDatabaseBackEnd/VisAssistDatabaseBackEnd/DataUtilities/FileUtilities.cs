@@ -716,12 +716,23 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         /// this adds the Cover Page Document visio file...
         /// </summary>
         /// <param name="sFilePath"></param>
-        internal static void AddCoverPageDocument(string sFilePath)
+        internal static Visio.Document AddCoverPageDocument(string sFilePath)
         {
             try
             {
                 //this creates the cover page documents and calls is Dwg - Cover Pages.vsdx and saves it to the folder path...
-                Visio.Application ovVisioApp = Globals.ThisAddIn.Application;
+                Visio.Application ovVisioApp;
+                //if there are no documents open in our current instance of visio then open the new proejct in that but otherwise open a new instance of visio 
+                if (Globals.ThisAddIn.Application.Documents.Count > 0) //-may need to account for stencils being open so instead of this would have to look for .vsdx drawings open...
+                {
+                    //open a new instance of visio 
+                    ovVisioApp = new Visio.Application();
+                }
+                else
+                {
+                    ovVisioApp = Globals.ThisAddIn.Application;
+                }
+               
                 Visio.Document ovDoc = ovVisioApp.Documents.Add("");
 
                 //save it, close it and reopen so that the file doesn't end up in a dirty state
@@ -737,10 +748,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 string sDirectoryPath = Path.GetDirectoryName(sFilePath); //get the path before the the file name
                 sDirectoryPath = Path.GetDirectoryName(sDirectoryPath); //get the path before the hidden Project Files folder
                 DatabaseConfig.DatabasePath = Path.Combine(sDirectoryPath, "DB", "VisAssistBackEnd.db");
+
+                return ovDoc;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error in AddCoverPageDocument " + ex.Message, "VisAssist");
+                return null;
             }
         }
 
@@ -889,8 +903,20 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     }
                                     else
                                     {
-                                        //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
-                                        ovDoc = ovApp.Documents.Open(sFilePath);
+                                        //we want to open the file in a new project if there is already a doucment open...
+                                        if(Globals.ThisAddIn.Application.Documents.Count > 0) //may need to account for stencils being open...
+                                        {
+                                            Visio.Application ovNewApp = new Visio.Application();
+                                            ovNewApp.Visible = true;
+
+                                            //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
+                                            ovDoc = ovNewApp.Documents.Open(sFilePath);
+                                        }
+                                        else
+                                        {
+                                            ovDoc = ovApp.Documents.Open(sFilePath);
+                                        }
+                                        
                                     }
 
                                 }
@@ -1032,16 +1058,18 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
                                 ovDoc.Save();
                             }
+                            folderdialog.Dispose();
                         }
                         else
                         {
                             //this is not a proper folder
                             MessageBox.Show("This is not a VisAssist folder.", "VisAssist");
-                            return;
+                            WhichFileToCopy();
                         }
 
 
                     }
+                    folderdialog.Dispose();
                 }
 
             }
@@ -1258,10 +1286,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             try
             {
                 Visio.Document ovNewDoc = null;
-
-
+                
+                
+                string sVisAssistFolderPath = Path.GetDirectoryName(sProjectFolderPath).TrimEnd(Path.DirectorySeparatorChar);
+                DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
                 //close the original document to copyp because we are going to copy the ovTempDoc instead...
                 string sDestFilePath = Path.Combine(sProjectFolderPath, sNewFileName);
+                
 
                 if (ovTempDoc != null)
                 {
@@ -2074,9 +2105,20 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         //turn off events before opening and checking the launch file..
                         Globals.ThisAddIn.Application.EventsEnabled = 0;
                         ovLaunchDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
-                        sProjectIDofLaunchDoc = ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                        if (sProjectIDofLaunchDoc != sProjectID)
+                        if (ovLaunchDoc.DocumentSheet.CellExists["User.ProjectID", 0] == -1)
                         {
+
+                            sProjectIDofLaunchDoc = ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                            if (sProjectIDofLaunchDoc != sProjectID)
+                            {
+                                ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
+                                ovLaunchDoc.Save();
+                            }
+                        }
+                        else
+                        {
+                            //the user.projectId cell didn't exist...
+                            ovLaunchDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ProjectID", 0);
                             ovLaunchDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
                             ovLaunchDoc.Save();
                         }
