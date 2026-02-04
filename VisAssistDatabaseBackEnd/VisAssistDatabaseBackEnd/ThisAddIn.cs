@@ -8,6 +8,7 @@ using Office = Microsoft.Office.Core;
 using System.Data.SQLite;
 using System.IO;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using VisAssistDatabaseBackEnd.VisioUtilities;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Windows.Forms;
@@ -33,7 +34,7 @@ namespace VisAssistDatabaseBackEnd
             {
                 if (doc.Type == Visio.VisDocumentTypes.visTypeDrawing)
                 {
-                    VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
+                    VisAssistDatabaseBackEnd.VisioUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
 
                     
                 }
@@ -313,14 +314,14 @@ namespace VisAssistDatabaseBackEnd
                 //PageDeleted
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage):
                     {
-                        VisAssistDatabaseBackEnd.DataUtilities.Application.OnPageDeleted((Visio.Page)subject);
+                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDeleted((Visio.Page)subject);
                         break;
                     }
 
                 //PageAdded -32752
                 case (short)((short)VisioEvents.visEvtAdd + (short)Visio.VisEventCodes.visEvtPage):
                     {
-                       VisAssistDatabaseBackEnd.DataUtilities.Application.OnPageAdded((Visio.Page)subject);
+                       VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
                         break;
                     }
 
@@ -334,7 +335,7 @@ namespace VisAssistDatabaseBackEnd
                 //page changed / modified 8208
                 case (short)((short)VisEventCodes.visEvtMod + (short)Visio.VisEventCodes.visEvtPage):
                     {
-                        VisAssistDatabaseBackEnd.DataUtilities.Application.OnPageChanged((Visio.Page)subject);
+                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageChanged((Visio.Page)subject);
                         break;
                     }
 
@@ -392,7 +393,7 @@ namespace VisAssistDatabaseBackEnd
 
                 case (short)(short)Visio.VisEventCodes.visEvtDoc + (short)Visio.VisEventCodes.visEvtMod:
                     {
-                       VisAssistDatabaseBackEnd.DataUtilities.Application.OnDocumentChanged((Visio.Document)subject);
+                       VisAssistDatabaseBackEnd.VisioUtilities.Application.OnDocumentChanged((Visio.Document)subject);
                         break;
                     }
 
@@ -419,7 +420,7 @@ namespace VisAssistDatabaseBackEnd
                         if (doc != null)
                         {
                             // visio is already open and we are now going to opne a doucment...
-                            VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
+                            VisAssistDatabaseBackEnd.VisioUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
                         }
                         //OnDocumentOpened((Visio.Document)subject);
                         break;

@@ -1,24 +1,15 @@
 ﻿using Microsoft.Win32;
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Runtime.Remoting.Messaging;
-using System.Runtime.Remoting.Metadata;
 using System.Security.Cryptography;
-using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.Project_Manifest;
 using WindowsAPICodePack.Dialogs;
-using static System.Net.WebRequestMethods;
 using Visio = Microsoft.Office.Interop.Visio;
 
 
@@ -61,22 +52,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static Dictionary<string, string> m_dictProjectFiles = new Dictionary<string, string>();
         public static Dictionary<string, string> m_dictFilesOutsideProjectFolder = new Dictionary<string, string>();
 
-        //SEEDING
-        internal static void AddSeedFile()
-        {
-            //make sure there is a project in the project_table...
 
-            bool bDoesTableExist = DataProcessingUtilities.DoesParentTableHaveRecord(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
-            if (bDoesTableExist)
-            {
-                DatabaseSeeding.SeedFiles();
-            }
-            else
-            {
-                MessageBox.Show("Please add a record to the project_Table.");
-            }
-
-        } //SEED DATA
 
 
 
@@ -137,7 +113,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     FileUtilities.AdjustFileCountInDB(ovDoc);
 
                     //need to attach the doucment level events to the doucment we just created and opened...
-                    VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpened(ovDoc, false);
+                    VisAssistDatabaseBackEnd.VisioUtilities.VisioHelper.OnDocumentOpened(ovDoc, false);
 
                     ovDoc.SaveAs(sFilePath);
                 }
@@ -159,7 +135,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 oFileRecord = FileUtilities.BuildFileInformation(ovDoc, sFilePath, sProjectID);
                 if (oFileRecord.ruRecords != null)
                 {
-                    DataProcessingUtilities.BuildInsertSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, oFileRecord);
+                    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.FilesTable.sFilesTable, oFileRecord);
 
 
                     return oFileRecord;
@@ -209,7 +185,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         string sValue = dgvRow.Cells[i].Value.ToString();
                         string sKey = dgvColumn.Name;
 
-                        if (sColumnName != DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK)
+                        if (sColumnName != DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK)
                         {
                             oDictColumnValues.Add(sColumnName, sValue);
                         }
@@ -223,7 +199,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     //create a recordupdate for this row
                     RecordUpdate ruRecordUpdate = new RecordUpdate();
-                    ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK;
+                    ruRecordUpdate.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
                     ruRecordUpdate.sId = sPrimaryKeyValue;
                     ruRecordUpdate.odictColumnValues = oDictColumnValues;
 
@@ -234,14 +210,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 m_mruRecordsToCompare = new MultipleRecordUpdates(lstRecordUpdate);
 
                 //compare the two record sets and build a new record set based on only the changes
-                m_mruRecordsToUpdate = DataProcessingUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
+                m_mruRecordsToUpdate = DatabaseUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
 
 
                 if (m_mruRecordsToUpdate.ruRecords.Count > 0)
                 {
                     //there is a change
                     //build the update sql for the files_table
-                    DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, m_mruRecordsToUpdate);
+                    DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.FilesTable.sFilesTable, m_mruRecordsToUpdate);
                     //reset the base record set
                     FileUtilities.GetFileDataFromDatabase(filePropertiesForm);
                 }
@@ -261,7 +237,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 DataGridViewRow dgvFirstRow = filePropertiesForm.dgvFileData.Rows[0];
                 string sProjectID = dgvFirstRow.Cells["ProjectID"].Value.ToString();
 
-                int iRecordCount = DataProcessingUtilities.GetTableRecordCount(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable);
+                int iRecordCount = DatabaseUtilities.GetTableRecordCount(DatabaseUtilities.SqlTables.FilesTable.sFilesTable);
 
                 if (iRecordCount > 1)
                 {
@@ -285,7 +261,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     {
                                         System.IO.File.Delete(sFilePath);
                                         DeleteFileFromDatabase(mruRecords);
-                                        
+
                                     }
 
                                 }
@@ -324,7 +300,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 // Get the selected row
 
                 // Disassociate the file meaning delete the record from the database
-                DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecords);
+                DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.FilesTable.sFilesTable, mruRecords);
 
                 FileUtilities.AdjustFileCountInDB(ovDoc);
 
@@ -350,7 +326,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
 
                 // string sDelete = "DELETE FROM files_table;";
-                string sDelete = "DELETE FROM " + DataProcessingUtilities.SqlTables.FilesTable.sFilesTable + ";";
+                string sDelete = "DELETE FROM " + DatabaseUtilities.SqlTables.FilesTable.sFilesTable + ";";
 
                 using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sDelete, sqliteConnection))
                 {
@@ -369,7 +345,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 sqliteconConnection.Open();
 
-                string sSqlUpdate = "UPDATE " + DataProcessingUtilities.SqlTables.ProjectTable.sProjectTable + " SET FileCount = 0 WHERE Id = @ProjectID";
+                string sSqlUpdate = "UPDATE " + DatabaseUtilities.SqlTables.ProjectTable.sProjectTable + " SET FileCount = 0 WHERE Id = @ProjectID";
 
                 using (SQLiteCommand cmd = new SQLiteCommand(sSqlUpdate, sqliteconConnection))
                 {
@@ -383,7 +359,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-
+                //format the sFileName with Dwg...
+                sFileName = FileUtilities.FormatFileName(sFileName);
 
                 //save the current document using the sFileName
                 Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
@@ -393,15 +370,23 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 string sFilePath = Path.Combine(sFileStructure, sFileName);
 
                 string sOldFilePath = Path.Combine(sFileStructure, ovDoc.Name);
+                
+                
 
                 ovDoc.SaveAs(sFilePath);
                 //delete the old file...
 
-                if (System.IO.File.Exists(sOldFilePath))
+                //close the docuemnt 
+                ovDoc.Close();
+                //then reopen the doc 
+                //delete the old filepath
+                if(System.IO.File.Exists(sOldFilePath))
                 {
                     System.IO.File.Delete(sOldFilePath);
                 }
 
+               ovDoc = Globals.ThisAddIn.Application.Documents.Open(sFilePath);
+                
 
                 string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
 
@@ -410,7 +395,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 MultipleRecordUpdates mruRecord = BuildFileInformation(ovDoc, sFilePath, sProjectID);
                 if (mruRecord.ruRecords != null)
                 {
-                    DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecord);
+                    DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.FilesTable.sFilesTable, mruRecord);
                 }
 
 
@@ -437,7 +422,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 //select all the files from the files_table
                 //string sSQl = @"SELECT * FROM files_table";
-                string sSQl = @"SELECT * FROM " + DataProcessingUtilities.SqlTables.FilesTable.sFilesTable;
+                string sSQl = @"SELECT * FROM " + DatabaseUtilities.SqlTables.FilesTable.sFilesTable;
                 List<RecordUpdate> lstRecords = new List<RecordUpdate>();
 
                 //logging statement placeholder
@@ -461,7 +446,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     string sColumnName = sqlitereadReader.GetName(i);
                                     string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
 
-                                    if (sColumnName != DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK)
+                                    if (sColumnName != DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK)
                                     {
                                         odictColumnValues.Add(sColumnName, sValue);
                                     }
@@ -475,7 +460,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 }
                                 //create a recordupdate for this specfic record (row)
                                 RecordUpdate ruRecordUpdate = new RecordUpdate();
-                                ruRecordUpdate.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK;
+                                ruRecordUpdate.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
                                 ruRecordUpdate.sId = sID;
                                 ruRecordUpdate.odictColumnValues = odictColumnValues;
 
@@ -524,7 +509,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 oDictFileValues.Add("Class", "VisAssistDocument");
 
 
-                ruFileRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK;
+                ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
                 string sProjectID = "";
                 if (ovDoc.DocumentSheet.CellExists["User.ProjectID", 0] == -1)
                 {
@@ -583,7 +568,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         sqliteConnection.Open();
 
                         // 1️⃣ Get the number of files for this project
-                        string sCountSql = "SELECT COUNT(*) FROM " + DataProcessingUtilities.SqlTables.FilesTable.sFilesTable + " WHERE ProjectID = @ProjectID";
+                        string sCountSql = "SELECT COUNT(*) FROM " + DatabaseUtilities.SqlTables.FilesTable.sFilesTable + " WHERE ProjectID = @ProjectID";
                         int iFileCount = 0;
 
                         using (SQLiteCommand countCmd = new SQLiteCommand(sCountSql, sqliteConnection))
@@ -631,7 +616,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //add a user Cell for the class to be Launch
                 ovLaunchDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "Class", 0);
                 ovLaunchDoc.DocumentSheet.Cells["User.Class"].Formula = "\"" + "Launch" + "\"";
-                
+
 
                 string sLaunchFilePath = Path.Combine(sVisAssistFolderPath, "LaunchFile.vsdx");
                 ovLaunchDoc.SaveAs(sLaunchFilePath);
@@ -823,7 +808,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     switch (sSource)
                     {
                         case "Launch":
-                            {
+                             {
                                 //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
                                 ovDoc = IsVisioFileOpen(ovApp, sFilePath);
                                 if (ovDoc != null)
@@ -833,6 +818,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     {
                                         if (ovWindow.Document == ovDoc)
                                         {
+                                           
                                             ovWindow.Activate();
                                             break;
                                         }
@@ -847,6 +833,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     {
                                         //the file is open in another instance of visio sorry we can't open this 
                                         MessageBox.Show("Sorry this file is used by another application and cannot be opened at this time.", "VisAssist");
+                                        //need to close the launch doc...
+                                        ovCurrentDoc.Close();
                                         return;
                                     }
                                     else
@@ -860,18 +848,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                         string sLaunchFilePath = Path.GetDirectoryName(sProjectFilePath.TrimEnd(Path.DirectorySeparatorChar)); //get the folder path before the hidden Project Files folder
                                         sLaunchFilePath = Path.Combine(sLaunchFilePath, "LaunchFile.vsdx");
 
-                                        foreach (Visio.Document ovDocToCheck in ovApp.Documents)
-                                        {
-                                            string sDocToCheckPath = FileUtilities.ReturnFileStructurePath(ovDocToCheck.Path);
-                                            sDocToCheckPath = Path.Combine(sDocToCheckPath, ovDocToCheck.Name);
 
-                                            if (sDocToCheckPath == sLaunchFilePath)
-                                            {
-                                                //this is the file we want to close
-                                                ovDocToCheck.Save();
-                                                ovDocToCheck.Close();
-                                            }
-                                        }
+                                        //close the launchfile doc
+                                        //may also just be ovCurrentDoc...
+                                        ovCurrentDoc.Close();
+                                        //foreach (Visio.Document ovDocToCheck in ovApp.Documents)
+                                        //{
+                                        //    string sDocToCheckPath = FileUtilities.ReturnFileStructurePath(ovDocToCheck.Path);
+                                        //    sDocToCheckPath = Path.Combine(sDocToCheckPath, ovDocToCheck.Name);
+
+                                        //    if (sDocToCheckPath == sLaunchFilePath)
+                                        //    {
+                                        //        //this is the file we want to close
+                                        //        ovDocToCheck.Save();
+                                        //        ovDocToCheck.Close();
+                                        //    }
+                                        //}
                                     }
                                 }
 
@@ -935,11 +927,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             }
 
                     }
-                    string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                    DatabaseConfig.BindToActiveDocument(sFolderPath);
+                    sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                    DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
                     //need to attach the doucment level events to the doucment we just created and opened...
-                    VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpened(ovDoc, false);
+                    VisAssistDatabaseBackEnd.VisioUtilities.VisioHelper.OnDocumentOpened(ovDoc, false);
                 }
             }
             catch (Exception ex)
@@ -1019,7 +1011,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                         if (bHasNecessaryFolders)
                         {
-                           
+
 
                             //make sure the folder/files the user wants to copy is apart of a good stable visassist project
                             ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
@@ -1063,8 +1055,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void CopyFile(FilesForm filesForm)
         {
             Visio.Document ovCurrentDoc = Globals.ThisAddIn.Application.ActiveDocument;
-            string sFolderPathOriginal = GetFolderPath(ovCurrentDoc);
-            sFolderPathOriginal = Path.Combine(sFolderPathOriginal, "Project Files");
+            string sVisAssistFolderPathOriginal = GetFolderPath(ovCurrentDoc);
+            string sProjectFolderPathOriginal = Path.Combine(sVisAssistFolderPathOriginal, "Project Files");
             DataGridViewRow dgvSelectedRow = filesForm.dgvFiles.SelectedRows[0];
             string sOldFileName = dgvSelectedRow.Cells[0].Value?.ToString();
 
@@ -1081,9 +1073,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 string sFilePath = m_dictProjectFiles[sOldFileName];
 
-               // string sFolderPathOfOtherFile = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
+                // string sFolderPathOfOtherFile = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
 
-                string sDocName = OpenFilesToCopy(sFilePath, sNewFileName, sFolderPathOriginal);
+                string sDocName = OpenFilesToCopy(sFilePath, sNewFileName, sProjectFolderPathOriginal);
                 if (sDocName == "")
                 {
                     MessageBox.Show("Could not copy file " + sOldFileName, "VisAssist");
@@ -1100,7 +1092,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         /// <param name="sFilePath"></param>
         /// <param name="sFolderPathOfOtherFile"></param>
         /// <returns></returns>
-        internal static string OpenFilesToCopy(string sFilePath, string sNewFileName, string sFolderPathOriginal)
+        internal static string OpenFilesToCopy(string sFilePath, string sNewFileName, string sProjectFolderPathOriginal)
         {
             string sDocName = "";
             try
@@ -1157,7 +1149,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
                             //copy the file
-                            sDocName = AddCopiedFile(sFolderPathOriginal, sFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
+                            sDocName = AddCopiedFile(sProjectFolderPathOriginal, sFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
                             //save and close the temp file now that we are done with it we can also trash it (we already used it to make a copy in copyfile)
                             ovTempDoc.Save();
                             ovTempDoc.Close();
@@ -1190,7 +1182,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                             //the file is open in a different instance of visio so we need to make a copy of the file and associate the copied file...
                             //bAssociatedFile = AssociateFileOpenInDifferentVisioInstance(sDestFilePath, sFolderPath, sFileName, sFilePath, sTempFilePath);
-                            sDocName = AddCopiedFile(sFolderPathOriginal, sTempFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
+                            sDocName = AddCopiedFile(sProjectFolderPathOriginal, sTempFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
 
                             ovTempDoc.Save();
                             ovTempDoc.Close();
@@ -1219,7 +1211,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         Visio.Document ovTempDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
 
                         //copy the file
-                        sDocName = AddCopiedFile(sFolderPathOriginal, sFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName); //we are associating a file that is already open
+                        sDocName = AddCopiedFile(sProjectFolderPathOriginal, sFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName); //we are associating a file that is already open
 
                         //save, close, and delete the temp file...
                         ovTempDoc.Save();
@@ -1300,7 +1292,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         if (mruRecords.ruRecords != null)
                         {
                             //run the update sql with the new proper information
-                            DataProcessingUtilities.BuildUpdateSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecords);
+                            DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.FilesTable.sFilesTable, mruRecords);
                         }
                     }
 
@@ -1439,7 +1431,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     oDictColumnValues.Add("FilePath", sFilePath);
 
                     RecordUpdate ruRecord = new RecordUpdate();
-                    ruRecord.sPrimaryKeyColumn = DataProcessingUtilities.SqlTables.FilesTable.sFilesTablePK;
+                    ruRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
                     ruRecord.sId = sFileID;
                     ruRecord.odictColumnValues = oDictColumnValues;
 
@@ -1496,7 +1488,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     bCleanBaseRecords = true;
                     //we are going to disassociate the file..
-                    DataProcessingUtilities.BuildDeleteSqlForMultipleRecords(DataProcessingUtilities.SqlTables.FilesTable.sFilesTable, mruRecordsToDeleted);
+                    DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.FilesTable.sFilesTable, mruRecordsToDeleted);
 
                     //we need to clean up our m_mruRecords again..
                     Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
@@ -2044,8 +2036,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 string sFilePath = sLaunchFileItem.Value.ToString();
                 //need to check to see if the launch file is already open, or if it is locked..
                 Visio.Document ovLaunchDoc = IsVisioFileOpen(Globals.ThisAddIn.Application, sFilePath);
-                string sFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                string sLaunchFilePath = Path.Combine(sFolderPath, "LaunchFile.vsdx");
+                string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                string sLaunchFilePath = Path.Combine(sVisAssistFolderPath, "LaunchFile.vsdx");
                 string sProjectIDofLaunchDoc = "";
 
 

@@ -9,8 +9,9 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Project_Manifest;
 using Visio = Microsoft.Office.Interop.Visio;
+using VisAssistDatabaseBackEnd.DataUtilities;
 
-namespace VisAssistDatabaseBackEnd.DataUtilities
+namespace VisAssistDatabaseBackEnd.VisioUtilities
 {
 
     /// <summary>A COM-visible Visio event handler.</summary>
@@ -370,15 +371,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //otherwise this is not a visassist project...
 
 
-
-
-
-
             }
             catch (COMException ex)
             {
                 Console.WriteLine($"COM Exception: {ex.Message}");
-                //VisAssistCommon.Logging.LogMsg("OnDocumentOpenedCreated for: " + ovThisVisioDocument.Name, "Error - Delete");
             }
 
 

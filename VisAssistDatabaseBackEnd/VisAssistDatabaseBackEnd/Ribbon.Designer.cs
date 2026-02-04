@@ -46,18 +46,13 @@
             this.grpFile = this.Factory.CreateRibbonGroup();
             this.btnAddFile = this.Factory.CreateRibbonButton();
             this.btnGetFileData = this.Factory.CreateRibbonButton();
-            this.btnDeleteFileInfo = this.Factory.CreateRibbonButton();
             this.btnAssociateFile = this.Factory.CreateRibbonButton();
-            this.btnDisAssociateFile = this.Factory.CreateRibbonButton();
             this.btnDeleteFile = this.Factory.CreateRibbonButton();
             this.btnAssociateAnotherFile = this.Factory.CreateRibbonButton();
-            this.btnAssociateOrphanedFile = this.Factory.CreateRibbonButton();
             this.btnChangeFileName = this.Factory.CreateRibbonButton();
             this.btnOpenFile = this.Factory.CreateRibbonButton();
             this.grpPages = this.Factory.CreateRibbonGroup();
-            this.btnAddPageInfo = this.Factory.CreateRibbonButton();
             this.btnDeletePageInfo = this.Factory.CreateRibbonButton();
-            this.btnModifyPage = this.Factory.CreateRibbonButton();
             this.btnGetPageName = this.Factory.CreateRibbonButton();
             this.grpShapes = this.Factory.CreateRibbonGroup();
             this.btnAddShapeInfo = this.Factory.CreateRibbonButton();
@@ -142,12 +137,9 @@
             // 
             this.grpFile.Items.Add(this.btnAddFile);
             this.grpFile.Items.Add(this.btnGetFileData);
-            this.grpFile.Items.Add(this.btnDeleteFileInfo);
             this.grpFile.Items.Add(this.btnAssociateFile);
-            this.grpFile.Items.Add(this.btnDisAssociateFile);
             this.grpFile.Items.Add(this.btnDeleteFile);
             this.grpFile.Items.Add(this.btnAssociateAnotherFile);
-            this.grpFile.Items.Add(this.btnAssociateOrphanedFile);
             this.grpFile.Items.Add(this.btnChangeFileName);
             this.grpFile.Items.Add(this.btnOpenFile);
             this.grpFile.Label = "File Info";
@@ -165,25 +157,11 @@
             this.btnGetFileData.Name = "btnGetFileData";
             this.btnGetFileData.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnGetFileData_Click);
             // 
-            // btnDeleteFileInfo
-            // 
-            this.btnDeleteFileInfo.Label = "Delete File Info";
-            this.btnDeleteFileInfo.Name = "btnDeleteFileInfo";
-            this.btnDeleteFileInfo.Visible = false;
-            this.btnDeleteFileInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnDeleteFileInfo_Click);
-            // 
             // btnAssociateFile
             // 
             this.btnAssociateFile.Label = "Copy Another File";
             this.btnAssociateFile.Name = "btnAssociateFile";
-            this.btnAssociateFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAssociateFile_Click);
-            // 
-            // btnDisAssociateFile
-            // 
-            this.btnDisAssociateFile.Label = "Disassociate File";
-            this.btnDisAssociateFile.Name = "btnDisAssociateFile";
-            this.btnDisAssociateFile.Visible = false;
-            this.btnDisAssociateFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnDisAssociateFile_Click);
+            this.btnAssociateFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnCopyAnotherFile_Click);
             // 
             // btnDeleteFile
             // 
@@ -195,13 +173,6 @@
             // 
             this.btnAssociateAnotherFile.Label = "";
             this.btnAssociateAnotherFile.Name = "btnAssociateAnotherFile";
-            // 
-            // btnAssociateOrphanedFile
-            // 
-            this.btnAssociateOrphanedFile.Label = "Associate Orphaned File";
-            this.btnAssociateOrphanedFile.Name = "btnAssociateOrphanedFile";
-            this.btnAssociateOrphanedFile.Visible = false;
-            this.btnAssociateOrphanedFile.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAssociateOrphanedFile_Click);
             // 
             // btnChangeFileName
             // 
@@ -217,18 +188,10 @@
             // 
             // grpPages
             // 
-            this.grpPages.Items.Add(this.btnAddPageInfo);
             this.grpPages.Items.Add(this.btnDeletePageInfo);
-            this.grpPages.Items.Add(this.btnModifyPage);
             this.grpPages.Items.Add(this.btnGetPageName);
             this.grpPages.Label = "Page Info";
             this.grpPages.Name = "grpPages";
-            // 
-            // btnAddPageInfo
-            // 
-            this.btnAddPageInfo.Label = "Add 50 Pages";
-            this.btnAddPageInfo.Name = "btnAddPageInfo";
-            this.btnAddPageInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAddPageInfo_Click);
             // 
             // btnDeletePageInfo
             // 
@@ -236,13 +199,6 @@
             this.btnDeletePageInfo.Name = "btnDeletePageInfo";
             this.btnDeletePageInfo.Visible = false;
             this.btnDeletePageInfo.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnDeletePageInfo_Click);
-            // 
-            // btnModifyPage
-            // 
-            this.btnModifyPage.Label = "Modify";
-            this.btnModifyPage.Name = "btnModifyPage";
-            this.btnModifyPage.Visible = false;
-            this.btnModifyPage.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnModifyPage_Click);
             // 
             // btnGetPageName
             // 
@@ -324,12 +280,9 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup grpShapes;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeleteDatabase;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeleteProjectInfo;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeleteFileInfo;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAddPageInfo;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeletePageInfo;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAddShapeInfo;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeleteShapeInfo;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnModifyPage;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup grpWireInfo;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAddWireInfo;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeleteWireInfo;
@@ -340,9 +293,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAddFile;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAssociateAnotherFile;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDeleteFile;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnDisAssociateFile;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAssociateFile;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAssociateOrphanedFile;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnChangeFileName;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnOpenProject;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnOpenFile;
