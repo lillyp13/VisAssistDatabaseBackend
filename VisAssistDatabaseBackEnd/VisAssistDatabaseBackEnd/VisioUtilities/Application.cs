@@ -15,7 +15,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
     internal class Application
     {
 
-        //PAGE EVENTS
+        //PAGE LEVEL EVENTS
         internal static void OnPageAdded(Visio.Page ovVisioPage)
         {
             try
@@ -90,8 +90,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 bool bRecordExists = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
                 if (bRecordExists)
                 {
-                    int undoScopeID = Globals.ThisAddIn.Application.BeginUndoScope("Delete Page");
-                    PageUtilities.DeletePage(ovPage, sProjectID);
+                    PageUtilities.DeletePageInDatabase(ovPage, sProjectID);
 
                     //have a delayed event that will call ondocumentchanged...
                     DelayedEvent oDelayedEvent = new DelayedEvent();
@@ -100,9 +99,6 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
 
                     
-
-
-                    Globals.ThisAddIn.Application.EndUndoScope(undoScopeID, true);
                 }
 
 
@@ -113,6 +109,77 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             }
         }
 
+
+        //SHAPE LEVEL EVENTS
+        internal static void OnShapeAdded(Visio.Shape ovShape)
+        {
+            if (ovShape.CellExists["User.Class", 0] == -1)
+            {
+                //this is one of our shapes...
+                string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovShape.ContainingPage.Document);
+                DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+                string sProjectID = ovShape.ContainingPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+
+                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                switch(sClass)
+                {
+                    case "NewWire":
+                        {
+                            ShapesUtilities.AddWireToDatabase(ovShape);
+                            break;
+                        }
+                    case "TerminalBlock":
+                        {
+                            ShapesUtilities.AddTerminalBlockToDatabase(ovShape);
+                            break;
+                        }
+                    case "ADC End Device":
+                        {
+                            ShapesUtilities.AddWiringEndDeviceToDatabase(ovShape);
+                            break;
+                        }
+                }
+                
+
+            }
+        }
+        internal static void OnShapeDeleted(Visio.Shape ovShape)
+        {
+
+            if (ovShape.CellExists["User.Class", 0] == -1)
+            {
+                //this is one of our shapes...
+                string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovShape.ContainingPage.Document);
+                DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+                string sProjectID = ovShape.ContainingPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+
+                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                switch (sClass)
+                {
+                    case "NewWire":
+                        {
+                            ShapesUtilities.DeleteWireFromDatabase(ovShape);
+                            break;
+                        }
+                    case "TerminalBlock":
+                        {
+                            ShapesUtilities.DeleteTerminalBlockFromDatabase(ovShape);
+                            break;
+                        }
+                    case "ADC End Device":
+                        {
+                            ShapesUtilities.DeleteEndDeviceFromDatabase(ovShape);
+                            break;
+                        }
+                }
+
+
+            }
+        }
+
+
+
+        //DOCUMENT LEVEL EVENTS
         internal static void ProcessThisDelayedEvent(DelayedEvent oThisDelayedEvent)
         {
 
@@ -158,5 +225,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 }
             }
         }
+
+        
     }
 }

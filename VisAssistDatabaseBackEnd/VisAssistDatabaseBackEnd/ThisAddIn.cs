@@ -37,7 +37,7 @@ namespace VisAssistDatabaseBackEnd
                 {
                     VisAssistDatabaseBackEnd.VisioUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
 
-                    
+
                 }
             }
         }
@@ -74,18 +74,18 @@ namespace VisAssistDatabaseBackEnd
 
 
                 //// Shape Added
-                //m_appEvents.Add(docEventList.AddAdvise(
-                //     (short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtShape),
-                //    m_appSink,
-                //    string.Empty,
-                //    string.Empty));
+                m_VisioEvents.Add(docEventList.AddAdvise(
+                     (short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtShape),
+                    m_appSink,
+                    string.Empty,
+                    string.Empty));
 
-                //// Shape Deleted
-                //m_appEvents.Add(docEventList.AddAdvise(
-                //   (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtShape),
-                //    m_appSink,
-                //    string.Empty,
-                //    string.Empty));
+                // Shape Deleted
+                m_VisioEvents.Add(docEventList.AddAdvise(
+                   (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtShape),
+                    m_appSink,
+                    string.Empty,
+                    string.Empty));
 
                 // Page Changed
                 Visio.Event pagechangedAddedEvent = ovDocument.EventList.AddAdvise(
@@ -244,7 +244,7 @@ namespace VisAssistDatabaseBackEnd
             var app = this.Application;
             var eventList = app.EventList;
 
-            m_appSink = new  VisioEventSink(OnVisioEvent);
+            m_appSink = new VisioEventSink(OnVisioEvent);
 
             ////event marker
             m_VisioAppEvents.Add(
@@ -315,14 +315,14 @@ namespace VisAssistDatabaseBackEnd
                 //ShapeAdded -32704
                 case (short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtShape):
                     {
-                       // OnShapeAdded((Visio.Shape)subject);
+                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded((Visio.Shape)subject);
                         break;
                     }
 
                 //ShapeDeleted 16448
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtShape):
                     {
-                       // OnShapeDeleted((Visio.Shape)subject);
+                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject);
                         break;
                     }
 
@@ -330,7 +330,7 @@ namespace VisAssistDatabaseBackEnd
                 //PageDeleted
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage):
                     {
-                        
+
                         VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDeleted((Visio.Page)subject);
 
                         break;
@@ -339,7 +339,7 @@ namespace VisAssistDatabaseBackEnd
                 //PageAdded -32752
                 case (short)((short)VisioEvents.visEvtAdd + (short)Visio.VisEventCodes.visEvtPage):
                     {
-                       VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
+                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
                         break;
                     }
 
@@ -360,7 +360,7 @@ namespace VisAssistDatabaseBackEnd
                 //ConnectionsAdded - 32512
                 case (short)(((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtConnect)):
                     {
-                        
+
                         //OnConnectionsAddded((Visio.Connects)subject);
                         break;
                     }
@@ -379,7 +379,7 @@ namespace VisAssistDatabaseBackEnd
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtDoc):
                     {
 
-                       // OnBeforeDocumentClosed((Visio.Document)subject);
+                        // OnBeforeDocumentClosed((Visio.Document)subject);
 
                         break;
                     }
@@ -388,7 +388,7 @@ namespace VisAssistDatabaseBackEnd
                 //QueryCancelPageDelete 500
                 case (short)((short)Visio.VisEventCodes.visEvtCodeQueryCancelPageDel):
                     {
-                       // bCancelEvent = OnCheckBeforePageDeleted((Visio.Page)subject);
+                        // bCancelEvent = OnCheckBeforePageDeleted((Visio.Page)subject);
                         //OnBeforePageDelete((Visio.Page)subject);
 
                         break;
@@ -397,7 +397,7 @@ namespace VisAssistDatabaseBackEnd
                 //NoEventsPending 4608
                 case (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtNonePending:
                     {
-                       // OnNoEventsPending((Visio.Application)subject);
+                        // OnNoEventsPending((Visio.Application)subject);
                         break;
                     }
 
@@ -408,11 +408,11 @@ namespace VisAssistDatabaseBackEnd
                         VisAssistDatabaseBackEnd.VisioUtilities.Application.OnVisioIsIdle((Visio.Application)subject);
                         break;
                     }
-               
+
 
                 case (short)(short)Visio.VisEventCodes.visEvtDoc + (short)Visio.VisEventCodes.visEvtMod:
                     {
-                       VisAssistDatabaseBackEnd.VisioUtilities.Application.OnDocumentChanged((Visio.Document)subject);
+                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnDocumentChanged((Visio.Document)subject);
                         break;
                     }
 
@@ -456,8 +456,8 @@ namespace VisAssistDatabaseBackEnd
                     }
                 case (short)Visio.VisEventCodes.visEvtCodeQueryCancelSelDel:
                     {
-                       // Visio.Selection ovSelection = (Visio.Selection)subject;
-                       // VisioApplication_SelectionDeleted(ovSelection);
+                        // Visio.Selection ovSelection = (Visio.Selection)subject;
+                        // VisioApplication_SelectionDeleted(ovSelection);
 
                         break;
                     }
@@ -490,13 +490,13 @@ namespace VisAssistDatabaseBackEnd
             return bCancelEvent;
         }
 
-       
+
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {
         }
 
-        
+
 
 
         #region VSTO generated code
@@ -510,7 +510,7 @@ namespace VisAssistDatabaseBackEnd
             this.Startup += new System.EventHandler(ThisAddIn_Startup);
             this.Shutdown += new System.EventHandler(ThisAddIn_Shutdown);
         }
-        
+
         #endregion
     }
 }

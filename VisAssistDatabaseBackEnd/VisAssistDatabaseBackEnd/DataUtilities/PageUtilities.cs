@@ -72,7 +72,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        internal static void DeletePage(Visio.Page ovPage, string sProjectID)
+        internal static void DeletePageInDatabase(Visio.Page ovPage, string sProjectID)
         {
             try
             {
@@ -203,7 +203,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 else
                 {
                     //get the pages for a specific file
-                    PageUtilities.GetPagesForCurrentFile();
+                    Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                    PageUtilities.GetPagesForCurrentFile(ovDoc);
                 }
 
 
@@ -365,11 +366,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
             }
         }
-        internal static void GetPagesForCurrentFile()
+        internal static void GetPagesForCurrentFile(Visio.Document ovDoc)
         {
             try
             {
-                Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                //Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
                 if (ovDoc != null)
                 {
                     string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);

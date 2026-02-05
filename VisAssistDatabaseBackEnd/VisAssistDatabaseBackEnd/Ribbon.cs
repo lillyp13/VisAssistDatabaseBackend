@@ -208,11 +208,6 @@ namespace VisAssistDatabaseBackEnd
                     string sAction = "Add";
                     ProjectUtilities.OpenProjectForm(sAction, sProjectName, sFilePath);
 
-                    //Create Manifest - after the project form is complete we can create the manifest file...
-                    string sProjectFolderPath = System.IO.Path.GetDirectoryName(sFilePath).TrimEnd(System.IO.Path.DirectorySeparatorChar); // I would like to add a more universal way to get the project folder path
-                   // string sDBPath = System.IO.Path.Combine(sProjectFolderPath, "DB", "VisAssistBackEnd.db"); // I would like to add a more universal way to get the db path
-                    string sProjectId = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("Id");
-                    ProjectManifest.CreateManifest(sProjectName, sProjectId, sProjectFolderPath);
                 }
                 else
                 {

@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.Forms
 {
@@ -36,8 +37,8 @@ namespace VisAssistDatabaseBackEnd.Forms
 
             //get the file id from the current document...
 
-
-            PageUtilities.GetPagesForCurrentFile();
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            PageUtilities.GetPagesForCurrentFile(ovDoc);
             PageUtilities.PopulatePagesForm(this);
 
         }

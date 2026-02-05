@@ -8,6 +8,9 @@ using System.Runtime.Remoting.Lifetime;
 using System.Security.Policy;
 using System.Text;
 using System.Windows.Forms;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Net.WebRequestMethods;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 using Visio = Microsoft.Office.Interop.Visio;
 
@@ -54,13 +57,56 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 };
             }
 
+            public struct WireShapesTable
+            {
+                public const string sWireShapeTable = "wire_shapes_table";
+                public const string sWireShapeTablePK = "WireID";
+
+                public static readonly string[] saWireShapesColumns = new string[]
+              {
+                "ProjectID", "FileID", "PageID", "WirePairID", "SystemID", "ConnectionID", "WirePairRole", "Tag", "Version",
+                "Class", "WireLabel", "Color", "XLocation", "YLocation", "AutoLabeling",
+                "ConductorCount", "Conductor1Label", "Conductor2Label", "Conductor3Label", "Conductor4Label", "Conductor5Label",
+                "Conductor6Label", "Conductor7Label", "Conductor8Label", "Conductor9Label", "Conductor10Label", "ShowShield", "ShieldTop", "ShieldBottom"
+              };
+
+
+            }
+
+            public struct TerminalBlocksTable
+            {
+                public const string sTerminalBlockTable = "terminal_block_table";
+                public const string sTerminalBlockTablePK = "TerminalID";
+
+
+                public static readonly string[] saTerminalBlockColumns = new string[]
+                {
+                "ProjectID", "FileID", "PageID", "Color", "ShapeText"
+                };
+            }
+
+            public struct WiringEndDevice
+            {
+                public const string sWiringEndDeviceTable = "wiring_end_device_table";
+                public const string sWiringEndDeviceTablePK = "DeviceID";
+                
+
+                public static readonly string[] saWiringEndDeviceColumns = new string[]
+                {
+                "ProjectID", "FileID", "PageID", "TermCount", "Tag"
+                };
+            }
 
             public static readonly Dictionary<string, (string PrimaryKey, string[] Columns)> odictTableInfo = new Dictionary<string, (string PrimaryKey, string[] Columns)>()
             {
                 { ProjectTable.sProjectTable, (ProjectTable.sProjectTablePK, ProjectTable.saProjectColumns) },
                 { FilesTable.sFilesTable, (FilesTable.sFilesTablePK, FilesTable.saFileColumns) },
-                { PagesTable.sPagesTable, (PagesTable.sPagesTablePK, PagesTable.saPagesColumns) }
+                { PagesTable.sPagesTable, (PagesTable.sPagesTablePK, PagesTable.saPagesColumns) },
+                { WireShapesTable.sWireShapeTable, (WireShapesTable.sWireShapeTablePK, WireShapesTable.saWireShapesColumns) },
+                { TerminalBlocksTable.sTerminalBlockTable, (TerminalBlocksTable.sTerminalBlockTablePK, TerminalBlocksTable.saTerminalBlockColumns) },
+                { WiringEndDevice.sWiringEndDeviceTable, (WiringEndDevice.sWiringEndDeviceTablePK, WiringEndDevice.saWiringEndDeviceColumns) }
             };
+
 
 
             public static bool TryGetPrimaryKey(string sTableName, out string sPK)
@@ -87,6 +133,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 case "files_table": return SqlTables.FilesTable.sFilesTablePK;
                 case "pages_table": return SqlTables.PagesTable.sPagesTablePK;
+                case "wire_shapes_table": return SqlTables.WireShapesTable.sWireShapeTablePK;
+                case "terminal_block_table": return SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
+                case "wiring_end_device_table": return SqlTables.WiringEndDevice.sWiringEndDeviceTablePK;
 
                 default: return "Id"; // fallback
             }
@@ -107,7 +156,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 if (bFolderAlreadyExists)
                 {
-                    bool bDatabaseFileExists = File.Exists(DatabaseConfig.DatabasePath);
+                    bool bDatabaseFileExists = System.IO.File.Exists(DatabaseConfig.DatabasePath);
                     if (!bDatabaseFileExists)
                     {
                         //the folder didn't exist so this is the first time we are creating the database...
@@ -228,119 +277,146 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         }
 
 
-                        //                    //create the wire_shapes_table
-                        //                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
-                        //                    {
-                        //                        connection.Open();
+                        //create the wire_shapes_table
+                        using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                        {
+                            connection.Open();
 
-                        ////enable foreign key enforcemnt for this connection
-                        //using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
-                        //{
-                        //    sqlitcmdPragma.ExecuteNonQuery();
-                        //}
-                        //                        string sWireTableCommand = @"
-                        //CREATE TABLE IF NOT EXISTS wire_shapes_table(
-                        //    wire_id INTEGER NOT NULL,
-                        //    project_id INTEGER NOT NULL,
-                        //    file_id INTEGER NOT NULL,
-                        //    page_id INTEGER NOT NULL,
-                        //    wire_pair_id INTEGER NOT NULL,
-                        //    system_id INTEGER,
-                        //    connection_id INTEGER,
-                        //    wire_pair_role TEXT NOT NULL,
-                        //    tag TEXT,
-                        //    version TEXT,
-                        //    class TEXT,
-                        //    wire_label TEXT,
-                        //    color TEXT,
-                        //    x_location REAL NOT NULL,
-                        //    y_location REAL NOT NULL,
-                        //    auto_labeling INTEGER NOT NULL,
-                        //    conductor_count INTEGER NOT NULL,
-                        //    conductor_1_label TEXT,
-                        //    conductor_2_label TEXT,
-                        //    conductor_3_label TEXT,
-                        //    conductor_4_label TEXT,
-                        //    conductor_5_label TEXT,
-                        //    conductor_6_label TEXT,
-                        //    conductor_7_label TEXT,
-                        //    conductor_8_label TEXT,
-                        //    conductor_9_label TEXT,
-                        //    conductor_10_label TEXT,
-                        //    conductor_11_label TEXT,
-                        //    conductor_12_label TEXT,
-                        //    show_shield INTEGER NOT NULL,
-                        //    shield_top INTEGER,
-                        //    shield_bottom INTEGER,
-                        //    PRIMARY KEY(wire_id),
-                        //    CONSTRAINT wire_pairs_wire_shapes
-                        //        FOREIGN KEY (wire_pair_id) REFERENCES wire_pairs_table (wire_pair_id) ON DELETE CASCADE,
-                        //    CONSTRAINT project_info_wire_shapes
-                        //        FOREIGN KEY (project_id) REFERENCES project_table (project_id) ON DELETE CASCADE,
-                        //    CONSTRAINT pages_wire_shapes
-                        //        FOREIGN KEY (page_id) REFERENCES pages_table (page_id) ON DELETE CASCADE,
-                        //    CONSTRAINT visio_files_wire_shapes
-                        //        FOREIGN KEY (file_id) REFERENCES files_table (file_id) ON DELETE CASCADE,
-                        //    CONSTRAINT connections_wire_shapes
-                        //        FOREIGN KEY (connection_id) REFERENCES connections_table (connection_id) ON DELETE CASCADE
-                        //);";
+                            //enable foreign key enforcemnt for this connection
+                            using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                            {
+                                sqlitcmdPragma.ExecuteNonQuery();
+                            }
+                            string sWireTableCommand = @"
+                        CREATE TABLE IF NOT EXISTS wire_shapes_table(
+                            WireID TEXT NOT NULL,
+                            ProjectID TEXT NOT NULL,
+                            FileID TEXT NOT NULL,
+                            PageID TEXT NOT NULL,
+                            WirePairID TEXT NOT NULL,
+                            SystemID INTEGER,
+                            ConnectionID INTEGER,
+                            WireRole TEXT NOT NULL,
+                            Tag TEXT,
+                            Version TEXT,
+                            Class TEXT,
+                            WireLabel TEXT,
+                            Color TEXT,
+                            XLocation REAL NOT NULL,
+                            YLocation REAL NOT NULL,
+                            AutoLabeling INTEGER NOT NULL,
+                            ConductorCount INTEGER NOT NULL,
+                            Conductor1Label TEXT,
+                            Conductor2Label TEXT,
+                            Conductor3Label TEXT,
+                            Conductor4Label TEXT,
+                            Conductor5Label TEXT,
+                            Conductor6Label TEXT,
+                            Conductor7Label TEXT,
+                            Conductor8Label TEXT,
+                            Conductor9Label TEXT,
+                            Conductor10Label TEXT,
+                            ShowShield INTEGER NOT NULL,
+                            ShieldTop INTEGER,
+                            ShieldBottom INTEGER,
+                            PRIMARY KEY(WireID),
+                            CONSTRAINT WirePairsWireShapes
+                                FOREIGN KEY (WirePairID) REFERENCES wire_pairs_table (WirePairID) ON DELETE CASCADE,
+                            CONSTRAINT project_info_wire_shapes
+                                FOREIGN KEY (ProjectID) REFERENCES project_table (Id) ON DELETE CASCADE,
+                            CONSTRAINT pages_wire_shapes
+                                FOREIGN KEY (PageID) REFERENCES pages_table (PageID) ON DELETE CASCADE,
+                            CONSTRAINT visio_files_wire_shapes
+                                FOREIGN KEY (FileID) REFERENCES files_table (FileID) ON DELETE CASCADE
+                        );";
 
-                        //                        using (SQLiteCommand cmd = new SQLiteCommand(sWireTableCommand, connection))
-                        //                        {
-                        //                            cmd.ExecuteNonQuery();
+                            //HAVEN'T ADDED THE CONNECTIONS TABLE YET...
+                            //CONSTRAINT connections_wire_shapes
+                            //    FOREIGN KEY (ConnectionID) REFERENCES connections_table (ConnectionID) ON DELETE CASCADE
 
-                        //                        }
-                        //                    }
+                            using (SQLiteCommand cmd = new SQLiteCommand(sWireTableCommand, connection))
+                            {
+                                cmd.ExecuteNonQuery();
 
-                        //                    //create the connections_table
-                        //                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
-                        //                    {
-                        //                        connection.Open();
-                        ////enable foreign key enforcemnt for this connection
-                        //using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
-                        //{
-                        //    sqlitcmdPragma.ExecuteNonQuery();
-                        //}
-                        //                        string sConnectionsTableCommand = @"
-                        //            CREATE TABLE IF NOT EXISTS connections_table (
-                        //                connection_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                        //                fromshape_id INTEGER NOT NULL,
-                        //                to_shape_id INTEGER,
-                        //                from_shape_class TEXT NOT NULL,
-                        //                to_shape_class TEXT
-                        //            );";
-                        //                        using (SQLiteCommand cmd = new SQLiteCommand(sConnectionsTableCommand, connection))
-                        //                        {
-                        //                            cmd.ExecuteNonQuery();
+                            }
+                        }
 
-                        //                        }
-                        //                    }
 
-                        //                    //create the wire_pairs_table
-                        //                    using (SQLiteConnection connection = new SQLiteConnection(SQLiteConnectionFactory.Create()))
-                        //                    {
-                        //                        connection.Open();
-                        ////enable foreign key enforcemnt for this connection
-                        //using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
-                        //{
-                        //    sqlitcmdPragma.ExecuteNonQuery();
-                        //}
-                        //                        string sWirePairsTableCommand = @"
-                        //            CREATE TABLE IF NOT EXISTS wire_pairs_table (
-                        //                wire_pair_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                        //                primary_wire_id INTEGER NOT NULL,
-                        //                secondary_wire_id INTEGER NOT NULL,
-                        //                CONSTRAINT fk_primary_wire FOREIGN KEY (primary_wire_id) REFERENCES wire_shapes_table(wire_id) ON DELETE CASCADE,
-                        //                CONSTRAINT fk_secondary_wire FOREIGN KEY (secondary_wire_id) REFERENCES wire_shapes_table(wire_id) ON DELETE CASCADE
-                        //            );";
-                        //                        using (SQLiteCommand cmd = new SQLiteCommand(sWirePairsTableCommand, connection))
-                        //                        {
-                        //                            cmd.ExecuteNonQuery();
+                        //create the wire_pairs_table
+                        using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                        {
+                            connection.Open();
+                            //enable foreign key enforcemnt for this connection
+                            using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                            {
+                                sqlitcmdPragma.ExecuteNonQuery();
+                            }
+                            string sWirePairsTableCommand = @"
+                                    CREATE TABLE IF NOT EXISTS wire_pairs_table (
+                                        WirePairID TEXT NOT NULL PRIMARY KEY,
+                                        PrimaryWireID TEXT NOT NULL,
+                                        SecondaryWireID TEXT NOT NULL,
+                                        CONSTRAINT fk_primary_wire FOREIGN KEY (PrimaryWireID) REFERENCES wire_shapes_table(WireID) ON DELETE CASCADE,
+                                        CONSTRAINT fk_secondary_wire FOREIGN KEY (SecondaryWireID) REFERENCES wire_shapes_table(WireID) ON DELETE CASCADE
+                                    );";
+                            using (SQLiteCommand cmd = new SQLiteCommand(sWirePairsTableCommand, connection))
+                            {
+                                cmd.ExecuteNonQuery();
 
-                        //                        }
+                            }
 
-                        //                    }
+                        }
 
+
+                        //create the terminal_block_table
+                        using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                        {
+                            connection.Open();
+                            //enable foreign key enforcemnt for this connection
+                            using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                            {
+                                sqlitcmdPragma.ExecuteNonQuery();
+                            }
+                            string sTerminalBlockTable = @"
+                                    CREATE TABLE IF NOT EXISTS terminal_block_table (
+                                    TerminalID TEXT NOT NULL PRIMARY KEY,
+                                    ProjectID TEXT NOT NULL,
+                                    FileID TEXT NOT NULL,
+                                    PageID TEXT NOT NULL,
+                                    Color TEXT,
+                                    ShapeText TEXT
+                                    );";
+                            using (SQLiteCommand cmd = new SQLiteCommand(sTerminalBlockTable, connection))
+                            {
+                                cmd.ExecuteNonQuery();
+
+                            }
+                        }
+
+                        //create the wiring_end_device
+                        using (SQLiteConnection connection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                        {
+                            connection.Open();
+                            //enable foreign key enforcemnt for this connection
+                            using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", connection))
+                            {
+                                sqlitcmdPragma.ExecuteNonQuery();
+                            }
+                            string sTerminalBlockTable = @"
+                                    CREATE TABLE IF NOT EXISTS wiring_end_device_table (
+                                    DeviceID TEXT NOT NULL PRIMARY KEY,
+                                    ProjectID TEXT NOT NULL,
+                                    FileID TEXT NOT NULL,
+                                    PageID TEXT NOT NULL,
+                                    TermCount INTEGER NOT NULL,
+                                    Tag TEXT
+                                    );";
+                            using (SQLiteCommand cmd = new SQLiteCommand(sTerminalBlockTable, connection))
+                            {
+                                cmd.ExecuteNonQuery();
+
+                            }
+                        }
                     }
                     else
                     {
@@ -354,7 +430,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     MessageBox.Show("Database directory and database exist", "VisAssist");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in InitializeDatabase " + ex.Message, "VisAssist");
             }
@@ -844,12 +920,70 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return new MultipleRecordUpdates(ruRecordsToUpdate);
         }
 
+        internal static void SyncDBWithFile(Visio.Document ovDocument, string sVisAssistFolderPath)
+        {
+            //make sure the db is pointing towards correct location 
+            DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+
+            string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+            List<string> lstPages = new List<string>();
+            //we are given the root project folderpath sVisAssistFolderPath
+            //and the document ovDocument
+            //create a collection of the pages and the shapes to confirm they exist in the db...
+            foreach (Visio.Page ovPage in ovDocument.Pages)
+            {
+                string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+
+                //check if that record exists in the db
+                bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
+                if (!bDoesRecordExist)
+                {
+                    //this is a freak accident add the record to the db...
+                    PageUtilities.AddPageToDatabase(ovPage, sProjectID);
+
+                }
+                //add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
+                lstPages.Add(sPageID);
+            }
 
 
+            //now check if any records exist in db that don't in lstPages then delete them from the db...
+            PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
+            List<string> lstPagesToRemove = new List<string>();
+            foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
+            {
+                string sPageID = ru.sId;
+                if (lstPages.Contains(sPageID))
+                {
+                    //the page exists in visio and in the db...
+                }
+                else
+                {
+                    //the page exists in the db and not in visio, we want to delete it from the db
+                    lstPagesToRemove.Add(sPageID);
+                }
+            }
 
+            if (lstPagesToRemove.Count > 0)
+            {
+                //we have records in our pages table that don't actually exist-go delete them from db...
+                //build a delete sql for each record...
+                List<RecordUpdate> ruRecords = new List<RecordUpdate>();
+                foreach (string sPageID in lstPagesToRemove)
+                {
+                    RecordUpdate ru = new RecordUpdate();
+                    ru.sId = sPageID;
+                    ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
+                    ru.odictColumnValues = null;
 
+                    ruRecords.Add(ru);
+                }
 
+                MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
+                BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
+            }
 
+        }
     }
 
 

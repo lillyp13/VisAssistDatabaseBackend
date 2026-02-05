@@ -331,6 +331,9 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                     ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
 
+
+                    //we need to check to make sure that the visio file and the db are in sync 
+                    DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
                 }
                 //otherwise this is not a visassist project...
 
@@ -365,7 +368,10 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     var AddIn = Globals.ThisAddIn;
                     AddIn.StartSinksForDoc(ovThisVisioDocument);
 
+                    string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovThisVisioDocument);
 
+                    //we need to check to make sure that the visio file and the db are in sync 
+                    DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
 
 
                 }
