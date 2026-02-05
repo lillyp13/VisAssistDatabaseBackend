@@ -87,14 +87,13 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
 
             string sManifestDirectoryPath = Path.Combine(sProjectPath, sManifestDirectoryName);
             bool bManifestDirectoryExists = ManifestDirectoryExists(sProjectPath);
-            bool bManifestFileExists = ManifestFileExists(sManifestDirectoryPath);
-
-           
 
             try
             {
                 if (bManifestDirectoryExists)
                 {
+                    bool bManifestFileExists = ManifestFileExists(sManifestDirectoryPath);
+
                     if (bManifestFileExists)
                     {
                         //we can only read manifestfile if the file exts....using the file to check if it is a visassist project but if they don't exist we need to abort earleir....
@@ -157,9 +156,24 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
                 if (oDictManifestData == null || oDictManifestData.Count == 0) return false;
                 if (oDictManifestData.ContainsKey("ApplicationName") && oDictManifestData["ApplicationName"] == sApplicationName)
                 {
-                    if (oDictManifestData.ContainsKey("ProjectId") && !string.IsNullOrEmpty(oDictManifestData["ProjectId"]))
-                        //Logging: Manifest corresponds to a valid VisAssist project
-                        return true;
+                    if (oDictManifestData.ContainsKey("ProjectID") && !string.IsNullOrEmpty(oDictManifestData["ProjectID"]))
+                    {
+                        string sDbProjectId = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("ProjectID");
+                        string sManifestProjectId = oDictManifestData["ProjectID"].ToString();
+                        if (sDbProjectId == sManifestProjectId)
+                        {
+                            //Logging: Manifest ProjectId matches the Database ProjectId
+                            return true;
+                        }
+
+                        //Logging: Manifest ProjectId does not match the Database ProjectId
+
+                        return false;
+                    }
+
+                    //Logging: Manifest ProjectId is missing or invalid
+
+                    return false;
                 }
 
                 //Logging: Manifest does not correspond to a valid VisAssist project
