@@ -373,7 +373,11 @@ namespace VisAssistDatabaseBackEnd
 
                             if (sFileName != null && sFileName != "")
                             {
-                                FileUtilities.UpdateFileName(sFileName);
+                                if(sFileName != sCurrentName) //make sure the file name is different than when it came in...
+                                {
+                                    FileUtilities.UpdateFileName(sFileName);
+                                }
+                                
                             }
                         }
                     }

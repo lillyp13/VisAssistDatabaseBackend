@@ -124,6 +124,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 switch(sClass)
                 {
                     case "NewWire":
+                    case "SmartWire":
                         {
                             ShapesUtilities.AddWireToDatabase(ovShape);
                             break;
@@ -157,6 +158,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 switch (sClass)
                 {
                     case "NewWire":
+                    case "SmartWire":
                         {
                             ShapesUtilities.DeleteWireFromDatabase(ovShape);
                             break;

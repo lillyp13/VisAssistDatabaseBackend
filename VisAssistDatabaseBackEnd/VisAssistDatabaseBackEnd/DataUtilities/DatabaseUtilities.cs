@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Runtime.Remoting.Lifetime;
+using System.Security.Cryptography;
 using System.Security.Policy;
 using System.Text;
 using System.Windows.Forms;
@@ -89,7 +91,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 public const string sWiringEndDeviceTable = "wiring_end_device_table";
                 public const string sWiringEndDeviceTablePK = "DeviceID";
-                
+
 
                 public static readonly string[] saWiringEndDeviceColumns = new string[]
                 {
@@ -168,7 +170,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             connection.Open();
                             string sProjectTableCommand = @"
                 CREATE TABLE IF NOT EXISTS project_table (
-                    Id TEXT PRIMARY KEY,
+                    ProjectID TEXT PRIMARY KEY,
                     ProjectName TEXT NOT NULL,
                     CustomerName TEXT,
                     CreatedDate TEXT NOT NULL,
@@ -228,7 +230,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     IgnoreWireColor INTEGER DEFAULT 0,
                     AllowDuplicateTags INTEGER DEFAULT 0,
                     ShowPointData INTEGER DEFAULT 0,
-                    FOREIGN KEY(ProjectID) REFERENCES project_table(Id) ON DELETE CASCADE
+                    FOREIGN KEY(ProjectID) REFERENCES project_table(ProjectID) ON DELETE CASCADE
                 );
                 ";
                             using (SQLiteCommand cmd = new SQLiteCommand(sFileTableCommand, connection))
@@ -264,7 +266,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     Class TEXT,
                     Orientation TEXT,
                     Scale TEXT,
-                    FOREIGN KEY(ProjectID) REFERENCES project_table(Id) ON DELETE CASCADE,
+                    FOREIGN KEY(ProjectID) REFERENCES project_table(ProjectID) ON DELETE CASCADE,
                     FOREIGN KEY(FileID) REFERENCES files_table(FileID) ON DELETE CASCADE
                 );
                 ";
@@ -289,15 +291,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             }
                             string sWireTableCommand = @"
                         CREATE TABLE IF NOT EXISTS wire_shapes_table(
-                            WireID TEXT NOT NULL,
-                            ProjectID TEXT NOT NULL,
-                            FileID TEXT NOT NULL,
+                            ShapeID TEXT NOT NULL,
                             PageID TEXT NOT NULL,
                             WirePairID TEXT NOT NULL,
-                            SystemID INTEGER,
                             ConnectionID INTEGER,
                             WireRole TEXT NOT NULL,
-                            Tag TEXT,
                             Version TEXT,
                             Class TEXT,
                             WireLabel TEXT,
@@ -316,19 +314,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             Conductor8Label TEXT,
                             Conductor9Label TEXT,
                             Conductor10Label TEXT,
-                            ShowShield INTEGER NOT NULL,
-                            ShieldTop INTEGER,
-                            ShieldBottom INTEGER,
+                            Shield TEXT,
                             PRIMARY KEY(WireID),
                             CONSTRAINT WirePairsWireShapes
                                 FOREIGN KEY (WirePairID) REFERENCES wire_pairs_table (WirePairID) ON DELETE CASCADE,
-                            CONSTRAINT project_info_wire_shapes
-                                FOREIGN KEY (ProjectID) REFERENCES project_table (Id) ON DELETE CASCADE,
                             CONSTRAINT pages_wire_shapes
-                                FOREIGN KEY (PageID) REFERENCES pages_table (PageID) ON DELETE CASCADE,
-                            CONSTRAINT visio_files_wire_shapes
-                                FOREIGN KEY (FileID) REFERENCES files_table (FileID) ON DELETE CASCADE
-                        );";
+                                FOREIGN KEY (PageID) REFERENCES pages_table (PageID) ON DELETE CASCADE
+                            );";
 
                             //HAVEN'T ADDED THE CONNECTIONS TABLE YET...
                             //CONSTRAINT connections_wire_shapes
@@ -356,8 +348,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                         WirePairID TEXT NOT NULL PRIMARY KEY,
                                         PrimaryWireID TEXT NOT NULL,
                                         SecondaryWireID TEXT NOT NULL,
-                                        CONSTRAINT fk_primary_wire FOREIGN KEY (PrimaryWireID) REFERENCES wire_shapes_table(WireID) ON DELETE CASCADE,
-                                        CONSTRAINT fk_secondary_wire FOREIGN KEY (SecondaryWireID) REFERENCES wire_shapes_table(WireID) ON DELETE CASCADE
+                                        CONSTRAINT fk_primary_wire FOREIGN KEY (PrimaryWireID) REFERENCES wire_shapes_table(ShapeID) ON DELETE CASCADE,
+                                        CONSTRAINT fk_secondary_wire FOREIGN KEY (SecondaryWireID) REFERENCES wire_shapes_table(ShapeID) ON DELETE CASCADE
                                     );";
                             using (SQLiteCommand cmd = new SQLiteCommand(sWirePairsTableCommand, connection))
                             {
@@ -379,12 +371,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             }
                             string sTerminalBlockTable = @"
                                     CREATE TABLE IF NOT EXISTS terminal_block_table (
-                                    TerminalID TEXT NOT NULL PRIMARY KEY,
-                                    ProjectID TEXT NOT NULL,
-                                    FileID TEXT NOT NULL,
+                                    ShapeID TEXT NOT NULL PRIMARY KEY,
                                     PageID TEXT NOT NULL,
                                     Color TEXT,
-                                    ShapeText TEXT
+                                    ShapeText TEXT,
+                                    XLocation REAL NOT NULL,
+                                    YLocation REAL NOT NULL
                                     );";
                             using (SQLiteCommand cmd = new SQLiteCommand(sTerminalBlockTable, connection))
                             {
@@ -404,7 +396,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             }
                             string sTerminalBlockTable = @"
                                     CREATE TABLE IF NOT EXISTS wiring_end_device_table (
-                                    DeviceID TEXT NOT NULL PRIMARY KEY,
+                                    ShapeID TEXT NOT NULL PRIMARY KEY,
                                     ProjectID TEXT NOT NULL,
                                     FileID TEXT NOT NULL,
                                     PageID TEXT NOT NULL,
@@ -840,6 +832,62 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+        internal static MultipleRecordUpdates GetRecordInformation(string sTableName, string sRecordID)
+        {
+            MultipleRecordUpdates mruRecordToReturn = new MultipleRecordUpdates();
+            try
+            {
+                 
+                //based on the table get the pK and then gather all the information for the columns in that row
+                string sPK = GetPrimaryKey(sTableName);
+
+                string sSql = $@"SELECT * FROM [{sTableName}] WHERE [{sPK}] = @Id";
+
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
+                    {
+                        sqlitecmdCommand.Parameters.AddWithValue("@Id", sRecordID);
+                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
+                        {
+                            if (!sqlitereadReader.Read())
+                                throw new Exception("Record not found");
+                            Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
+
+                            for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                            {
+                                string sColumnName = sqlitereadReader.GetName(i);
+
+                                if (sColumnName.Equals(DatabaseUtilities.SqlTables.PagesTable.sPagesTablePK, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    continue; // PK not included in update dictionary
+                                }
+
+                                oDictColumnValues[sColumnName] = sqlitereadReader.IsDBNull(i) ? null : sqlitereadReader.GetValue(i).ToString();
+                            }
+
+                            RecordUpdate ru = new RecordUpdate();
+                            ru.sPrimaryKeyColumn = sPK;
+                            ru.sId = sRecordID;
+                            ru.odictColumnValues = oDictColumnValues;
+
+                            mruRecordToReturn.ruRecords = new List<RecordUpdate>
+                            {
+                                ru
+                            };
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in GetRecordInformation " + ex.Message, "VisAssist");
+                return mruRecordToReturn;
+            }
+            return mruRecordToReturn;
+        }
 
 
 
@@ -900,13 +948,34 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     // if only primary key exists, nothing changed
                     if (odictChanges.Count > 0)
                     {
+                        //if the only thing that has "changed" is the lastmodifieddate then don't update it we didn't actually change anything
+                        if(odictChanges.Count == 1)
+                        {
+                            //only continue if the column is not lastmodfieddate
+                            if (odictChanges.ContainsKey("LastModifiedDate"))
+                            {
+                               
+                            }
+                            else
+                            {
+                                RecordUpdate ruUpdate = new RecordUpdate();
+                                ruUpdate.sPrimaryKeyColumn = ruBase.sPrimaryKeyColumn;
+                                ruUpdate.sId = ruBase.sId;
+                                ruUpdate.odictColumnValues = odictChanges;
 
-                        RecordUpdate ruUpdate = new RecordUpdate();
-                        ruUpdate.sPrimaryKeyColumn = ruBase.sPrimaryKeyColumn;
-                        ruUpdate.sId = ruBase.sId;
-                        ruUpdate.odictColumnValues = odictChanges;
+                                ruRecordsToUpdate.Add(ruUpdate);
+                            }
+                        }
+                        else
+                        {
+                            RecordUpdate ruUpdate = new RecordUpdate();
+                            ruUpdate.sPrimaryKeyColumn = ruBase.sPrimaryKeyColumn;
+                            ruUpdate.sId = ruBase.sId;
+                            ruUpdate.odictColumnValues = odictChanges;
 
-                        ruRecordsToUpdate.Add(ruUpdate);
+                            ruRecordsToUpdate.Add(ruUpdate);
+                        }
+                        
                     }
                 }
             }
@@ -925,64 +994,96 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //make sure the db is pointing towards correct location 
             DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
-            string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-            List<string> lstPages = new List<string>();
-            //we are given the root project folderpath sVisAssistFolderPath
-            //and the document ovDocument
-            //create a collection of the pages and the shapes to confirm they exist in the db...
-            foreach (Visio.Page ovPage in ovDocument.Pages)
+            CheckPageExistence(ovDocument, sVisAssistFolderPath);
+
+
+
+        }
+
+        private static void CheckPageExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
+        {
+            try
             {
-                string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                //this first part checks to see if the all the pages in the visio file exist in the db and if their information is correct...
 
-                //check if that record exists in the db
-                bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
-                if (!bDoesRecordExist)
+                string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                List<string> lstPages = new List<string>();
+                //we are given the root project folderpath sVisAssistFolderPath
+                //and the document ovDocument
+                //create a collection of the pages and the shapes to confirm they exist in the db...
+                foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
-                    //this is a freak accident add the record to the db...
-                    PageUtilities.AddPageToDatabase(ovPage, sProjectID);
+                    string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
+                    //check if that record exists in the db
+                    bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
+                    if (!bDoesRecordExist)
+                    {
+                        //this is a freak accident add the record to the db...
+                        PageUtilities.AddPageToDatabase(ovPage, sProjectID);
+
+                    }
+                    else
+                    {
+                        //the record exists, we want to make sure that the information in the db matches the information in the visio file
+                        MultipleRecordUpdates mruBaseFileRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
+                        //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
+                        MultipleRecordUpdates mruDBRecord = GetRecordInformation(SqlTables.PagesTable.sPagesTable, sPageID);
+                        if (mruDBRecord.ruRecords != null)
+                        {
+                            MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
+                            if (mruRecordToUpdate.ruRecords.Count > 0)
+                            {
+                                BuildUpdateSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruBaseFileRecord);
+                            }
+                        }
+
+                    }
+                    //add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
+                    lstPages.Add(sPageID);
                 }
-                //add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
-                lstPages.Add(sPageID);
+
+                //This checks to see if we need to delete any records from the DB
+                //now check if any records exist in db that don't in lstPages then delete them from the db...
+                PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
+                List<string> lstPagesToRemove = new List<string>();
+                foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
+                {
+                    string sPageID = ru.sId;
+                    if (lstPages.Contains(sPageID))
+                    {
+                        //the page exists in visio and in the db...
+                    }
+                    else
+                    {
+                        //the page exists in the db and not in visio, we want to delete it from the db
+                        lstPagesToRemove.Add(sPageID);
+                    }
+                }
+
+                if (lstPagesToRemove.Count > 0)
+                {
+                    //we have records in our pages table that don't actually exist-go delete them from db...
+                    //build a delete sql for each record...
+                    List<RecordUpdate> ruRecords = new List<RecordUpdate>();
+                    foreach (string sPageID in lstPagesToRemove)
+                    {
+                        RecordUpdate ru = new RecordUpdate();
+                        ru.sId = sPageID;
+                        ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
+                        ru.odictColumnValues = null;
+
+                        ruRecords.Add(ru);
+                    }
+
+                    MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
+                    BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
+                }
             }
-
-
-            //now check if any records exist in db that don't in lstPages then delete them from the db...
-            PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
-            List<string> lstPagesToRemove = new List<string>();
-            foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
+            catch (Exception ex)
             {
-                string sPageID = ru.sId;
-                if (lstPages.Contains(sPageID))
-                {
-                    //the page exists in visio and in the db...
-                }
-                else
-                {
-                    //the page exists in the db and not in visio, we want to delete it from the db
-                    lstPagesToRemove.Add(sPageID);
-                }
+                MessageBox.Show("Error in CheckFileExistence " + ex.Message, "VisAssist");
             }
-
-            if (lstPagesToRemove.Count > 0)
-            {
-                //we have records in our pages table that don't actually exist-go delete them from db...
-                //build a delete sql for each record...
-                List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                foreach (string sPageID in lstPagesToRemove)
-                {
-                    RecordUpdate ru = new RecordUpdate();
-                    ru.sId = sPageID;
-                    ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
-                    ru.odictColumnValues = null;
-
-                    ruRecords.Add(ru);
-                }
-
-                MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
-                BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
-            }
-
         }
     }
 

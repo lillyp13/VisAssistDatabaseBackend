@@ -32,6 +32,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 //will also need to add it to the wire_pairs_table....
                 //this gets triggered when the user drops a wire on the page, do we drop another one which would be our secondary wire...?
+
                 MultipleRecordUpdates oWirePairRecord = BuildWirePairInfo(ovShape);
             }
         }
@@ -74,7 +75,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             Visio.Document ovDoc = ovShape.ContainingPage.Document;
             string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
             string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-            string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+            string sPageID = ovShape.Cells["User.PageID"].get_ResultStr(0);
 
             string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
 
@@ -95,17 +96,16 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             string sConductor10 = ovShape.Cells["User.Conductor10AutoLabel"].get_ResultStr(0);
 
             string sID = "";
-            if (ovShape.CellExists["User.ID", 0] == -1)
+            if (ovShape.CellExists["User.ShapeID", 0] == -1)
             {
-                sID = ovShape.Cells["User.ID"].get_ResultStr(0);
+                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+                if(sID == "")
+                {
+                    sID = GenerateShapeID(sProjectID, sFileID, sPageID, ovShape.Name, DateTime.Now);
+                    ovShape.Cells["User.ShapeID"].Formula = "\"" + sID + "\"";
+                }
             }
-            else
-            {
-                ovShape.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ID", 0);
-                sID = GenerateShapeID(sProjectID, sFileID, sPageID, ovShape.Name, DateTime.Now);
-                ovShape.Cells["User.ID"].Formula = "\"" + sID + "\"";
-            }
-
+           
 
 
             Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
@@ -115,14 +115,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             //add the WirePairID
             oDictFileValues.Add("WirePairID", "");
-            //add SystemID
-            oDictFileValues.Add("SystemID", "");
             //add the ConnectionID
             oDictFileValues.Add("ConnectionID", "");
 
             oDictFileValues.Add("WireRole", sWireRole);
-            //add the tag? is this from user cells?
-            oDictFileValues.Add("Tag", "");
+    
 
             oDictFileValues.Add("Version", sVersion);
             oDictFileValues.Add("Class", sClass);
@@ -154,11 +151,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             oDictFileValues.Add("Conductor10Label", sConductor10);
 
             //add the show shield
-            oDictFileValues.Add("ShowShield", "");
-            //add the sheildtop
-            oDictFileValues.Add("ShieldTop", "");
-            //add the shieldbottom
-            oDictFileValues.Add("ShieldBottom", "");
+            oDictFileValues.Add("Shield", "");
+         
 
 
 
