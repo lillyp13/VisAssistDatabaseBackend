@@ -12,7 +12,7 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
         static string sVersion = "1.0.0";
         static string sCreatedBy = "VisAssist Application";
         static string sProjectName;
-        static string sProjectId;
+        static string sProjectID;
         static string sImportantNote = "This manifest is auto-generated. Do not modify or delete otherwise, the application will become unstable and system errors will occur.";
         static string sProjectPath; //path to the VisAssist project directory
         static string sManifestDirectoryName = ".visassist";
@@ -31,7 +31,7 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             {
                 ProjectManifest.sProjectName = sProjectName;
                 ProjectManifest.sProjectPath = sProjectPath;
-                sProjectId = sProjectID;
+                ProjectManifest.sProjectID = sProjectID;
 
                 string sManifestDirectoryPath = Path.Combine(sProjectPath, sManifestDirectoryName);
                 Directory.CreateDirectory(sManifestDirectoryPath);
@@ -56,7 +56,7 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             {
                 DatabaseConfig.BindToActiveDocument(sProjectPath);
                 string sProjectName = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("ProjectName");
-                string sProjectID = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("Id");
+                string sProjectID = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("ProjectID");
 
                 bool bManifestValid = ManifestValidations(sProjectPath);
                 if (!bManifestValid)
@@ -290,7 +290,7 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
                 {
                     ApplicationName = sApplicationName,
                     Version = sVersion,
-                    ProjectId = sProjectId,
+                    ProjectID = sProjectID,
                     CreatedOn = DateTime.Parse(DateTime.Now.ToString()),
                     CreatedBy = sCreatedBy,
                     ImportantNote = sImportantNote

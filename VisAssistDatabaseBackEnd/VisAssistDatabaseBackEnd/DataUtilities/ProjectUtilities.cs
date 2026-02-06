@@ -495,7 +495,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error in GetProjectID " + ex.Message, "VisAssist");
+                MessageBox.Show("Error in GetColumnInfoInProjectTableFromDatabase " + ex.Message, "VisAssist");
             }
             return "";
         }

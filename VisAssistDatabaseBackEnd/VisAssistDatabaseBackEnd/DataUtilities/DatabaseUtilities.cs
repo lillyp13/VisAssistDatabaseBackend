@@ -27,7 +27,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             public struct ProjectTable
             {
                 public const string sProjectTable = "project_table";
-                public const string sProjectTablePK = "Id";
+                public const string sProjectTablePK = "ProjectID";
                 //don't know if i'll ever need to saProjectColumns...
                 public static readonly string[] saProjectColumns = new string[]
                 {
@@ -62,7 +62,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             public struct WireShapesTable
             {
                 public const string sWireShapeTable = "wire_shapes_table";
-                public const string sWireShapeTablePK = "WireID";
+                public const string sWireShapeTablePK = "ShapeID";
 
                 public static readonly string[] saWireShapesColumns = new string[]
               {
@@ -75,10 +75,23 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             }
 
+            public struct WirePairsTable
+            {
+                public const string sWirePairsTable = "wire_pairs_table";
+                public const string sWirePairsTablePK = "WirePairID";
+
+                public static readonly string[] saWirePairsTableColumns
+                    = new string[]
+               {
+                "WirePairID", "PrimaryWireID", "SecondaryWireID"
+               };
+
+            }
+
             public struct TerminalBlocksTable
             {
                 public const string sTerminalBlockTable = "terminal_block_table";
-                public const string sTerminalBlockTablePK = "TerminalID";
+                public const string sTerminalBlockTablePK = "ShapeID";
 
 
                 public static readonly string[] saTerminalBlockColumns = new string[]
@@ -90,7 +103,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             public struct WiringEndDevice
             {
                 public const string sWiringEndDeviceTable = "wiring_end_device_table";
-                public const string sWiringEndDeviceTablePK = "DeviceID";
+                public const string sWiringEndDeviceTablePK = "ShapeID";
 
 
                 public static readonly string[] saWiringEndDeviceColumns = new string[]
@@ -106,7 +119,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 { PagesTable.sPagesTable, (PagesTable.sPagesTablePK, PagesTable.saPagesColumns) },
                 { WireShapesTable.sWireShapeTable, (WireShapesTable.sWireShapeTablePK, WireShapesTable.saWireShapesColumns) },
                 { TerminalBlocksTable.sTerminalBlockTable, (TerminalBlocksTable.sTerminalBlockTablePK, TerminalBlocksTable.saTerminalBlockColumns) },
-                { WiringEndDevice.sWiringEndDeviceTable, (WiringEndDevice.sWiringEndDeviceTablePK, WiringEndDevice.saWiringEndDeviceColumns) }
+                { WiringEndDevice.sWiringEndDeviceTable, (WiringEndDevice.sWiringEndDeviceTablePK, WiringEndDevice.saWiringEndDeviceColumns) },
+                { WirePairsTable.sWirePairsTable, (WirePairsTable.sWirePairsTablePK, WirePairsTable.saWirePairsTableColumns) }
+
             };
 
 
@@ -138,8 +153,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 case "wire_shapes_table": return SqlTables.WireShapesTable.sWireShapeTablePK;
                 case "terminal_block_table": return SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
                 case "wiring_end_device_table": return SqlTables.WiringEndDevice.sWiringEndDeviceTablePK;
+                case "wire_pairs_table": return SqlTables.WirePairsTable.sWirePairsTablePK;
 
-                default: return "Id"; // fallback
+                default: return "ProjectID"; // fallback
             }
         }
 
@@ -315,7 +331,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             Conductor9Label TEXT,
                             Conductor10Label TEXT,
                             Shield TEXT,
-                            PRIMARY KEY(WireID),
+                            PRIMARY KEY(ShapeID),
                             CONSTRAINT WirePairsWireShapes
                                 FOREIGN KEY (WirePairID) REFERENCES wire_pairs_table (WirePairID) ON DELETE CASCADE,
                             CONSTRAINT pages_wire_shapes
@@ -837,7 +853,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             MultipleRecordUpdates mruRecordToReturn = new MultipleRecordUpdates();
             try
             {
-                 
+
                 //based on the table get the pK and then gather all the information for the columns in that row
                 string sPK = GetPrimaryKey(sTableName);
 
@@ -881,7 +897,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in GetRecordInformation " + ex.Message, "VisAssist");
                 return mruRecordToReturn;
@@ -949,12 +965,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     if (odictChanges.Count > 0)
                     {
                         //if the only thing that has "changed" is the lastmodifieddate then don't update it we didn't actually change anything
-                        if(odictChanges.Count == 1)
+                        if (odictChanges.Count == 1)
                         {
                             //only continue if the column is not lastmodfieddate
                             if (odictChanges.ContainsKey("LastModifiedDate"))
                             {
-                               
+
                             }
                             else
                             {
@@ -975,7 +991,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                             ruRecordsToUpdate.Add(ruUpdate);
                         }
-                        
+
                     }
                 }
             }
@@ -1084,6 +1100,37 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 MessageBox.Show("Error in CheckFileExistence " + ex.Message, "VisAssist");
             }
+        }
+
+        internal static void CreateGridString(Visio.Page ovPage, out double dPageWidth, out double dPageHeight, out string sPageGrid)
+        {
+
+            //Re-Caculate the values for the different page sizes
+            //The new page will be the same size as the page that the user was on
+            dPageWidth = ovPage.PageSheet.get_Cells("PageWidth").get_Result(0);
+            dPageHeight = ovPage.PageSheet.get_Cells("PageHeight").get_Result(0);
+            double dStartingX = .3833;
+            double dStartingY = .3833;
+            double dUsableWidth = dPageWidth - 2 * dStartingX;
+            double dGridValue1 = dUsableWidth + dStartingX;
+            sPageGrid = "";
+            double dUsableHeight;
+
+
+            StringBuilder sb = new StringBuilder();
+
+
+            sb.Append(dUsableWidth.ToString());
+            sb.Append(";");
+            dUsableHeight = dPageHeight - 2 * dStartingY;
+            sb.Append(dUsableHeight.ToString());
+            sb.Append(";");
+            sb.Append(dStartingX.ToString());
+            sb.Append(";");
+            sb.Append(dStartingY.ToString());
+
+            sPageGrid = sb.ToString();
+
         }
     }
 

@@ -146,13 +146,13 @@ namespace VisAssistDatabaseBackEnd
 
 
 
-                //// Cell Modified (with custom property filter)
-                //var evtCellModified = docEventList.AddAdvise(
-                //    (short)((short)Visio.VisEventCodes.visEvtCell + (short)Visio.VisEventCodes.visEvtMod),
-                //    m_appSink,
-                //    string.Empty,
-                //    string.Empty);
-                //m_appEvents.Add(evtCellModified);
+                // Cell Changed possibly for movement as well as information change....
+                var evtCellModified = docEventList.AddAdvise(
+                    (short)((short)Visio.VisEventCodes.visEvtCell + (short)Visio.VisEventCodes.visEvtMod),
+                    m_appSink,
+                    string.Empty,
+                    string.Empty);
+                m_VisioEvents.Add(evtCellModified);
 
                 //// Filter only custom property cells
                 //System.Array filterArray = Array.CreateInstance(typeof(short), 7);
@@ -346,7 +346,7 @@ namespace VisAssistDatabaseBackEnd
                 //Cell Changed / modified 10240
                 case (short)((short)Visio.VisEventCodes.visEvtCell + (short)Visio.VisEventCodes.visEvtMod):
                     {
-                        //VisioApplication_CellChanged((Visio.Cell)subject);
+                       VisAssistDatabaseBackEnd.VisioUtilities.Application.VisioApplication_CellChanged((Visio.Cell)subject);
                         break;
                     }
 

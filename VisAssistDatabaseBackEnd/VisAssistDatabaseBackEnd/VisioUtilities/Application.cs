@@ -228,6 +228,63 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             }
         }
 
-        
+        internal static void VisioApplication_CellChanged(Visio.Cell ovCell)
+        {
+            //check what cell was changed...
+            //if it was the x or y recalculate the grid location...
+            string sCellName = ovCell.Name;
+            if (sCellName == "PinX" || sCellName == "PinY")
+            {
+                //this is movement....
+                //what shape is the cell apart of ?
+                Visio.Shape ovShape = ovCell.Shape;
+                if (ovShape.CellExists["User.Class", 0] == -1)
+                {
+                    //this is one of our shapes
+                    string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+
+                    switch(sClass)
+                    {
+                        case "TerminalBlock":
+                            {
+                               ShapesUtilities.UpdateTerminalBlockInDatabase(ovShape);
+
+                                break;
+                            }
+                        case "SmartWire":
+                            {
+                                break;
+                            }
+                        case "ADC End Device":
+                            {
+                                break;
+                            }
+                    }
+                }
+            }
+        }
+
+        //HELPER FUNCTION
+
+        /// <summary>
+        /// This function is used to properly format a string for use in a Visio cell or a SQL string.
+        /// Note: This version pads " characters to each end of the string.
+        static public string FormatStringForVisio(
+            string sInputString)
+        {
+            // return result
+            const string SINGLE_QUOTE = "\"";
+            const string DOUBLE_QUOTES = "\"\"";
+
+            if (string.IsNullOrEmpty(sInputString))
+                return "\"\"";   // Visio empty string literal
+
+            // replace each " char with double "" chars
+            sInputString = sInputString.Replace(SINGLE_QUOTE, DOUBLE_QUOTES);
+            sInputString = "\"" + sInputString + "\"";
+
+            // return result
+            return sInputString;
+        }
     }
 }

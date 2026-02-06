@@ -816,7 +816,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     //before we get the projectID from the db we need to bind the doucment to the db...
                     DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
-                    string sProjectID = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("Id");
+                    string sProjectID = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("ProjectID");
 
 
                     switch (sSource)
