@@ -578,7 +578,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         }
 
                         // 2️⃣ Update the FileCount in project_table
-                        string sUpdateSql = "UPDATE project_table SET FileCount = @FileCount WHERE Id = @ProjectID";
+                        string sUpdateSql = "UPDATE project_table SET FileCount = @FileCount WHERE ProjectId = @ProjectID";
 
                         using (SQLiteCommand updateCmd = new SQLiteCommand(sUpdateSql, sqliteConnection))
                         {
