@@ -81,7 +81,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         {
             try
             {
-               
+
                 //user is deleting the page
                 string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
                 string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
@@ -98,7 +98,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     oDelayedEvent.ovDocument = ovPage.Document;
                     Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
 
-                    
+
                 }
 
 
@@ -121,7 +121,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 string sProjectID = ovShape.ContainingPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
 
                 string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                switch(sClass)
+                switch (sClass)
                 {
                     case "NewWire":
                     case "SmartWire":
@@ -140,7 +140,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             break;
                         }
                 }
-                
+
 
             }
         }
@@ -178,7 +178,61 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
             }
         }
+        internal static void CellChanged(Visio.Cell ovCell)
+        {
+            //check what cell was changed...
+            //if it was the x or y recalculate the grid location...
 
+            Visio.Shape ovShape = ovCell.Shape;
+            string sClass = "";
+            if (ovShape.CellExists["User.Class", 0] == -1)
+            {
+                //this is one of our shapes
+                //this is one of our shapes
+                sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+
+                switch (sClass)
+                {
+                    case "TerminalBlock":
+                        {
+                            ShapesUtilities.UpdateTerminalBlockInDatabase(ovShape);
+
+                            break;
+                        }
+                    case "SmartWire":
+                        {
+                            break;
+                        }
+                    case "ADC End Device":
+                        {
+                            break;
+                        }
+                }
+            }
+
+
+            //the pinx or piny was not the cell that changed so it was not a movement but an update in the shapes cell...
+
+        }
+        internal static void TextChanged(Shape ovShape)
+        {
+            //we need this because the text is no longer stored in a cell...
+            string sClass = "";
+            if (ovShape.CellExists["User.Class", 0] == -1)
+            {
+                //this is one of our shapes
+                //this is one of our shapes
+                sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                switch (sClass)
+                {
+                    case "TerminalBlock":
+                        {
+                            ShapesUtilities.UpdateTerminalBlockInDatabase(ovShape);
+                            break;
+                        }
+                }
+            }
+        }
 
 
         //DOCUMENT LEVEL EVENTS
@@ -203,6 +257,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
         internal static void OnVisioIsIdle(Visio.Application subject)
         {
+            Globals.ThisAddIn.m_pendingShapeIds.Clear();
 
             int iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
 
@@ -224,42 +279,6 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 catch (Exception ex)
                 {
                     MessageBox.Show("Error in OnVisioIsIdle " + ex.Message, "VisAssist");
-                }
-            }
-        }
-
-        internal static void VisioApplication_CellChanged(Visio.Cell ovCell)
-        {
-            //check what cell was changed...
-            //if it was the x or y recalculate the grid location...
-            string sCellName = ovCell.Name;
-            if (sCellName == "PinX" || sCellName == "PinY")
-            {
-                //this is movement....
-                //what shape is the cell apart of ?
-                Visio.Shape ovShape = ovCell.Shape;
-                if (ovShape.CellExists["User.Class", 0] == -1)
-                {
-                    //this is one of our shapes
-                    string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-
-                    switch(sClass)
-                    {
-                        case "TerminalBlock":
-                            {
-                               ShapesUtilities.UpdateTerminalBlockInDatabase(ovShape);
-
-                                break;
-                            }
-                        case "SmartWire":
-                            {
-                                break;
-                            }
-                        case "ADC End Device":
-                            {
-                                break;
-                            }
-                    }
                 }
             }
         }
@@ -286,5 +305,6 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             // return result
             return sInputString;
         }
+
     }
 }

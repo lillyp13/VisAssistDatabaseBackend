@@ -970,6 +970,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
+                //DocumentLevel
                 //i need to go through and upate the fileID and the page ids and shapes ids...
                 string sNewFileID = GenerateFileID(sProjectID, sDestFilePath, DateTime.Now);
                 if (ovDoc.DocumentSheet.CellExists["User.FileID", 0] == 0)
@@ -977,13 +978,15 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "FileID", 0);
 
                 }
-                ovDoc.DocumentSheet.Cells["User.FileID"].Formula = "\"" + sNewFileID + "\"";
+                ovDoc.DocumentSheet.Cells["User.FileID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewFileID);
                 if (ovDoc.DocumentSheet.CellExists["User.ProjectID", 0] == 0)
                 {
                     ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ProjectID", 0);
 
                 }
-                ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = "\"" + sProjectID + "\"";
+                ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = VisioUtilities.Application.FormatStringForVisio(sProjectID);
+
+                //Page Level
                 foreach (Visio.Page ovPage in ovDoc.Pages)
                 {
                     string sNewPageID = PageUtilities.GeneratePageID(sProjectID, sNewFileID, ovPage.Name, DateTime.Now);
@@ -992,10 +995,18 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0);
 
                     }
-                    ovPage.PageSheet.Cells["User.PageID"].Formula = "\"" + sNewPageID + "\"";
+                    ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+
+                    //Shape Level
                     foreach (Visio.Shape ovShape in ovPage.Shapes)
                     {
-                        //update the shapes id....
+                        if (ovShape.CellExists["User.Class", 0] == -1)
+                        {
+                            //this is one of our shapes
+                            string sNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sNewFileID, sNewPageID, ovShape.Name, DateTime.Now);
+
+                            ovShape.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewShapeID);
+                        }
                     }
                 }
 
@@ -1306,8 +1317,28 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //add the pages...
                     foreach (Visio.Page ovPage in ovTempDoc.Pages)
                     {
-
                         PageUtilities.AddPageToDatabase(ovPage, sProjectID);
+                        
+                        foreach(Visio.Shape ovShape in ovPage.Shapes)
+                        {
+                            if (ovShape.CellExists["User.Class", 0] == -1)
+                            {
+                                //this is one of our shapes 
+                                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                                switch(sClass)
+                                {
+                                    case "TerminalBlock":
+                                        {
+                                            ShapesUtilities.AddTerminalBlockToDatabase(ovShape);
+                                            break;
+                                        }
+                                    case "SmartWire":
+                                        {
+                                            break;
+                                        }
+                                }
+                            }
+                        }
                     }
 
                     string sUniqueFilePath = "";

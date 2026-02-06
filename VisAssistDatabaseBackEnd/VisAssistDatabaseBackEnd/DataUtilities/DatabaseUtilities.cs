@@ -392,7 +392,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     Color TEXT,
                                     ShapeText TEXT,
                                     XLocation REAL NOT NULL,
-                                    YLocation REAL NOT NULL
+                                    YLocation REAL NOT NULL,
+                                    FOREIGN KEY(PageID) REFERENCES pages_table(PageID) ON DELETE CASCADE
                                     );";
                             using (SQLiteCommand cmd = new SQLiteCommand(sTerminalBlockTable, connection))
                             {
@@ -417,7 +418,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     FileID TEXT NOT NULL,
                                     PageID TEXT NOT NULL,
                                     TermCount INTEGER NOT NULL,
-                                    Tag TEXT
+                                    Tag TEXT,
+                                    FOREIGN KEY(PageID) REFERENCES pages_table(PageID) ON DELETE CASCADE
                                     );";
                             using (SQLiteCommand cmd = new SQLiteCommand(sTerminalBlockTable, connection))
                             {
@@ -1012,8 +1014,109 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             CheckPageExistence(ovDocument, sVisAssistFolderPath);
 
+            CheckShapeExistence(ovDocument, sVisAssistFolderPath);
 
 
+        }
+
+        private static void CheckShapeExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
+        {
+            //first part checks to see if all the shape in the visio file exist in the db and that their information is up to date...
+            string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+            //create a new list for each shape that has its own table...
+            List<string> lstTerminals = new List<string>();
+            List<string> lstWires = new List<string>();
+            foreach (Visio.Page ovPage in ovDocument.Pages)
+            {
+                foreach (Visio.Shape ovShape in ovPage.Shapes)
+                {
+                    string sClass = "";
+                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    {
+                        //this is one of our shapes
+                        sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                        string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+                        bool bDoesRecordExist;
+                        switch (sClass)
+                        {
+                            case "TerminalBlock":
+                                {
+                                    bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, sShapeID);
+                                    if (!bDoesRecordExist)
+                                    {
+                                        //the record doesn't exist for this visio shape-freak accident...
+                                        ShapesUtilities.AddTerminalBlockToDatabase(ovShape);
+                                    }
+                                    else
+                                    {
+                                        //the record exists, but we want to make sure that the information in the visio shape matches the db...
+                                        MultipleRecordUpdates mruBaseFileRecord = ShapesUtilities.BuildTerminalBlockInfo(ovShape);
+                                        //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
+                                        MultipleRecordUpdates mruDBRecord = GetRecordInformation(SqlTables.TerminalBlocksTable.sTerminalBlockTable, sShapeID);
+                                        if (mruDBRecord.ruRecords != null)
+                                        {
+                                            MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
+                                            if (mruRecordToUpdate.ruRecords.Count > 0)
+                                            {
+                                                BuildUpdateSqlForMultipleRecords(SqlTables.TerminalBlocksTable.sTerminalBlockTable, mruBaseFileRecord);
+                                            }
+                                        }
+                                    }
+                                    lstTerminals.Add(sShapeID);
+                                    //now we need to check to see if we need to delete any records in the db because they don't actually exist in the file...
+
+
+
+                                    break;
+                                }
+                            case "SmartWire":
+                                {
+                                    break;
+                                }
+                        }
+
+
+                    }
+
+                }
+            }
+
+
+            ShapesUtilities.GetShapesInTable(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
+            List<string> lstTerminalBlocksToRemove = new List<string>();
+            foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
+            {
+                string sShapeID = ru.sId;
+                if (lstTerminals.Contains(sShapeID))
+                {
+                    //the page exists in visio and in the db...
+                }
+                else
+                {
+                    //the page exists in the db and not in visio, we want to delete it from the db
+                    lstTerminalBlocksToRemove.Add(sShapeID);
+                }
+            }
+            if (lstTerminalBlocksToRemove.Count > 0)
+            {
+                //we have records in our pages table that don't actually exist-go delete them from db...
+                //build a delete sql for each record...
+                List<RecordUpdate> ruRecords = new List<RecordUpdate>();
+                foreach (string sShapeID in lstTerminalBlocksToRemove)
+                {
+                    RecordUpdate ru = new RecordUpdate();
+                    ru.sId = sShapeID;
+                    ru.sPrimaryKeyColumn = SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
+                    ru.odictColumnValues = null;
+
+                    ruRecords.Add(ru);
+                }
+
+                MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
+                BuildDeleteSqlForMultipleRecords(SqlTables.TerminalBlocksTable.sTerminalBlockTable, mruRecordsToDelete);
+            }
+
+            //the second part checks to see if all the records in the db exist in the visio file and if they don't delete them from the db...
         }
 
         private static void CheckPageExistence(Visio.Document ovDocument, string sVisAssistFolderPath)

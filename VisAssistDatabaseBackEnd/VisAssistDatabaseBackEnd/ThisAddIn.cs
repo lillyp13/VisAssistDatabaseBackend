@@ -25,6 +25,7 @@ namespace VisAssistDatabaseBackEnd
         public List<Visio.Event> m_VisioEvents = new List<Visio.Event>();
         public List<Visio.Event> m_VisioAppEvents = new List<Visio.Event>();
         public List<DelayedEvent> m_delayedEvents = new List<DelayedEvent>();
+        public  HashSet<int> m_pendingShapeIds = new HashSet<int>();
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
@@ -79,6 +80,18 @@ namespace VisAssistDatabaseBackEnd
                     m_appSink,
                     string.Empty,
                     string.Empty));
+
+
+                ////text changed
+                /// //// Shape Added
+                m_VisioEvents.Add(
+                docEventList.AddAdvise(
+                (short)Visio.VisEventCodes.visEvtCodeShapeExitTextEdit,
+                m_appSink,
+                string.Empty,
+                string.Empty));
+
+
 
                 // Shape Deleted
                 m_VisioEvents.Add(docEventList.AddAdvise(
@@ -315,7 +328,14 @@ namespace VisAssistDatabaseBackEnd
                 //ShapeAdded -32704
                 case (short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtShape):
                     {
-                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded((Visio.Shape)subject);
+                        Visio.Shape ovShape = (Visio.Shape)subject;
+                       
+                        if (!m_pendingShapeIds.Contains(ovShape.ID))
+                        {
+                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape);
+                            m_pendingShapeIds.Add(ovShape.ID);
+                        }
+                       
                         break;
                     }
 
@@ -346,9 +366,19 @@ namespace VisAssistDatabaseBackEnd
                 //Cell Changed / modified 10240
                 case (short)((short)Visio.VisEventCodes.visEvtCell + (short)Visio.VisEventCodes.visEvtMod):
                     {
-                       VisAssistDatabaseBackEnd.VisioUtilities.Application.VisioApplication_CellChanged((Visio.Cell)subject);
+                       VisAssistDatabaseBackEnd.VisioUtilities.Application.CellChanged((Visio.Cell)subject);
                         break;
                     }
+
+                //Text Changed 
+                case (short)Visio.VisEventCodes.visEvtCodeShapeExitTextEdit:
+                    {
+                        Visio.Shape ovShape = (Visio.Shape)subject;
+                        VisAssistDatabaseBackEnd.VisioUtilities.Application.TextChanged(ovShape);
+                        //OnShapeTextChanged(shape);
+                        break;
+                    }
+
 
                 //page changed / modified 8208
                 case (short)((short)VisEventCodes.visEvtMod + (short)Visio.VisEventCodes.visEvtPage):
