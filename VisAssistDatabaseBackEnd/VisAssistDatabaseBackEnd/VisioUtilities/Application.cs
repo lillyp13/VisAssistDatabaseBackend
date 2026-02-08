@@ -205,6 +205,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         }
                     case "ADC End Device":
                         {
+                            ShapesUtilities.UpdateEndDeviceInDatabase(ovShape);
                             break;
                         }
                 }

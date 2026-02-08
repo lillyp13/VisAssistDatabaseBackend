@@ -60,6 +60,8 @@
             this.grpWireInfo = this.Factory.CreateRibbonGroup();
             this.btnAddWireInfo = this.Factory.CreateRibbonButton();
             this.btnDeleteWireInfo = this.Factory.CreateRibbonButton();
+            this.grpStressTests = this.Factory.CreateRibbonGroup();
+            this.btnPageAndTerminals = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.grpInitialize.SuspendLayout();
             this.grpProjectInfo.SuspendLayout();
@@ -67,6 +69,7 @@
             this.grpPages.SuspendLayout();
             this.grpShapes.SuspendLayout();
             this.grpWireInfo.SuspendLayout();
+            this.grpStressTests.SuspendLayout();
             this.SuspendLayout();
             // 
             // tab1
@@ -78,6 +81,7 @@
             this.tab1.Groups.Add(this.grpPages);
             this.tab1.Groups.Add(this.grpShapes);
             this.tab1.Groups.Add(this.grpWireInfo);
+            this.tab1.Groups.Add(this.grpStressTests);
             this.tab1.Label = "TabAddIns";
             this.tab1.Name = "tab1";
             // 
@@ -245,6 +249,18 @@
             this.btnDeleteWireInfo.Name = "btnDeleteWireInfo";
             this.btnDeleteWireInfo.Visible = false;
             // 
+            // grpStressTests
+            // 
+            this.grpStressTests.Items.Add(this.btnPageAndTerminals);
+            this.grpStressTests.Label = "Stress Tests";
+            this.grpStressTests.Name = "grpStressTests";
+            // 
+            // btnPageAndTerminals
+            // 
+            this.btnPageAndTerminals.Label = "Add 50 Pages 10 Terminals Each";
+            this.btnPageAndTerminals.Name = "btnPageAndTerminals";
+            this.btnPageAndTerminals.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnPageAndTerminals_Click);
+            // 
             // Ribbon
             // 
             this.Name = "Ribbon";
@@ -265,6 +281,8 @@
             this.grpShapes.PerformLayout();
             this.grpWireInfo.ResumeLayout(false);
             this.grpWireInfo.PerformLayout();
+            this.grpStressTests.ResumeLayout(false);
+            this.grpStressTests.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -297,6 +315,8 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnChangeFileName;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnOpenProject;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton btnOpenFile;
+        internal Microsoft.Office.Tools.Ribbon.RibbonGroup grpStressTests;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnPageAndTerminals;
     }
 
     partial class ThisRibbonCollection

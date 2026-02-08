@@ -447,5 +447,11 @@ namespace VisAssistDatabaseBackEnd
                 //ProjectUtilities.OpenProject();
             }
         }
+
+        private void btnPageAndTerminals_Click(object sender, RibbonControlEventArgs e)
+        {
+            PageUtilities.StressTest();
+
+        }
     }
 }

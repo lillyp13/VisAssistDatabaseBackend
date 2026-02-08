@@ -310,7 +310,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             {
                 //going to see if this is a launch file...
                 string sClass = "";
-                if (ovThisVisioDocument.DocumentSheet.CellExists["User.Class", 0] == -1)
+                if (ovThisVisioDocument.DocumentSheet.CellExists["User.ProjectID", 0] == -1)
                 {
                     var AddIn = Globals.ThisAddIn;
                     AddIn.StartSinksForDoc(ovThisVisioDocument);
@@ -328,12 +328,16 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         FileUtilities.PopulateProjectFilesDictionaryBasedOnDirectory(sVisAssistFolderPath);
                         FileUtilities.OpenFileForm("Launch");
                     }
+                    else
+                    {
+                        //we need to check to make sure that the visio file and the db are in sync 
+                        DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
+                    }
 
                     ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
 
 
-                    //we need to check to make sure that the visio file and the db are in sync 
-                    DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
+                    
                 }
                 //otherwise this is not a visassist project...
 

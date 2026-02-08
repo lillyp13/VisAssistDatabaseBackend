@@ -25,7 +25,7 @@ namespace VisAssistDatabaseBackEnd
         public List<Visio.Event> m_VisioEvents = new List<Visio.Event>();
         public List<Visio.Event> m_VisioAppEvents = new List<Visio.Event>();
         public List<DelayedEvent> m_delayedEvents = new List<DelayedEvent>();
-        public  HashSet<int> m_pendingShapeIds = new HashSet<int>();
+        public List<string> m_pendingShapeIds = new List<string>();
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
@@ -329,13 +329,14 @@ namespace VisAssistDatabaseBackEnd
                 case (short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtShape):
                     {
                         Visio.Shape ovShape = (Visio.Shape)subject;
-                       
-                        if (!m_pendingShapeIds.Contains(ovShape.ID))
+                        string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                        if (!m_pendingShapeIds.Contains(sKey))
                         {
                             VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape);
-                            m_pendingShapeIds.Add(ovShape.ID);
+
+                            m_pendingShapeIds.Add(sKey);
                         }
-                       
+
                         break;
                     }
 
@@ -366,7 +367,18 @@ namespace VisAssistDatabaseBackEnd
                 //Cell Changed / modified 10240
                 case (short)((short)Visio.VisEventCodes.visEvtCell + (short)Visio.VisEventCodes.visEvtMod):
                     {
-                       VisAssistDatabaseBackEnd.VisioUtilities.Application.CellChanged((Visio.Cell)subject);
+                        Visio.Cell ovCell = ((Visio.Cell)subject);
+                        Visio.Shape ovShape = ovCell.Shape;
+                        if (ovShape != null)
+                        {
+                            string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                            if (!m_pendingShapeIds.Contains(sKey))
+                            {
+                                //we are not in the middle of adding a shape..
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.CellChanged((Visio.Cell)subject);
+                            }
+                        }
+
                         break;
                     }
 

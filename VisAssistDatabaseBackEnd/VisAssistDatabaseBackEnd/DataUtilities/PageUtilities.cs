@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Microsoft.Office.Interop.Visio;
+using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
@@ -717,6 +719,49 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 
                 //orientation and scale are also aspects we built for the user to change, not sure if i should build out something to act as it...
 
+            }
+        }
+
+        internal static void StressTest()
+        {
+            //this will add 50 pages and drop ten terminal blocks on each page
+            Visio.Document ovCurrentDoc = Globals.ThisAddIn.Application.ActiveDocument;
+
+            Visio.Document ovStencilDoc = null;
+
+            foreach (Visio.Document ovDoc in Globals.ThisAddIn.Application.Documents)
+            {
+                if (ovDoc.Type == Visio.VisDocumentTypes.visTypeStencil && ovDoc.Name.Equals("TestStencil.vssx", StringComparison.OrdinalIgnoreCase))
+                {
+                    ovStencilDoc = ovDoc;
+                    break;
+                }
+            }
+
+            Visio.Master ovTerminalBlockMaster = ovStencilDoc.Masters["TerminalBlock"];
+
+            if (ovCurrentDoc != null)
+            {
+                //add 50 visio pages and drop 10 terminals blocks on each page
+
+                for (int ithPage = 1; ithPage <= 50; ithPage++)
+                {
+                    Visio.Page ovPage = ovCurrentDoc.Pages.Add();
+                 
+                    double dX = 1.0;
+
+                    // Start at top of page
+                    double dY = ovPage.PageSheet.CellsU["PageHeight"].ResultIU - 0.5;
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        Visio.Shape ovShape = ovPage.Drop(ovTerminalBlockMaster, dX, dY);
+
+                        // Move y down by the shape's actual height
+                        double dHeight = ovShape.Cells["Height"].ResultIU;
+                        dY -= dHeight + 0.2; // small gap
+                    }
+                }
             }
         }
     }
