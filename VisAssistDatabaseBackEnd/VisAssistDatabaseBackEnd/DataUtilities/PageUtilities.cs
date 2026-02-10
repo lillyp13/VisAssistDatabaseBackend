@@ -1,6 +1,8 @@
 ﻿using Microsoft.Office.Interop.Visio;
+using MS.WindowsAPICodePack.Internal;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SQLite;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
@@ -8,6 +10,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
+using VisAssistDatabaseBackEnd.VisioUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
@@ -78,7 +81,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-                MultipleRecordUpdates mruRecordUpdates = BuildPageInformation(ovPage, sProjectID);
+                MultipleRecordUpdates mruRecordUpdates = BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
                 // Call delete
                 DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, mruRecordUpdates);
             }
@@ -177,7 +180,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             m_mruRecordsToCompare = new MultipleRecordUpdates(lstRecordUpdate);
 
             m_mruRecordsToUpdate = DatabaseUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
-            
+
 
 
 
@@ -216,11 +219,44 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
-        internal static void AddPageToDatabase(Visio.Page ovPage, string sProjectID)
+        internal static void AddPageToDatabase(Visio.Page ovPage, string sProjectID, string sSource)
         {
             try
             {
-                MultipleRecordUpdates oPageRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
+                MultipleRecordUpdates oPageRecord = new MultipleRecordUpdates();
+                switch (sSource)
+                {
+                    case "Visio":
+                        {
+                            oPageRecord = PageUtilities.BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
+                            break;
+                        }
+                    case "New":
+                        {
+                            oPageRecord = PageUtilities.BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
+                            //give it a new id...
+                            string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+
+                            string sNewPageID = GeneratePageID(sProjectID, sFileID, ovPage.Name, DateTime.Now);
+                            RecordUpdate ru = oPageRecord.ruRecords[0];
+                            ru.sId = sNewPageID;
+                            oPageRecord.ruRecords[0] = ru;
+                            //update the pages User.PageID with events off..
+                           
+                            //will need to create a delayed event to add the new ids to the page/shapes on the page...
+                            DelayedEvent oDelayedEvent = new DelayedEvent();
+                            oDelayedEvent.sOperationType = "UpdateIDs";
+                            oDelayedEvent.ovDocument = ovPage.Document;
+                            oDelayedEvent.ovPage = ovPage;
+                            oDelayedEvent.sPageID = sNewPageID;
+                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
+
+
+                            break;
+                        }
+                }
+               
                 DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, oPageRecord);
             }
             catch (Exception ex)
@@ -229,11 +265,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+       
         internal static void UpdatePageInDatabase(Visio.Page ovPage, string sProjectID)
         {
             try
             {
-                MultipleRecordUpdates oPageRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
+                MultipleRecordUpdates oPageRecord = PageUtilities.BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
                 DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, oPageRecord);
             }
             catch (Exception ex)
@@ -253,7 +290,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 PageUtilities.UpdateVisioPageName(pagesForm);
 
                 //build up the multiplerecordupate of the page 
-                MultipleRecordUpdates mruRecord = BuildPageInformation(ovPage, sProjectID);
+                MultipleRecordUpdates mruRecord = BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
 
                 //there is something to update
                 //sync with visio this is to simulate the actual event (user changes a page name in visio and it triggers the update to db 
@@ -272,7 +309,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
 
         }
-       
+
 
 
 
@@ -436,6 +473,41 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             }
         }
+
+
+        internal static string GetColumnInfoInPagesTableFromDatabase(string sColumnName, string sPageID)
+        {
+            try
+            {
+                string sSpecificPiece = "";
+                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    //logging here
+                    sqliteconConnection.Open();
+                    string sSQL = $"SELECT {sColumnName} FROM pages_table WHERE PageID = @PageID LIMIT 1";
+
+                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                    {
+                        sqlcmdCommand.Parameters.Add("@PageID", DbType.String).Value = sPageID;
+
+                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
+                        {
+                            if (sqlitereadReader.Read())
+                            {
+                                sSpecificPiece = sqlitereadReader[sColumnName]?.ToString();
+                                return sSpecificPiece;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetColumnInfoInPagesTableFromDatabase " + ex.Message, "VisAssist");
+            }
+            return "";
+        }
         internal static void GetAllPages()
         {
             //get all the pages in the pages_table
@@ -495,7 +567,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        internal static MultipleRecordUpdates BuildPageInformation(Visio.Page ovPage, string sProjectID)
+        internal static MultipleRecordUpdates BuildPageInfoBasedOnVisioPage(Visio.Page ovPage, string sProjectID)
         {
 
             //PageName
@@ -643,7 +715,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
                 return bCellsAdded;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in AddUserCellsToPage " + ex.Message, "VisAssist");
             }
@@ -662,7 +734,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //get the page information from visio 
                 string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
 
-                m_mruRecordsToUpdate = BuildPageInformation(ovPage, sProjectID);
+                m_mruRecordsToUpdate = BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
 
 
                 foreach (RecordUpdate ruRecord in m_mruRecordsToUpdate.ruRecords)
@@ -682,7 +754,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         }
                         else
                         {
-                            if(sColName == "PageID")
+                            if (sColName == "PageID")
                             {
                                 dgvRow.Cells[dgvCol.Index].Value = ruRecord.sId;
                             }
@@ -690,7 +762,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             {
                                 dgvRow.Cells[dgvCol.Index].Value = null; // or string.Empty if preferred
                             }
-                            
+
                         }
                     }
 
@@ -701,22 +773,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-      
+
         //simulates changing the page name in visio
         private static void UpdateVisioPageName(PagesForm pagesForm)
         {
             //gather the information for the current informtaion and apply it the pages shape sheet...
             Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
-            if(ovPage != null)
+            if (ovPage != null)
             {
                 string sPageName = pagesForm.dgvPages.Rows[0].Cells[1].Value.ToString();
-               // string sPageIndex = pagesForm.dgvPages.Rows[0].Cells[4].Value.ToString();
-               // string sLastModifiedDate = pagesForm.dgvPages.Rows[0].Cells[6].Value.ToString();
-                
+                // string sPageIndex = pagesForm.dgvPages.Rows[0].Cells[4].Value.ToString();
+                // string sLastModifiedDate = pagesForm.dgvPages.Rows[0].Cells[6].Value.ToString();
+
 
                 ovPage.Name = sPageName;
                 //ovPage.PageSheet.Cells["User.LastModifiedDate"].Formula = "\"" + sLastModifiedDate + "\"";
-                
+
                 //orientation and scale are also aspects we built for the user to change, not sure if i should build out something to act as it...
 
             }
@@ -747,7 +819,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 for (int ithPage = 1; ithPage <= 50; ithPage++)
                 {
                     Visio.Page ovPage = ovCurrentDoc.Pages.Add();
-                 
+
                     double dX = 1.0;
 
                     // Start at top of page
@@ -763,6 +835,57 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
             }
+        }
+
+        internal static List<string> PopulateVisioPageList(Visio.Document ovDocument)
+        {
+            List<string> lstPages = new List<string>();
+            try
+            {
+                foreach (Visio.Page ovPage in ovDocument.Pages)
+                {
+                    if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                    {
+                        string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                        lstPages.Add(sPageID);
+                    }
+                }
+                return lstPages;
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in PopulateVisioPageList " + ex.Message, "VisAssist");
+            }
+            return lstPages;
+        }
+
+        internal static List<string> PopulateShapesListBasedOnPage(Visio.Page ovPage, string sTableName)
+        {
+            List<string> lstResults = new List<string>();
+            //gather all the shapes in the table for the given page...
+            string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+            string sPk = DatabaseUtilities.GetPrimaryKey(sTableName);
+            //query all the shapes in the table for sPageID...
+            using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+            {
+                sqliteconConnection.Open();
+
+                string sSQL = $@"SELECT {sPk} FROM {sTableName} WHERE PageID = @PageID;";
+
+                using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                {
+                    sqlcmdCommand.Parameters.Add("@PageID", DbType.String).Value = sPageID;
+
+                    using (SQLiteDataReader reader = sqlcmdCommand.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            lstResults.Add(reader.GetString(0));
+                        }
+                    }
+                }
+            }
+            return lstResults;
         }
     }
 

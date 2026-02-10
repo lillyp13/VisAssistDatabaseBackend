@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Office.Interop.Visio;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -466,7 +467,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static bool CheckForDatabaseDirectory(string sFilePath)
         {
             bool bFolderAlreadyExists = false;
-            string sFolder = Path.GetDirectoryName(DatabaseConfig.DatabasePath);
+            string sFolder = System.IO.Path.GetDirectoryName(DatabaseConfig.DatabasePath);
             if (!Directory.Exists(sFolder))
             {
                 //the folder didn't exist
@@ -1019,7 +1020,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        private static void CheckShapeExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
+        internal static void CheckShapeExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
         {
             //first part checks to see if all the shape in the visio file exist in the db and that their information is up to date...
             string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
@@ -1037,27 +1038,32 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         //this is one of our shapes
                         sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
                         string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-                        bool bDoesRecordExist;
-                        switch (sClass)
+
+                        if (sShapeID != "")
                         {
-                            case "TerminalBlock":
-                                {
-                                    //this checks that all the visio termianl blocks have a db record entry and makes sure the information is up to date..
-                                    CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape, sShapeID, ref lstTerminals);
 
-                                    
+                            bool bDoesRecordExist;
+                            switch (sClass)
+                            {
+                                case "TerminalBlock":
+                                    {
+                                        //this checks that all the visio termianl blocks have a db record entry and makes sure the information is up to date..
+                                        CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape, sShapeID, ref lstTerminals);
 
-                                    break;
-                                }
-                            case "SmartWire":
-                                {
-                                    break;
-                                }
-                            case "ADC End Device":
-                                {
-                                    CheckShapeExistenceInDB(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape, sShapeID, ref lstEndDevices);
-                                    break;
-                                }
+
+
+                                        break;
+                                    }
+                                case "SmartWire":
+                                    {
+                                        break;
+                                    }
+                                case "ADC End Device":
+                                    {
+                                        CheckShapeExistenceInDB(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape, sShapeID, ref lstEndDevices);
+                                        break;
+                                    }
+                            }
                         }
 
 
@@ -1076,10 +1082,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //the second part checks to see if all the records in the db exist in the visio file and if they don't delete them from the db...
         }
 
-        private static void CheckShapeExistenceInVisio(string sTerminalBlockTable, Visio.Document ovDocument, ref List<string> lstShapes)
+        internal static void CheckShapeExistenceInVisio(string sTableName, Visio.Document ovDocument, ref List<string> lstShapes)
         {
-            ShapesUtilities.GetShapesInTable(sTerminalBlockTable, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
-            List<string> lstTerminalBlocksToRemove = new List<string>();
+            ShapesUtilities.GetShapesInTable(sTableName, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
+            List<string> lstShapesToRemove = new List<string>();
+            string sPK = GetPrimaryKey(sTableName);
             foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
             {
                 string sShapeID = ru.sId;
@@ -1090,30 +1097,30 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 else
                 {
                     //the page exists in the db and not in visio, we want to delete it from the db
-                    lstTerminalBlocksToRemove.Add(sShapeID);
+                    lstShapesToRemove.Add(sShapeID);
                 }
             }
-            if (lstTerminalBlocksToRemove.Count > 0)
+            if (lstShapesToRemove.Count > 0)
             {
                 //we have records in our pages table that don't actually exist-go delete them from db...
                 //build a delete sql for each record...
                 List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                foreach (string sShapeID in lstTerminalBlocksToRemove)
+                foreach (string sShapeID in lstShapesToRemove)
                 {
                     RecordUpdate ru = new RecordUpdate();
                     ru.sId = sShapeID;
-                    ru.sPrimaryKeyColumn = SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
+                    ru.sPrimaryKeyColumn = sPK;
                     ru.odictColumnValues = null;
 
                     ruRecords.Add(ru);
                 }
 
                 MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
-                BuildDeleteSqlForMultipleRecords(SqlTables.TerminalBlocksTable.sTerminalBlockTable, mruRecordsToDelete);
+                BuildDeleteSqlForMultipleRecords(sTableName, mruRecordsToDelete);
             }
         }
 
-        private static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> lstShapes)
+        internal static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> lstShapes)
         {
             bool bDoesRecordExist = DoesRecordExist(sTableName, sShapeID);
             string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
@@ -1130,6 +1137,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         }
                     case "ADC End Device":
                         {
+                            ShapesUtilities.AddWiringEndDeviceToDatabase(ovShape);
                             break;
                         }
                 }
@@ -1169,7 +1177,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             lstShapes.Add(sShapeID);
         }
 
-        private static void CheckPageExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
+        internal static void CheckPageExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
         {
             try
             {
@@ -1180,79 +1188,155 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //we are given the root project folderpath sVisAssistFolderPath
                 //and the document ovDocument
                 //create a collection of the pages and the shapes to confirm they exist in the db...
+                
                 foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
                     string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-
-                    //check if that record exists in the db
-                    bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
-                    if (!bDoesRecordExist)
-                    {
-                        //this is a freak accident add the record to the db...
-                        PageUtilities.AddPageToDatabase(ovPage, sProjectID);
-
-                    }
-                    else
-                    {
-                        //the record exists, we want to make sure that the information in the db matches the information in the visio file
-                        MultipleRecordUpdates mruBaseFileRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
-                        //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
-                        MultipleRecordUpdates mruDBRecord = GetRecordInformation(SqlTables.PagesTable.sPagesTable, sPageID);
-                        if (mruDBRecord.ruRecords != null)
-                        {
-                            MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
-                            if (mruRecordToUpdate.ruRecords.Count > 0)
-                            {
-                                BuildUpdateSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruBaseFileRecord);
-                            }
-                        }
-
-                    }
+                    CheckPageExistenceInDB(ovPage, sProjectID, sPageID);
                     //add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
                     lstPages.Add(sPageID);
+                    ////check if that record exists in the db
+                    //bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
+                    //if (!bDoesRecordExist)
+                    //{
+                    //    //this is a freak accident add the record to the db...
+                    //    PageUtilities.AddPageToDatabase(ovPage, sProjectID);
+
+                    //}
+                    //else
+                    //{
+                    //    //the record exists, we want to make sure that the information in the db matches the information in the visio file
+                    //    MultipleRecordUpdates mruBaseFileRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
+                    //    //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
+                    //    MultipleRecordUpdates mruDBRecord = GetRecordInformation(SqlTables.PagesTable.sPagesTable, sPageID);
+                    //    if (mruDBRecord.ruRecords != null)
+                    //    {
+                    //        MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
+                    //        if (mruRecordToUpdate.ruRecords.Count > 0)
+                    //        {
+                    //            BuildUpdateSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruBaseFileRecord);
+                    //        }
+                    //    }
+
+                    //}
+                    ////add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
+                    //lstPages.Add(sPageID);
                 }
+                
 
-                //This checks to see if we need to delete any records from the DB
-                //now check if any records exist in db that don't in lstPages then delete them from the db...
-                PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
-                List<string> lstPagesToRemove = new List<string>();
-                foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
-                {
-                    string sPageID = ru.sId;
-                    if (lstPages.Contains(sPageID))
-                    {
-                        //the page exists in visio and in the db...
-                    }
-                    else
-                    {
-                        //the page exists in the db and not in visio, we want to delete it from the db
-                        lstPagesToRemove.Add(sPageID);
-                    }
-                }
 
-                if (lstPagesToRemove.Count > 0)
-                {
-                    //we have records in our pages table that don't actually exist-go delete them from db...
-                    //build a delete sql for each record...
-                    List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                    foreach (string sPageID in lstPagesToRemove)
-                    {
-                        RecordUpdate ru = new RecordUpdate();
-                        ru.sId = sPageID;
-                        ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
-                        ru.odictColumnValues = null;
 
-                        ruRecords.Add(ru);
-                    }
+                CheckPageExistenceInVisio(ovDocument, ref lstPages);
+                ////This checks to see if we need to delete any records from the DB
+                ////now check if any records exist in db that don't in lstPages then delete them from the db...
+                //PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
+                //List<string> lstPagesToRemove = new List<string>();
+                //foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
+                //{
+                //    string sPageID = ru.sId;
+                //    if (lstPages.Contains(sPageID))
+                //    {
+                //        //the page exists in visio and in the db...
+                //    }
+                //    else
+                //    {
+                //        //the page exists in the db and not in visio, we want to delete it from the db
+                //        lstPagesToRemove.Add(sPageID);
+                //    }
+                //}
 
-                    MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
-                    BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
-                }
+                //if (lstPagesToRemove.Count > 0)
+                //{
+                //    //we have records in our pages table that don't actually exist-go delete them from db...
+                //    //build a delete sql for each record...
+                //    List<RecordUpdate> ruRecords = new List<RecordUpdate>();
+                //    foreach (string sPageID in lstPagesToRemove)
+                //    {
+                //        RecordUpdate ru = new RecordUpdate();
+                //        ru.sId = sPageID;
+                //        ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
+                //        ru.odictColumnValues = null;
+
+                //        ruRecords.Add(ru);
+                //    }
+
+                //    MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
+                //    BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
+                //}
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error in CheckPageExistence " + ex.Message, "VisAssist");
             }
+        }
+
+        internal static void CheckPageExistenceInVisio(Document ovDocument, ref List<string> lstPages)
+        {
+            //This checks to see if we need to delete any records from the DB
+            //now check if any records exist in db that don't in lstPages then delete them from the db...
+            PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
+            List<string> lstPagesToRemove = new List<string>();
+            foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
+            {
+                string sPageID = ru.sId;
+                if (lstPages.Contains(sPageID))
+                {
+                    //the page exists in visio and in the db...
+                }
+                else
+                {
+                    //the page exists in the db and not in visio, we want to delete it from the db
+                    lstPagesToRemove.Add(sPageID);
+                }
+            }
+
+            if (lstPagesToRemove.Count > 0)
+            {
+                //we have records in our pages table that don't actually exist-go delete them from db...
+                //build a delete sql for each record...
+                List<RecordUpdate> ruRecords = new List<RecordUpdate>();
+                foreach (string sPageID in lstPagesToRemove)
+                {
+                    RecordUpdate ru = new RecordUpdate();
+                    ru.sId = sPageID;
+                    ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
+                    ru.odictColumnValues = null;
+
+                    ruRecords.Add(ru);
+                }
+
+                MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
+                BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
+            }
+        }
+
+        internal static void CheckPageExistenceInDB(Visio.Page ovPage, string sProjectID, string sPageID)
+        {
+            //check if that record exists in the db
+            bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
+            if (!bDoesRecordExist)
+            {
+                //this is a freak accident add the record to the db...
+                PageUtilities.AddPageToDatabase(ovPage, sProjectID, "Visio");
+
+            }
+            else
+            {
+                //the record exists, we want to make sure that the information in the db matches the information in the visio file
+                MultipleRecordUpdates mruBaseFileRecord = PageUtilities.BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
+                //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
+                MultipleRecordUpdates mruDBRecord = GetRecordInformation(SqlTables.PagesTable.sPagesTable, sPageID);
+                if (mruDBRecord.ruRecords != null)
+                {
+                    MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
+                    if (mruRecordToUpdate.ruRecords.Count > 0)
+                    {
+                        BuildUpdateSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruBaseFileRecord);
+                    }
+                }
+
+            }
+           
         }
 
         internal static void CreateGridString(Visio.Page ovPage, out double dPageWidth, out double dPageHeight, out string sPageGrid)
@@ -1285,6 +1369,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             sPageGrid = sb.ToString();
 
         }
+
+       
     }
 
 
@@ -1367,7 +1453,7 @@ internal static class DatabaseConfig
 
         //sFolderPath = Path.GetDirectoryName(sFolderPath);
 
-        DatabasePath = Path.Combine(sFolderPath, "DB", "VisAssistBackEnd.db");
+        DatabasePath = System.IO.Path.Combine(sFolderPath, "DB", "VisAssistBackEnd.db");
         return true;
     }
 }

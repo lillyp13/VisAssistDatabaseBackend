@@ -26,6 +26,8 @@ namespace VisAssistDatabaseBackEnd
         public List<Visio.Event> m_VisioAppEvents = new List<Visio.Event>();
         public List<DelayedEvent> m_delayedEvents = new List<DelayedEvent>();
         public List<string> m_pendingShapeIds = new List<string>();
+        public List<string> m_pendingPageIds = new List<string>();
+        bool m_bIsPageDuplicating = false;
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
@@ -206,6 +208,7 @@ namespace VisAssistDatabaseBackEnd
                 //    string.Empty,
                 //    string.Empty));
 
+
                 // Page Deleted
                 m_VisioEvents.Add(docEventList.AddAdvise(
                    (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage),
@@ -343,7 +346,14 @@ namespace VisAssistDatabaseBackEnd
                 //ShapeDeleted 16448
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtShape):
                     {
-                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject);
+                        Visio.Shape ovShape = (Visio.Shape)subject;
+                        string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                        if (!m_pendingShapeIds.Contains(sKey))
+                        {
+                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject);
+                            m_pendingShapeIds.Add(sKey);
+                        }
+
                         break;
                     }
 
@@ -360,7 +370,18 @@ namespace VisAssistDatabaseBackEnd
                 //PageAdded -32752
                 case (short)((short)VisioEvents.visEvtAdd + (short)Visio.VisEventCodes.visEvtPage):
                     {
-                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
+                        Visio.Page ovPage = (Visio.Page)subject;
+
+                        string sKey = ovPage.ID + "|" + ovPage.Name;
+                        if (!m_pendingPageIds.Contains(sKey))
+                        {
+                            //if the page has shapes on it already this is a duplicate..
+                            m_bIsPageDuplicating = ovPage.Shapes.Count > 0;
+                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
+                            m_pendingPageIds.Add(sKey);
+                        }
+
+
                         break;
                     }
 
@@ -371,11 +392,25 @@ namespace VisAssistDatabaseBackEnd
                         Visio.Shape ovShape = ovCell.Shape;
                         if (ovShape != null)
                         {
-                            string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
-                            if (!m_pendingShapeIds.Contains(sKey))
+                            if (ovShape.ContainingPage != null)
                             {
-                                //we are not in the middle of adding a shape..
-                                VisAssistDatabaseBackEnd.VisioUtilities.Application.CellChanged((Visio.Cell)subject);
+                                string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+
+                                if (!m_pendingShapeIds.Contains(sKey))
+                                {
+                                    if (m_bIsPageDuplicating)
+                                    {
+                                        break;
+                                    }
+
+                                    if(Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                                    {
+                                        break;
+                                    }
+                                    //we are not in the middle of adding a shape..
+                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.CellChanged((Visio.Cell)subject);
+                                    m_pendingShapeIds.Add(sKey);
+                                }
                             }
                         }
 

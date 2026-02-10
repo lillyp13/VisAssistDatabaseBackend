@@ -20,6 +20,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         public string sNewValue;
         public Visio.Cell ovCell;
         public Visio.Shape ovOtherShape;
+        public string sPageID;
 
         public DelayedEvent() { }
 

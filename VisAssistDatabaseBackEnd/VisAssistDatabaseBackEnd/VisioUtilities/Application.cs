@@ -29,7 +29,38 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 if (bAdded)
                 {
                     //we haven't added the page yet...
-                    PageUtilities.AddPageToDatabase(ovVisioPage, sProjectID);
+                    PageUtilities.AddPageToDatabase(ovVisioPage, sProjectID, "Visio");
+                }
+                else
+                {
+                    //check to see if this is an undo/ by seeing if the pages ID exists in the db
+                    string sPageID = ovVisioPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    if (sPageID != "")
+                    {
+                        bool bDoesRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
+                        if (!bDoesRecordExist)
+                        {
+                            //need to add the page to the database...
+                            PageUtilities.AddPageToDatabase(ovVisioPage, sProjectID, "Visio");
+                            //will need to also add all the shapes on the page back to the db...
+                            ShapesUtilities.AddShapesToDatabase(ovVisioPage, sProjectID);
+                        }
+                        else
+                        {
+                            //the user has duplicated a page using visio...
+                            //we need to assign this page a new id and add it to the db as well as upate the ids of the shapes on the page...
+                            string sFileID = ovVisioPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+
+
+
+                            //i need to do this after as a processdelayed event i think....
+                            // FileUtilities.UpdatePageAndShapeIDs(ovVisioPage, sProjectID, sFileID);
+                            //now that all the ids are updated, we need to add the page and the shpaes...
+                            PageUtilities.AddPageToDatabase(ovVisioPage, sProjectID, "New");
+                            //ShapesUtilities.AddShapesToDatabase(ovVisioPage, sProjectID);
+
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -66,9 +97,28 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 //is the only time this gets called when the user changes the page index by dragging pages around?
                 //should we just update each page in the document?
                 string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                string sLastPageID = "";
                 foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
-                    PageUtilities.UpdatePageInDatabase(ovPage, sProjectID);
+                    //before we go upate the page in the database, we want to check if the pageID is the same as the last pages PageID 
+                    //this would mean we are doing a duplicate page..
+                    string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+
+                    if (sLastPageID != "")
+                    {
+                        //need to see if this is a duplicate...
+                        if (sLastPageID != sPageID)
+                        {
+                            PageUtilities.UpdatePageInDatabase(ovPage, sProjectID);
+                            sLastPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                        }
+                    }
+                    else
+                    {
+                        PageUtilities.UpdatePageInDatabase(ovPage, sProjectID);
+                        sLastPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    }
+
                 }
             }
             catch (Exception ex)
@@ -84,21 +134,50 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                 //user is deleting the page
                 string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
-                //check if the pageID has already been removed from the db...
-                bool bRecordExists = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
-                if (bRecordExists)
+                if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                 {
-                    PageUtilities.DeletePageInDatabase(ovPage, sProjectID);
 
-                    //have a delayed event that will call ondocumentchanged...
-                    DelayedEvent oDelayedEvent = new DelayedEvent();
-                    oDelayedEvent.sOperationType = "OnDocumentChanged";
-                    oDelayedEvent.ovDocument = ovPage.Document;
-                    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                    string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
 
+                    //check if the pageID has already been removed from the db...
+                    bool bRecordExists = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
+
+                    if (bRecordExists)
+                    {
+                        //we need to see if the id matches the pages name-we could have duplicated a page and then want to undo it so the page would have the same id as the orignal duplicated one...
+                        string sPageNameInDB = PageUtilities.GetColumnInfoInPagesTableFromDatabase("PageName", sPageID);
+                        if (sPageNameInDB == ovPage.Name)
+                        {
+                            PageUtilities.DeletePageInDatabase(ovPage, sProjectID);
+
+                            //have a delayed event that will call ondocumentchanged...
+                            DelayedEvent oDelayedEvent = new DelayedEvent();
+                            oDelayedEvent.sOperationType = "OnDocumentChanged";
+                            oDelayedEvent.ovDocument = ovPage.Document;
+                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                        }
+                        else
+                        {
+                            //this is from an undo after adding a page by duplicating it (therefore it has a PageID but the wrong pageID...)
+                            string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovPage.Document);
+                            //populate the list of pages in the document 
+                            List<string> lstPages = PageUtilities.PopulateVisioPageList(ovPage.Document);
+
+                            DatabaseUtilities.CheckPageExistenceInVisio(ovPage.Document, ref lstPages);
+                        }
+
+                    }
+                }
+                else
+                {
+                    //this if from an undo of adding a page, where we don't have the User.PageID..
+                    string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovPage.Document);
+                    //populate the list of pages in the document 
+                    List<string> lstPages = PageUtilities.PopulateVisioPageList(ovPage.Document);
+
+                    DatabaseUtilities.CheckPageExistenceInVisio(ovPage.Document, ref lstPages);
                 }
 
 
@@ -154,23 +233,59 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
                 string sProjectID = ovShape.ContainingPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
 
+
+
                 string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
                 switch (sClass)
                 {
                     case "NewWire":
                     case "SmartWire":
                         {
-                            ShapesUtilities.DeleteWireFromDatabase(ovShape);
+                            if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                            {
+                                List<string> lstShapes = ShapesUtilities.PopulateShapesOnPage(ovShape.ContainingPage, sClass);
+                                //need to clean up the db based on the shapes on this page left...
+                                DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovShape.Document, ref lstShapes);
+                            }
+                            else
+                            {
+                                ShapesUtilities.DeleteWireFromDatabase(ovShape);
+                            }
+
+
                             break;
                         }
                     case "TerminalBlock":
                         {
-                            ShapesUtilities.DeleteTerminalBlockFromDatabase(ovShape);
+                            if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                            {
+                                List<string> lstShapes = ShapesUtilities.PopulateShapesOnPage(ovShape.ContainingPage, sClass);
+                                //need to clean up the db based on the shapes on this page left...
+                                DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape.Document, ref lstShapes);
+
+                            }
+                            else
+                            {
+                                ShapesUtilities.DeleteTerminalBlockFromDatabase(ovShape);
+                            }
+
                             break;
                         }
                     case "ADC End Device":
                         {
-                            ShapesUtilities.DeleteEndDeviceFromDatabase(ovShape);
+                            if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                            {
+                                List<string> lstShapes = ShapesUtilities.PopulateShapesOnPage(ovShape.ContainingPage, sClass);
+
+                                //need to clean up the db based on the shapes on this page left...
+                                DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape.Document, ref lstShapes);
+
+                            }
+                            else
+                            {
+                                ShapesUtilities.DeleteEndDeviceFromDatabase(ovShape);
+                            }
+
                             break;
                         }
                 }
@@ -248,10 +363,42 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     OnDocumentChanged(ovDocument);
                 }
 
+
+                if (oThisDelayedEvent.sOperationType == "UpdateIDs")
+                {
+                    //we want to update page and shape ids for the given page...
+                    Visio.Document ovDocument = oThisDelayedEvent.ovDocument;
+                    Visio.Page ovPage = oThisDelayedEvent.ovPage;
+
+                    string sPageID = oThisDelayedEvent.sPageID;
+
+                    Visio.Cell pageCell = ovPage.PageSheet.CellsU["User.PageID"];
+                    if (pageCell != null)
+                    {
+                        pageCell.FormulaU = VisioUtilities.Application.FormatStringForVisio(sPageID);
+                    }
+                    // try
+                    // {
+
+                    int undoScope = ovPage.Application.BeginUndoScope("Update PageID");
+                    // Update all shapes' User.PageID without adding undo steps
+                    foreach (Visio.Shape ovShape in ovPage.Shapes)
+                    {
+                        ovShape.Cells["User.PageID"].FormulaU = VisioUtilities.Application.FormatStringForVisio(sPageID);
+                    }
+                    // }
+                    // finally
+                    // {
+                    // false = do NOT add this scope to the undo stack
+                    ovPage.Application.EndUndoScope(undoScope, false);
+                    // }
+
+                }
+
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error in processThisDelayedEvnet " + ex.Message, "VisAssist");
+                MessageBox.Show("Error in ProcessThisDelayedEvent " + ex.Message, "VisAssist");
             }
 
         }
@@ -259,7 +406,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         internal static void OnVisioIsIdle(Visio.Application subject)
         {
             Globals.ThisAddIn.m_pendingShapeIds.Clear();
-
+            Globals.ThisAddIn.m_pendingPageIds.Clear();
             int iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
 
             if (iNumberOfDelayedEvents > 0)

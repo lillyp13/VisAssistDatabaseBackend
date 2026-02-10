@@ -222,7 +222,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //THIS IS A BIT DIFFERENT BECAUSE WHEN WE ADD A NEW FILE/PROJECT WE ARE ADDING A FEW PAGES...THIS IS JUST SOME SET UP THAT IS NEEDED
                 //need to build up the page reocrd and run the sql to the database
                 //The page has sufficient data to move forward with AddPageToDatabase
-                PageUtilities.AddPageToDatabase(ovPage, "");
+                PageUtilities.AddPageToDatabase(ovPage, "","Visio");
 
                 //after adding the necessary user cells save the document 
                 ovDoc.SaveAs(sFilePath);

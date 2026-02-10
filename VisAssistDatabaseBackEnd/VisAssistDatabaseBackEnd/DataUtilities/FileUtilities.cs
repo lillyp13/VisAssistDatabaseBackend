@@ -108,7 +108,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     PageUtilities.AddUserCellsToPage(ovPage);
                     //The page contains the necessary info to move forward with AddPageToDatabase
-                    PageUtilities.AddPageToDatabase(ovPage, "");
+                    PageUtilities.AddPageToDatabase(ovPage, "", "Visio");
 
                     FileUtilities.AdjustFileCountInDB(ovDoc);
 
@@ -370,8 +370,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 string sFilePath = Path.Combine(sFileStructure, sFileName);
 
                 string sOldFilePath = Path.Combine(sFileStructure, ovDoc.Name);
-                
-                
+
+
 
                 ovDoc.SaveAs(sFilePath);
                 //delete the old file...
@@ -380,13 +380,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 ovDoc.Close();
                 //then reopen the doc 
                 //delete the old filepath
-                if(System.IO.File.Exists(sOldFilePath))
+                if (System.IO.File.Exists(sOldFilePath))
                 {
                     System.IO.File.Delete(sOldFilePath);
                 }
 
-               ovDoc = Globals.ThisAddIn.Application.Documents.Open(sFilePath);
-                
+                ovDoc = Globals.ThisAddIn.Application.Documents.Open(sFilePath);
+
 
                 string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
 
@@ -732,7 +732,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     ovVisioApp = Globals.ThisAddIn.Application;
                 }
-               
+
                 Visio.Document ovDoc = ovVisioApp.Documents.Add("");
 
                 //save it, close it and reopen so that the file doesn't end up in a dirty state
@@ -822,7 +822,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     switch (sSource)
                     {
                         case "Launch":
-                             {
+                            {
                                 //WILL NEED TO CHECK TO SEE IF THE FILE IS ALREADY IN USE...
                                 ovDoc = IsVisioFileOpen(ovApp, sFilePath);
                                 if (ovDoc != null)
@@ -832,7 +832,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     {
                                         if (ovWindow.Document == ovDoc)
                                         {
-                                           
+
                                             ovWindow.Activate();
                                             break;
                                         }
@@ -904,7 +904,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     else
                                     {
                                         //we want to open the file in a new project if there is already a doucment open...
-                                        if(Globals.ThisAddIn.Application.Documents.Count > 0) //may need to account for stencils being open...
+                                        if (Globals.ThisAddIn.Application.Documents.Count > 0) //may need to account for stencils being open...
                                         {
                                             Visio.Application ovNewApp = new Visio.Application();
                                             ovNewApp.Visible = true;
@@ -916,7 +916,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                         {
                                             ovDoc = ovApp.Documents.Open(sFilePath);
                                         }
-                                        
+
                                     }
 
                                 }
@@ -966,7 +966,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        private static void UpdateIDs(Visio.Document ovDoc, string sDestFilePath, string sProjectID)
+        private static void UpdateFileIDs(Visio.Document ovDoc, string sDestFilePath, string sProjectID)
         {
             try
             {
@@ -986,29 +986,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
                 ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = VisioUtilities.Application.FormatStringForVisio(sProjectID);
 
-                //Page Level
                 foreach (Visio.Page ovPage in ovDoc.Pages)
                 {
-                    string sNewPageID = PageUtilities.GeneratePageID(sProjectID, sNewFileID, ovPage.Name, DateTime.Now);
-                    if (ovDoc.DocumentSheet.CellExists["User.PageID", 0] == 0)
-                    {
-                        ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0);
-
-                    }
-                    ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
-
-                    //Shape Level
-                    foreach (Visio.Shape ovShape in ovPage.Shapes)
-                    {
-                        if (ovShape.CellExists["User.Class", 0] == -1)
-                        {
-                            //this is one of our shapes
-                            string sNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sNewFileID, sNewPageID, ovShape.Name, DateTime.Now);
-
-                            ovShape.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewShapeID);
-                        }
-                    }
+                    UpdatePageAndShapeIDs(ovPage, sProjectID, sNewFileID);
                 }
+
+
+
 
                 //save the document with the new ids..
                 ovDoc.Save();
@@ -1016,6 +1000,37 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             catch (Exception ex)
             {
                 MessageBox.Show("Error in UpdateIDs " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static void UpdatePageAndShapeIDs(Visio.Page ovPage, string sProjectID, string sNewFileID)
+        {
+            //Page Level
+            try
+            {
+                string sNewPageID = PageUtilities.GeneratePageID(sProjectID, sNewFileID, ovPage.Name, DateTime.Now);
+                if (ovPage.PageSheet.CellExists["User.PageID", 0] == 0)
+                {
+                    ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0);
+
+                }
+                ovPage.PageSheet.Cells["User.PageID"].FormulaForceU = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+
+                //Shape Level
+                foreach (Visio.Shape ovShape in ovPage.Shapes)
+                {
+                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    {
+                        //this is one of our shapes
+                        string sNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sNewFileID, sNewPageID, ovShape.Name, DateTime.Now);
+
+                        ovShape.Cells["User.ShapeID"].FormulaForceU = VisioUtilities.Application.FormatStringForVisio(sNewShapeID);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in UpdatePageAndShapeIDs " + ex.Message, "VisAssist");
             }
         }
 
@@ -1168,7 +1183,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         if (!IsFileLocked(sFilePath))
                         {
                             //the visio file is not locked and not open in our current instance so we can safely copy from
-                            //bCloseDocument = true;
+
 
                             //open the specified sFilePath given by the user
                             //before we opne the temporary doc we want to turn off events...
@@ -1200,43 +1215,53 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         else
                         {
                             //the file is locked because it is open in another instance of visio
-                            //bDeleteTempFilePath = true;
-                            // Swallow the exception silently, create a temp copy instead
-                            sTempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_" + sFileName);
-                            System.IO.File.Copy(sFilePath, sTempFilePath, true);
+                            DialogResult result = MessageBox.Show("This document is open. Are all the edits saved to the file?", "VisAssist", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
-                            //turn events off before opening the temp docs...
-                            Globals.ThisAddIn.Application.EventsEnabled = 0;
-                            //open the temporary doc instead of the sFilePath given by the user
-                            Visio.Document ovDocToCopy = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
+                            if (result == DialogResult.No)
+                            {
+                                return "";
+                            }
+                            else
+                            {
 
-                            Visio.Document ovNewDoc = null;
-                            //create the temporary file that we will add the new IDs into and move into the correct file structure
-                            sTempFolder = Path.GetTempPath();
-                            sTempFileName = ovDocToCopy.Name;
-                            sTempFilePath = Path.Combine(sTempFolder, sTempFileName);
+                                sTempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + "_" + sFileName);
+                                System.IO.File.Copy(sFilePath, sTempFilePath, true);
 
-                            //open the temporary document
-                            Visio.Document ovTempDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
+                                //turn events off before opening the temp docs...
+                                Globals.ThisAddIn.Application.EventsEnabled = 0;
+                                //open the temporary doc instead of the sFilePath given by the user
+                                Visio.Document ovDocToCopy = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
 
-                            //the file is open in a different instance of visio so we need to make a copy of the file and associate the copied file...
-                            //bAssociatedFile = AssociateFileOpenInDifferentVisioInstance(sDestFilePath, sFolderPath, sFileName, sFilePath, sTempFilePath);
-                            sDocName = AddCopiedFile(sProjectFolderPathOriginal, sTempFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
+                                Visio.Document ovNewDoc = null;
+                                //create the temporary file that we will add the new IDs into and move into the correct file structure
+                                sTempFolder = Path.GetTempPath();
+                                sTempFileName = ovDocToCopy.Name;
+                                sTempFilePath = Path.Combine(sTempFolder, sTempFileName);
 
-                            ovTempDoc.Save();
-                            ovTempDoc.Close();
-                            System.IO.File.Delete(sTempFilePath);
-                            ovCurrentDoc.Save();
+                                //open the temporary document
+                                Visio.Document ovTempDoc = Globals.ThisAddIn.Application.Documents.OpenEx(sTempFilePath, (short)(Visio.VisOpenSaveArgs.visOpenHidden | Visio.VisOpenSaveArgs.visOpenRW));
 
-                            //turn events back on 
-                            Globals.ThisAddIn.Application.EventsEnabled = -1;
+                                //the file is open in a different instance of visio so we need to make a copy of the file and associate the copied file...
+                                //bAssociatedFile = AssociateFileOpenInDifferentVisioInstance(sDestFilePath, sFolderPath, sFileName, sFilePath, sTempFilePath);
+                                sDocName = AddCopiedFile(sProjectFolderPathOriginal, sTempFilePath, sProjectID, ovTempDoc, sTempFilePath, sNewFileName);
+
+                                ovTempDoc.Save();
+                                ovTempDoc.Close();
+                                System.IO.File.Delete(sTempFilePath);
+                                ovCurrentDoc.Save();
+
+                                //turn events back on 
+                                Globals.ThisAddIn.Application.EventsEnabled = -1;
+                            }
                         }
 
 
                     }
                     else
                     {
-
+                        //the file is currently open in our isntance of visio, save the file first and then continue
+                        ovDoc.Save();
+                        
                         //the ovDoc is not null so it is open in our current instance of visio
                         //create the temporary folder
                         sTempFolder = Path.GetTempPath();
@@ -1259,6 +1284,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                         //turn events back on 
                         Globals.ThisAddIn.Application.EventsEnabled = -1;
+
                     }
 
 
@@ -1297,19 +1323,19 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             try
             {
                 Visio.Document ovNewDoc = null;
-                
-                
+
+
                 string sVisAssistFolderPath = Path.GetDirectoryName(sProjectFolderPath).TrimEnd(Path.DirectorySeparatorChar);
                 DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
                 //close the original document to copyp because we are going to copy the ovTempDoc instead...
                 string sDestFilePath = Path.Combine(sProjectFolderPath, sNewFileName);
-                
+
 
                 if (ovTempDoc != null)
                 {
 
                     //update all the ids in the visio document
-                    UpdateIDs(ovTempDoc, sDestFilePath, sProjectID);
+                    UpdateFileIDs(ovTempDoc, sDestFilePath, sProjectID);
 
                     //add the visio file to the database based on the new IDs/information in the document
                     MultipleRecordUpdates mruRecords = AddFileToDatabase(ovTempDoc, sDestFilePath, sProjectID);
@@ -1317,15 +1343,15 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //add the pages...
                     foreach (Visio.Page ovPage in ovTempDoc.Pages)
                     {
-                        PageUtilities.AddPageToDatabase(ovPage, sProjectID);
-                        
-                        foreach(Visio.Shape ovShape in ovPage.Shapes)
+                        PageUtilities.AddPageToDatabase(ovPage, sProjectID, "Visio");
+
+                        foreach (Visio.Shape ovShape in ovPage.Shapes)
                         {
                             if (ovShape.CellExists["User.Class", 0] == -1)
                             {
                                 //this is one of our shapes 
                                 string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                                switch(sClass)
+                                switch (sClass)
                                 {
                                     case "TerminalBlock":
                                         {
