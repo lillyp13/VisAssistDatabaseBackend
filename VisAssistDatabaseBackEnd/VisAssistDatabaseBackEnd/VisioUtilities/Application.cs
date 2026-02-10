@@ -47,6 +47,8 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         }
                         else
                         {
+                            //I THINK THIS IS DEAD CODE NOW BECAUSE WE ARE UPDATING THE ID BEFORE THIS...
+
                             //the user has duplicated a page using visio...
                             //we need to assign this page a new id and add it to the db as well as upate the ids of the shapes on the page...
                             string sFileID = ovVisioPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
@@ -363,7 +365,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     OnDocumentChanged(ovDocument);
                 }
 
-
+                //i think this delayed event is dead code now...
                 if (oThisDelayedEvent.sOperationType == "UpdateIDs")
                 {
                     //we want to update page and shape ids for the given page...
@@ -393,6 +395,11 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     ovPage.Application.EndUndoScope(undoScope, false);
                     // }
 
+                }
+
+                if(oThisDelayedEvent.sOperationType == "TurnOffDuplicateBool")
+                {
+                    Globals.ThisAddIn.m_bIsPageDuplicating = false;
                 }
 
             }
@@ -454,5 +461,47 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             return sInputString;
         }
 
+        internal static void OnPageDuplicated(Visio.Page ovPage)
+        {
+            try
+            {
+
+
+                string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+
+                string sNewPageID = PageUtilities.GeneratePageID(sProjectID, sFileID, ovPage.Name, DateTime.Now);
+                ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+
+
+                //need to update the shapes ids as well...
+                foreach (Visio.Shape ovShape in ovPage.Shapes)
+                {
+                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    {
+                        //this is one of our shapes..
+                        ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+                        string sNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sFileID, sNewPageID, ovShape.Name, DateTime.Now);
+                        ovShape.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewShapeID);
+
+                        //add the shapes to m_pendingShapeIDs (so that onshapeadded doesn't get fired for them...)
+                        string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                        Globals.ThisAddIn.m_pendingShapeIds.Add(sKey);
+                    }
+                }
+                //add a delayed event that will switch the duplicate bool to be false..
+                DelayedEvent oDelayedEvent = new DelayedEvent();
+                oDelayedEvent.ovDocument = ovPage.Document;
+                oDelayedEvent.sOperationType = "TurnOffDuplicateBool";
+                Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
+
+                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(ovPage);
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in OnPageDuplicated " + ex.Message, "VisAssist");
+            }
+        }
     }
 }

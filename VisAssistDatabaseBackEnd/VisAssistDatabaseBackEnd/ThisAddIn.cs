@@ -27,7 +27,7 @@ namespace VisAssistDatabaseBackEnd
         public List<DelayedEvent> m_delayedEvents = new List<DelayedEvent>();
         public List<string> m_pendingShapeIds = new List<string>();
         public List<string> m_pendingPageIds = new List<string>();
-        bool m_bIsPageDuplicating = false;
+        public bool m_bIsPageDuplicating = false;
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
@@ -101,6 +101,7 @@ namespace VisAssistDatabaseBackEnd
                     m_appSink,
                     string.Empty,
                     string.Empty));
+
 
                 // Page Changed
                 Visio.Event pagechangedAddedEvent = ovDocument.EventList.AddAdvise(
@@ -287,6 +288,14 @@ namespace VisAssistDatabaseBackEnd
                     "",
                     "")
             );
+
+
+            //after modal
+            m_VisioAppEvents.Add(eventList.AddAdvise(
+              (short)((short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtAfterModal),
+               m_appSink,
+               string.Empty,
+               string.Empty));
         }
 
 
@@ -377,8 +386,21 @@ namespace VisAssistDatabaseBackEnd
                         {
                             //if the page has shapes on it already this is a duplicate..
                             m_bIsPageDuplicating = ovPage.Shapes.Count > 0;
-                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
+                            //if this is a duplicate then we are going to set the pagesheets formula first...
+                           // ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio("LillY");
+                           if(m_bIsPageDuplicating)
+                            {
+                                //we are duplicating a page...
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDuplicated(ovPage);
+                            }
+                           else
+                            {
+                                //we are just adding a page
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
+                            }
+                            
                             m_pendingPageIds.Add(sKey);
+
                         }
 
 
@@ -400,6 +422,7 @@ namespace VisAssistDatabaseBackEnd
                                 {
                                     if (m_bIsPageDuplicating)
                                     {
+                                       
                                         break;
                                     }
 
@@ -431,6 +454,13 @@ namespace VisAssistDatabaseBackEnd
                 case (short)((short)VisEventCodes.visEvtMod + (short)Visio.VisEventCodes.visEvtPage):
                     {
                         VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageChanged((Visio.Page)subject);
+                        break;
+                    }
+
+                //after modal
+                case (short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtAfterModal:
+                    {
+                        m_bIsPageDuplicating = false;
                         break;
                     }
 

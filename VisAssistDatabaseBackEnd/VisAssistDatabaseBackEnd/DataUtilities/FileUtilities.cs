@@ -359,8 +359,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-                //format the sFileName with Dwg...
-                sFileName = FileUtilities.FormatFileName(sFileName);
 
                 //save the current document using the sFileName
                 Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
@@ -1261,7 +1259,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     {
                         //the file is currently open in our isntance of visio, save the file first and then continue
                         ovDoc.Save();
-                        
+
                         //the ovDoc is not null so it is open in our current instance of visio
                         //create the temporary folder
                         sTempFolder = Path.GetTempPath();
@@ -1906,7 +1904,38 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             return false;
         }
+        internal static List<string> GetFileNamesInProject()
+        {
+            List<string> lstFileNames = new List<string>();
+            try
+            {
 
+
+                //gather a list of all the file names in the project
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+                    string sSql = @"SELECT FileName FROM files_table";
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
+                    {
+                        using (SQLiteDataReader reader = sqlitecmdCommand.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                // Assuming FileName is a TEXT column
+                                lstFileNames.Add(reader.GetString(0));
+                                // or: reader["FileName"].ToString()
+                            }
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in GetFileNamesInProject " + ex.Message, "VisAssist");
+            }
+            return lstFileNames;
+        }
 
 
         internal static string ExtractNameFromVisioFile(string sCurrentName)
@@ -2380,10 +2409,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
             return null;
         }
-
-
-
-
 
 
     }

@@ -375,7 +375,17 @@ namespace VisAssistDatabaseBackEnd
                             {
                                 if(sFileName != sCurrentName) //make sure the file name is different than when it came in...
                                 {
-                                    FileUtilities.UpdateFileName(sFileName);
+                                    //before we go and update the file name we need to check to make sure there isn't another file in the project with the same file name
+
+                                    sFileName = FileUtilities.FormatFileName(sFileName);
+
+                                    //get all the file names in this proejct 
+                                    List<string> lstFileNames = FileUtilities.GetFileNamesInProject();
+                                    if (!lstFileNames.Contains(sFileName, StringComparer.OrdinalIgnoreCase))
+                                    {
+                                        FileUtilities.UpdateFileName(sFileName);
+                                    }
+                                   
                                 }
                                 
                             }
