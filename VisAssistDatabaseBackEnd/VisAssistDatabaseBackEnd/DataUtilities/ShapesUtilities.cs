@@ -1299,7 +1299,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static List<string> PopulateShapesOnPage(Visio.Page ovPage, string sClassToGather)
+        internal static List<string> PopulateShapesInDocument(Visio.Document ovDocument, string sClassToGather)
         {
             //this populates a list of the shapes (given a class) on a given page
             List<string> lstShapesToReturn = new List<string>();
@@ -1307,47 +1307,53 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
 
                 string sID = "";
-                //based on sClass populate a list of shapes on ther page 
-                foreach (Visio.Shape ovShape in ovPage.Shapes)
+                foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
-                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    if (ovPage.PageSheet.CellExists["User.PageClass", 0] == -1)
                     {
-                        string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-
-                        switch (sClassToGather)
+                        //based on sClass populate a list of shapes on ther page 
+                        foreach (Visio.Shape ovShape in ovPage.Shapes)
                         {
-                            case "TerminalBlock":
+                            if (ovShape.CellExists["User.Class", 0] == -1)
+                            {
+                                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+
+                                switch (sClassToGather)
                                 {
-                                    //we want to gather terminal blocks
-                                    if (sClass == "TerminalBlock")
-                                    {
-                                        sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+                                    case "TerminalBlock":
+                                        {
+                                            //we want to gather terminal blocks
+                                            if (sClass == "TerminalBlock")
+                                            {
+                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
 
-                                        lstShapesToReturn.Add(sID);
-                                    }
+                                                lstShapesToReturn.Add(sID);
+                                            }
 
-                                    break;
+                                            break;
+                                        }
+                                    case "SmartWire":
+                                        {
+                                            if (sClass == "SmartWire")
+                                            {
+                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+
+                                                lstShapesToReturn.Add(sID);
+                                            }
+                                            break;
+                                        }
+                                    case "ADC End Device":
+                                        {
+                                            if (sClass == "ADC End Device")
+                                            {
+                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+
+                                                lstShapesToReturn.Add(sID);
+                                            }
+                                            break;
+                                        }
                                 }
-                            case "SmartWire":
-                                {
-                                    if (sClass == "SmartWire")
-                                    {
-                                        sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-
-                                        lstShapesToReturn.Add(sID);
-                                    }
-                                    break;
-                                }
-                            case "ADC End Device":
-                                {
-                                    if (sClass == "ADC End Device")
-                                    {
-                                        sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-
-                                        lstShapesToReturn.Add(sID);
-                                    }
-                                    break;
-                                }
+                            }
                         }
                     }
                 }

@@ -72,6 +72,46 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
         }
 
+        internal static void OnPageDuplicated(Visio.Page ovPage)
+        {
+            try
+            {
+                string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+
+                string sNewPageID = PageUtilities.GeneratePageID(sProjectID, sFileID, ovPage.Name, DateTime.Now);
+                ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+
+
+                //need to update the shapes ids as well...
+                foreach (Visio.Shape ovShape in ovPage.Shapes)
+                {
+                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    {
+                        //this is one of our shapes..
+                        ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+                        string sNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sFileID, sNewPageID, ovShape.Name, DateTime.Now);
+                        ovShape.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewShapeID);
+
+                        //add the shapes to m_pendingShapeIDs (so that onshapeadded doesn't get fired for them...)
+                        string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                        Globals.ThisAddIn.m_pendingShapeIds.Add(sKey);
+                    }
+                }
+                //add a delayed event that will switch the duplicate bool to be false..
+                DelayedEvent oDelayedEvent = new DelayedEvent();
+                oDelayedEvent.ovDocument = ovPage.Document;
+                oDelayedEvent.sOperationType = "TurnOffDuplicateBool";
+                Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
+
+                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(ovPage);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in OnPageDuplicated " + ex.Message, "VisAssist");
+            }
+        }
         internal static void OnPageChanged(Visio.Page ovVisioPage)
         {
             try
@@ -245,7 +285,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         {
                             if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
                             {
-                                List<string> lstShapes = ShapesUtilities.PopulateShapesOnPage(ovShape.ContainingPage, sClass);
+                                List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
                                 //need to clean up the db based on the shapes on this page left...
                                 DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovShape.Document, ref lstShapes);
                             }
@@ -261,7 +301,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         {
                             if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
                             {
-                                List<string> lstShapes = ShapesUtilities.PopulateShapesOnPage(ovShape.ContainingPage, sClass);
+                                List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
                                 //need to clean up the db based on the shapes on this page left...
                                 DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape.Document, ref lstShapes);
 
@@ -277,7 +317,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         {
                             if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
                             {
-                                List<string> lstShapes = ShapesUtilities.PopulateShapesOnPage(ovShape.ContainingPage, sClass);
+                                List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
 
                                 //need to clean up the db based on the shapes on this page left...
                                 DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape.Document, ref lstShapes);
@@ -297,35 +337,43 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         }
         internal static void CellChanged(Visio.Cell ovCell)
         {
-            //check what cell was changed...
-            //if it was the x or y recalculate the grid location...
-
-            Visio.Shape ovShape = ovCell.Shape;
-            string sClass = "";
-            if (ovShape.CellExists["User.Class", 0] == -1)
+            try
             {
-                //this is one of our shapes
-                //this is one of our shapes
-                sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
 
-                switch (sClass)
+                //check what cell was changed...
+                //if it was the x or y recalculate the grid location...
+
+                Visio.Shape ovShape = ovCell.Shape;
+                string sClass = "";
+                if (ovShape.CellExists["User.Class", 0] == -1)
                 {
-                    case "TerminalBlock":
-                        {
-                            ShapesUtilities.UpdateTerminalBlockInDatabase(ovShape);
+                    //this is one of our shapes
+                    //this is one of our shapes
+                    sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
 
-                            break;
-                        }
-                    case "SmartWire":
-                        {
-                            break;
-                        }
-                    case "ADC End Device":
-                        {
-                            ShapesUtilities.UpdateEndDeviceInDatabase(ovShape);
-                            break;
-                        }
+                    switch (sClass)
+                    {
+                        case "TerminalBlock":
+                            {
+                                ShapesUtilities.UpdateTerminalBlockInDatabase(ovShape);
+
+                                break;
+                            }
+                        case "SmartWire":
+                            {
+                                break;
+                            }
+                        case "ADC End Device":
+                            {
+                                ShapesUtilities.UpdateEndDeviceInDatabase(ovShape);
+                                break;
+                            }
+                    }
                 }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in CellChanged " + ex.Message, "VisAssist");
             }
 
 
@@ -334,21 +382,28 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         }
         internal static void TextChanged(Shape ovShape)
         {
-            //we need this because the text is no longer stored in a cell...
-            string sClass = "";
-            if (ovShape.CellExists["User.Class", 0] == -1)
+            try
             {
-                //this is one of our shapes
-                //this is one of our shapes
-                sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                switch (sClass)
+                //we need this because the text is no longer stored in a cell...
+                string sClass = "";
+                if (ovShape.CellExists["User.Class", 0] == -1)
                 {
-                    case "TerminalBlock":
-                        {
-                            ShapesUtilities.UpdateTerminalBlockInDatabase(ovShape);
-                            break;
-                        }
+                    //this is one of our shapes
+                    //this is one of our shapes
+                    sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                    switch (sClass)
+                    {
+                        case "TerminalBlock":
+                            {
+                                ShapesUtilities.UpdateTerminalBlockInDatabase(ovShape);
+                                break;
+                            }
+                    }
                 }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in TextChanged " + ex.Message, "VisAssist");
             }
         }
 
@@ -461,47 +516,5 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             return sInputString;
         }
 
-        internal static void OnPageDuplicated(Visio.Page ovPage)
-        {
-            try
-            {
-
-
-                string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-
-                string sNewPageID = PageUtilities.GeneratePageID(sProjectID, sFileID, ovPage.Name, DateTime.Now);
-                ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
-
-
-                //need to update the shapes ids as well...
-                foreach (Visio.Shape ovShape in ovPage.Shapes)
-                {
-                    if (ovShape.CellExists["User.Class", 0] == -1)
-                    {
-                        //this is one of our shapes..
-                        ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
-                        string sNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sFileID, sNewPageID, ovShape.Name, DateTime.Now);
-                        ovShape.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewShapeID);
-
-                        //add the shapes to m_pendingShapeIDs (so that onshapeadded doesn't get fired for them...)
-                        string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
-                        Globals.ThisAddIn.m_pendingShapeIds.Add(sKey);
-                    }
-                }
-                //add a delayed event that will switch the duplicate bool to be false..
-                DelayedEvent oDelayedEvent = new DelayedEvent();
-                oDelayedEvent.ovDocument = ovPage.Document;
-                oDelayedEvent.sOperationType = "TurnOffDuplicateBool";
-                Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-
-
-                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(ovPage);
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in OnPageDuplicated " + ex.Message, "VisAssist");
-            }
-        }
     }
 }
