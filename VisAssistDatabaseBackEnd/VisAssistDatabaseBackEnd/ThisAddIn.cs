@@ -45,6 +45,11 @@ namespace VisAssistDatabaseBackEnd
             }
         }
 
+        protected override Microsoft.Office.Core.IRibbonExtensibility CreateRibbonExtensibilityObject()
+        {
+            return new Ribbonxml();
+        }
+
         public const short visEvtAdd = -0x8000;
         internal void StartSinksForDoc(Visio.Document ovDocument)
         {
