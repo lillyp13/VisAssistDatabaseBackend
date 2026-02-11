@@ -10,6 +10,7 @@ using System.Runtime.Remoting.Lifetime;
 using System.Security.Cryptography;
 using System.Security.Policy;
 using System.Text;
+using System.Web;
 using System.Windows.Forms;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
@@ -417,6 +418,16 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     ShapeID TEXT NOT NULL PRIMARY KEY,
                                     PageID TEXT NOT NULL,
                                     TermCount INTEGER NOT NULL,
+                                    Term1 TEXT,
+                                    Term2 TEXT,
+                                    Term3 TEXT,
+                                    Term4 TEXT,
+                                    Term5 TEXT,
+                                    Term6 TEXT,
+                                    Term7 TEXT,
+                                    Term8 TEXT,
+                                    Term9 TEXT,
+                                    Term10 TEXT,
                                     Tag TEXT,
                                     XLocation REAL NOT NULL,
                                     YLocation REAL NOT NULL,
@@ -1077,9 +1088,39 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             CheckShapeExistenceInVisio(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument, ref lstTerminals);
             CheckShapeExistenceInVisio(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovDocument, ref lstEndDevices);
 
-           
 
-            //the second part checks to see if all the records in the db exist in the visio file and if they don't delete them from the db...
+
+            //this last part checks all the shape tables to make sure that there pages actually exist and if they don't delete them..
+            CheckShapesPageExistence(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument);
+            CheckShapesPageExistence(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovDocument);
+        }
+
+        private static void CheckShapesPageExistence(string sShapeTable, Document ovDocument)
+        {
+            //this checks to make sure all the shapes pageId's actually exist in the db pages_table
+            try
+            {
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+                    //enable foreign key enforcemnt for this connection
+                    using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteconConnection))
+                    {
+                        sqlitcmdPragma.ExecuteNonQuery();
+                    }
+                    string sSql = @"DELETE FROM " + sShapeTable + " WHERE PageID NOT IN (SELECT PageID FROM pages_table)";
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
+                    {
+                        sqlitecmdCommand.CommandText = sSql;
+                        sqlitecmdCommand.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in CheckShapesPageExistence " + ex.Message, "VisAssist");
+            }
         }
 
         internal static void CheckShapeExistenceInVisio(string sTableName, Visio.Document ovDocument, ref List<string> lstShapes)

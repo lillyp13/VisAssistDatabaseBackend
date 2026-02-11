@@ -428,12 +428,12 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     Visio.Page ovPage = oThisDelayedEvent.ovPage;
 
                     string sPageID = oThisDelayedEvent.sPageID;
-
-                    Visio.Cell pageCell = ovPage.PageSheet.CellsU["User.PageID"];
-                    if (pageCell != null)
-                    {
-                        pageCell.FormulaU = VisioUtilities.Application.FormatStringForVisio(sPageID);
-                    }
+                    
+                    //Visio.Cell pageCell = ovPage.PageSheet.CellsU["User.PageID"];
+                    //if (pageCell != null)
+                    //{
+                    //    pageCell.FormulaU = VisioUtilities.Application.FormatStringForVisio(sPageID);
+                    //}
                     // try
                     // {
 
@@ -441,7 +441,11 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     // Update all shapes' User.PageID without adding undo steps
                     foreach (Visio.Shape ovShape in ovPage.Shapes)
                     {
-                        ovShape.Cells["User.PageID"].FormulaU = VisioUtilities.Application.FormatStringForVisio(sPageID);
+                        if (ovShape.CellExists["User.PageID", 0] == -1)
+                        {
+                            ovShape.Cells["User.PageID"].FormulaU = VisioUtilities.Application.FormatStringForVisio(sPageID);
+                        }
+                        
                     }
                     // }
                     // finally

@@ -7,6 +7,7 @@ using System.Data.Odbc;
 using System.Data.SQLite;
 using System.Drawing;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -101,6 +102,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 ovSecondaryWire.Cells["User.WireRole"].Formula = VisioUtilities.Application.FormatStringForVisio("S");
                 string sShapeID = GenerateShapeID(sProjectID, sFileID, sPageID, ovSecondaryWire.Name, DateTime.Now);
                 ovSecondaryWire.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sShapeID);
+                ovSecondaryWire.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sPageID);
 
                 ovSecondaryWire.Document.Application.EventsEnabled = -1;
 
@@ -241,6 +243,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return new MultipleRecordUpdates();
         }
 
+
+
+
+
         //Terminal Block
         internal static void AddTerminalBlockToDatabase(Visio.Shape ovShape)
         {
@@ -337,7 +343,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
                 string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
                 string sPageID = ovMainWire.Cells["User.PageID"].get_ResultStr(0);
-
+                if(sPageID == "")
+                {
+                    //get the pageID from the page
+                    sPageID = ovMainWire.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                }
 
                 string sWireRole = ovMainWire.Cells["User.WireRole"].get_ResultStr(0);
 
@@ -520,26 +530,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
 
-                string sColor = ovShape.Cells["Prop.Color"].get_ResultStr(0);
-                string sShapeText = ovShape.Text;
+                Dictionary<string, string> oDictFileValues = GatherTerminalBlockInformation(ovShape, sPageID);
 
-                //get the x and y location...
-                double dPinX = ovShape.Cells["PinX"].ResultIU;
-                double dPinY = ovShape.Cells["PinY"].ResultIU;
-                double dPageX;
-                double dPageY;
-                ovShape.XYToPage(dPinX, dPinY, out dPageX, out dPageY);
-
-                int iPageX = (int)dPageX;
-                int iPageY = (int)dPageY;
-
-                Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
-
-                oDictFileValues.Add("PageID", sPageID);
-                oDictFileValues.Add("Color", sColor);
-                oDictFileValues.Add("ShapeText", sShapeText);
-                oDictFileValues.Add("XLocation", iPageX.ToString());
-                oDictFileValues.Add("YLocation", iPageY.ToString());
 
                 string sID = "";
                 if (ovShape.CellExists["User.ShapeID", 0] == -1)
@@ -557,48 +549,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
 
 
-                //hardcode the vert and horizontal markers...for now but i need this information from the pages...
-                //assuming instead of grabbing it this way i'll want to grab the page information from the database, 
-                //which part of the location should be in the DB, X and Y? the actual (1,1F)? what should we really be keeping in db
-
-                int iPageIndex = ovShape.ContainingPage.Index;
-                string sHorizontalMarkers = "8;7;6;5;4;3;2;1"; //will need to get this from the page
-                string sVertMarkers = "A;B;C;D;E;F;G;H";//will need to get this from the page based on vertical/horizontal/pagescale...
-                double dPageWidth = ovShape.ContainingPage.PageSheet.Cells["PageWidth"].ResultIU;
-                double dPageHeight = ovShape.ContainingPage.PageSheet.Cells["PageHeight"].ResultIU;
-                double dLeft = ovShape.CellsU["PinX"].ResultIU - (ovShape.CellsU["Width"].ResultIU / 2);
-                double dTop = ovShape.CellsU["PinY"].ResultIU - (ovShape.CellsU["Height"].ResultIU / 2);
-
-                double dWidth = ovShape.CellsU["Width"].ResultIU;
-                double dHeight = ovShape.CellsU["Height"].ResultIU;
-
-
-                string sGridLocation = GetShapeGridLocation(dLeft, dTop, dWidth, dHeight, dPageWidth, dPageHeight, sVertMarkers, sHorizontalMarkers, iPageIndex);
-
-
-
-                //add the user.gridlocation temporarily
-                if (ovShape.CellExists["User.GridLocation", 0] == -1)
-                {
-                    if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                    {
-                        //don't need to do this if we are undoing something, the last formula will be good
-                        //turn off events before adding the gridlocation to the shape..
-                        ovDoc.Application.EventsEnabled = 0;
-                        ovShape.Cells["User.GridLocation"].Formula = $"\"{sGridLocation}\"";
-                        ovDoc.Application.EventsEnabled = -1;
-                    }
-
-                }
-                else
-                {
-                    //turn off events before adding the gridlocation to the shape..
-                    ovDoc.Application.EventsEnabled = 0;
-                    ovShape.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "GridLocation", 0);
-                    ovShape.Cells["User.GridLocation"].Formula = $"\"{sGridLocation}\"";
-                    ovDoc.Application.EventsEnabled = -1;
-                }
-
+               
 
                 RecordUpdate ruFileRecord = new RecordUpdate();
                 ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
@@ -640,26 +591,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
 
 
-                string sColor = ovShape.Cells["Prop.Color"].get_ResultStr(0);
-                string sShapeText = ovShape.Text;
+                Dictionary<string, string> oDictFileValues = GatherTerminalBlockInformation(ovShape, sPageID);
 
-                //get the x and y location...
-                double dPinX = ovShape.Cells["PinX"].ResultIU;
-                double dPinY = ovShape.Cells["PinY"].ResultIU;
-                double dPageX;
-                double dPageY;
-                ovShape.XYToPage(dPinX, dPinY, out dPageX, out dPageY);
-
-                int iPageX = (int)dPageX;
-                int iPageY = (int)dPageY;
-
-                Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
-
-                oDictFileValues.Add("PageID", sPageID);
-                oDictFileValues.Add("Color", sColor);
-                oDictFileValues.Add("ShapeText", sShapeText);
-                oDictFileValues.Add("XLocation", iPageX.ToString());
-                oDictFileValues.Add("YLocation", iPageY.ToString());
 
                 string sID = "";
                 if (ovShape.CellExists["User.ShapeID", 0] == -1)
@@ -674,9 +607,53 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
 
 
-                //hardcode the vert and horizontal markers...for now but i need this information from the pages...
-                //assuming instead of grabbing it this way i'll want to grab the page information from the database, 
-                //which part of the location should be in the DB, X and Y? the actual (1,1F)? what should we really be keeping in db
+
+                RecordUpdate ruFileRecord = new RecordUpdate();
+                ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
+                ruFileRecord.sId = sID;
+                ruFileRecord.odictColumnValues = oDictFileValues;
+
+                return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in BuildTerminalBlockInfo " + ex.Message, "VisAssist");
+            }
+            finally
+            {
+                ovDoc.Application.EventsEnabled = -1;
+            }
+            return new MultipleRecordUpdates();
+        }
+
+        private static Dictionary<string, string> GatherTerminalBlockInformation(Visio.Shape ovShape, string sPageID)
+        {
+            Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
+            try
+            {
+                Visio.Document ovDoc = ovShape.Document;
+
+                string sColor = ovShape.Cells["Prop.Color"].get_ResultStr(0);
+                string sShapeText = ovShape.Text;
+
+                //get the x and y location...
+                double dPinX = ovShape.Cells["PinX"].ResultIU;
+                double dPinY = ovShape.Cells["PinY"].ResultIU;
+                double dPageX;
+                double dPageY;
+                ovShape.XYToPage(dPinX, dPinY, out dPageX, out dPageY);
+
+                int iPageX = (int)dPageX;
+                int iPageY = (int)dPageY;
+
+               
+
+                oDictFileValues.Add("PageID", sPageID);
+                oDictFileValues.Add("Color", sColor);
+                oDictFileValues.Add("ShapeText", sShapeText);
+                oDictFileValues.Add("XLocation", iPageX.ToString());
+                oDictFileValues.Add("YLocation", iPageY.ToString());
+
 
                 int iPageIndex = ovShape.ContainingPage.Index;
                 string sHorizontalMarkers = "8;7;6;5;4;3;2;1"; //will need to get this from the page
@@ -697,14 +674,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //add the user.gridlocation temporarily
                 if (ovShape.CellExists["User.GridLocation", 0] == -1)
                 {
-                    if(!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                    if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
                     {
                         //turn off events before adding the gridlocation to the shape..
                         ovDoc.Application.EventsEnabled = 0;
                         ovShape.Cells["User.GridLocation"].Formula = $"\"{sGridLocation}\"";
                         ovDoc.Application.EventsEnabled = -1;
                     }
-                    
+
 
                 }
                 else
@@ -715,25 +692,15 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     ovShape.Cells["User.GridLocation"].Formula = $"\"{sGridLocation}\"";
                     ovDoc.Application.EventsEnabled = -1;
                 }
-
-
-                RecordUpdate ruFileRecord = new RecordUpdate();
-                ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
-                ruFileRecord.sId = sID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
-
-                return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                MessageBox.Show("Error in BuildTerminalBlockInfo " + ex.Message, "VisAssist");
+                MessageBox.Show("Error in GatherTerminalBlockInformation " + ex.Message, "VisAssist");
             }
-            finally
-            {
-                ovDoc.Application.EventsEnabled = -1;
-            }
-            return new MultipleRecordUpdates();
+            return oDictFileValues;
+        
         }
+
         //End Device
         internal static MultipleRecordUpdates BuildWiringEndDeviceInfo(Visio.Shape ovShape)
         {
@@ -778,27 +745,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
 
-                int iTermCount = (int)ovShape.Cells["Prop.TermCount"].ResultIU;
-                string sTag = ovShape.Cells["Prop.Tag"].get_ResultStr(0);
+                Dictionary<string, string> oDictFileValues = GatherEndDeviceInformation(ovShape, sPageIDFromShape);
 
-                //get the x and y location...
-                //the pinx and piny are located at the top left corner of the end device--need to determine how many terminals to determine where the middle of the shape is...
-                double dPinX = ovShape.Cells["PinX"].ResultIU;
-                double dPinY = ovShape.Cells["PinY"].ResultIU;
-                double dPageX;
-                double dPageY;
-                ovShape.XYToPage(dPinX, dPinY, out dPageX, out dPageY);
-
-                int iPageX = (int)dPageX;
-                int iPageY = (int)dPageY;
-
-                Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
-                oDictFileValues.Add("PageID", sPageIDFromShape);
-                oDictFileValues.Add("TermCount", iTermCount.ToString());
-                oDictFileValues.Add("Tag", sTag);
-                oDictFileValues.Add("XLocation", iPageX.ToString());
-                oDictFileValues.Add("YLocation", iPageY.ToString());
-
+              
                 string sID = "";
                 if (ovShape.CellExists["User.ShapeID", 0] == -1)
                 {
@@ -813,51 +762,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         ovDoc.Application.EventsEnabled = -1;
                     }
                 }
-                //else
-                //{ //this should be added to the stencil so the wiring end device shoul dalways have a ShapeID and a PageID...
-                //    ovShape.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "ShapeID", 0);
-                //    sID = GenerateShapeID(sProjectID, sFileID, sPageIDFromShape, ovShape.Name, DateTime.Now);
-                //    ovShape.Cells["User.ShapeID"].Formula = "\"" + sID + "\"";
-                //}
-
-
-                int iPageIndex = ovShape.ContainingPage.Index;
-                string sHorizontalMarkers = "8;7;6;5;4;3;2;1"; //will need to get this from the page
-                string sVertMarkers = "A;B;C;D;E;F;G;H";//will need to get this from the page based on vertical/horizontal/pagescale...
-                double dPageWidth = ovShape.ContainingPage.PageSheet.Cells["PageWidth"].ResultIU;
-                double dPageHeight = ovShape.ContainingPage.PageSheet.Cells["PageHeight"].ResultIU;
-                double dLeft = ovShape.CellsU["PinX"].ResultIU - (ovShape.CellsU["Width"].ResultIU / 2);
-                double dTop = ovShape.CellsU["PinY"].ResultIU - (ovShape.CellsU["Height"].ResultIU / 2);
-
-                double dWidth = ovShape.CellsU["Width"].ResultIU;
-                double dHeight = ovShape.CellsU["Height"].ResultIU;
-
-
-                string sGridLocation = GetShapeGridLocation(dLeft, dTop, dWidth, dHeight, dPageWidth, dPageHeight, sVertMarkers, sHorizontalMarkers, iPageIndex);
-
-
-
-                //add the user.gridlocation temporarily
-                if (ovShape.CellExists["User.GridLocation", 0] == -1)
-                {
-                    if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                    {
-                        //turn off events before adding the gridlocation to the shape..
-                        ovDoc.Application.EventsEnabled = 0;
-                        ovShape.Cells["User.GridLocation"].Formula = $"\"{sGridLocation}\"";
-                        ovDoc.Application.EventsEnabled = -1;
-                    }
-
-                }
-                else
-                {
-                    //turn off events before adding the gridlocation to the shape..
-                    ovDoc.Application.EventsEnabled = 0;
-                    ovShape.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "GridLocation", 0);
-                    ovShape.Cells["User.GridLocation"].Formula = $"\"{sGridLocation}\"";
-                    ovDoc.Application.EventsEnabled = -1;
-                }
-
+               
 
 
                
@@ -897,26 +802,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 }
 
-                int iTermCount = (int)ovShape.Cells["Prop.TermCount"].ResultIU;
-                string sTag = ovShape.Cells["Prop.Tag"].get_ResultStr(0);
+                Dictionary<string, string> oDictFileValues = GatherEndDeviceInformation(ovShape, sPageID);
 
-                //get the x and y location...
-                double dPinX = ovShape.Cells["PinX"].ResultIU;
-                double dPinY = ovShape.Cells["PinY"].ResultIU;
-                double dPageX;
-                double dPageY;
-                ovShape.XYToPage(dPinX, dPinY, out dPageX, out dPageY);
-
-                int iPageX = (int)dPageX;
-                int iPageY = (int)dPageY;
-
-                Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
-
-                oDictFileValues.Add("PageID", sPageID);
-                oDictFileValues.Add("TermCount", iTermCount.ToString());
-                oDictFileValues.Add("Tag", sTag);
-                oDictFileValues.Add("XLocation", iPageX.ToString());
-                oDictFileValues.Add("YLocation", iPageY.ToString());
 
                 string sID = "";
                 if (ovShape.CellExists["User.ShapeID", 0] == -1)
@@ -930,9 +817,72 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
 
 
-                //hardcode the vert and horizontal markers...for now but i need this information from the pages...
-                //assuming instead of grabbing it this way i'll want to grab the page information from the database, 
-                //which part of the location should be in the DB, X and Y? the actual (1,1F)? what should we really be keeping in db
+                RecordUpdate ruFileRecord = new RecordUpdate();
+                ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
+                ruFileRecord.sId = sID;
+                ruFileRecord.odictColumnValues = oDictFileValues;
+
+                return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in BuildTerminalBlockInfo " + ex.Message, "VisAssist");
+            }
+            finally
+            {
+                ovDoc.Application.EventsEnabled = -1;
+            }
+            return new MultipleRecordUpdates();
+        }
+
+        private static Dictionary<string, string> GatherEndDeviceInformation(Visio.Shape ovShape, string sPageID)
+        {
+            Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
+            try
+            {
+                Visio.Document ovDoc = ovShape.Document;
+
+                int iTermCount = (int)ovShape.Cells["Prop.TermCount"].ResultIU;
+                string sTerm1 = ovShape.Cells["Prop.term1"].get_ResultStr(0);
+                string sTerm2 = ovShape.Cells["Prop.term2"].get_ResultStr(0);
+                string sTerm3 = ovShape.Cells["Prop.term3"].get_ResultStr(0);
+                string sTerm4 = ovShape.Cells["Prop.term4"].get_ResultStr(0);
+                string sTerm5 = ovShape.Cells["Prop.term5"].get_ResultStr(0);
+                string sTerm6 = ovShape.Cells["Prop.term6"].get_ResultStr(0);
+                string sTerm7 = ovShape.Cells["Prop.term7"].get_ResultStr(0);
+                string sTerm8 = ovShape.Cells["Prop.term8"].get_ResultStr(0);
+                string sTerm9 = ovShape.Cells["Prop.term9"].get_ResultStr(0);
+                string sTerm10 = ovShape.Cells["Prop.term10"].get_ResultStr(0);
+
+                string sTag = ovShape.Cells["Prop.Tag"].get_ResultStr(0);
+
+                //get the x and y location...
+                double dPinX = ovShape.Cells["PinX"].ResultIU;
+                double dPinY = ovShape.Cells["PinY"].ResultIU;
+                double dPageX;
+                double dPageY;
+                ovShape.XYToPage(dPinX, dPinY, out dPageX, out dPageY);
+
+                int iPageX = (int)dPageX;
+                int iPageY = (int)dPageY;
+
+
+                oDictFileValues.Add("PageID", sPageID);
+                oDictFileValues.Add("TermCount", iTermCount.ToString());
+                oDictFileValues.Add("Term1", sTerm1);
+                oDictFileValues.Add("Term2", sTerm2);
+                oDictFileValues.Add("Term3", sTerm3);
+                oDictFileValues.Add("Term4", sTerm4);
+                oDictFileValues.Add("Term5", sTerm5);
+                oDictFileValues.Add("Term6", sTerm6);
+                oDictFileValues.Add("Term7", sTerm7);
+                oDictFileValues.Add("Term8", sTerm8);
+                oDictFileValues.Add("Term9", sTerm9);
+                oDictFileValues.Add("Term10", sTerm10);
+                oDictFileValues.Add("Tag", sTag);
+                oDictFileValues.Add("XLocation", iPageX.ToString());
+                oDictFileValues.Add("YLocation", iPageY.ToString());
+
 
                 int iPageIndex = ovShape.ContainingPage.Index;
                 string sHorizontalMarkers = "8;7;6;5;4;3;2;1"; //will need to get this from the page
@@ -971,23 +921,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     ovDoc.Application.EventsEnabled = -1;
                 }
 
-
-                RecordUpdate ruFileRecord = new RecordUpdate();
-                ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
-                ruFileRecord.sId = sID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
-
-                return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error in BuildTerminalBlockInfo " + ex.Message, "VisAssist");
+                MessageBox.Show("Error in GatherEndDeviceInformation " + ex.Message, "VisAssist");
             }
-            finally
-            {
-                ovDoc.Application.EventsEnabled = -1;
-            }
-            return new MultipleRecordUpdates();
+            return oDictFileValues;
         }
 
 
@@ -1100,6 +1039,145 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
         //UTILITIES
+        internal static string GetColumnInfoInWireShapesTableFromDatabase(string sColumnName, string sID)
+        {
+            try
+            {
+                string sSpecificPiece = "";
+                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    //logging here
+                    sqliteconConnection.Open();
+                    string sSQL = $"SELECT [{sColumnName}] FROM [wire_shapes_table] WHERE [ShapeID] = @Id LIMIT 1";
+
+                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                    {
+                        sqlcmdCommand.Parameters.AddWithValue("@Id", sID);
+
+                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
+                        {
+                            if (sqlitereadReader.Read())
+                            {
+                                // Safe retrieval of value as string
+                                object dbValue = sqlitereadReader[sColumnName];
+                                return dbValue == DBNull.Value ? "" : dbValue.ToString();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetColumnInfoInProjectTableFromDatabase " + ex.Message, "VisAssist");
+            }
+            return "";
+        }
+
+        internal static void AddShapesToDatabase(Visio.Page ovVisioPage, string sProjectID)
+        {
+            try
+            {
+                //gets called when we are adding a page that already has shapes on it and need to add the shapes to the db...
+                //this gets called when the user is bringing back a page from an undo event...
+                foreach (Visio.Shape ovShape in ovVisioPage.Shapes)
+                {
+                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    {
+                        //this is one of our shapes..
+                        string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                        switch (sClass)
+                        {
+                            case "TerminalBlock":
+                                {
+                                    ShapesUtilities.AddTerminalBlockToDatabase(ovShape);
+                                    break;
+                                }
+                            case "ADC End Device":
+                                {
+                                    ShapesUtilities.AddWiringEndDeviceToDatabase(ovShape);
+                                    break;
+                                }
+                            case "SmartWire":
+                                {
+                                    break;
+                                }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in AddShapesToDatabase " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static List<string> PopulateShapesInDocument(Visio.Document ovDocument, string sClassToGather)
+        {
+            //this populates a list of the shapes (given a class) on a given page
+            List<string> lstShapesToReturn = new List<string>();
+            try
+            {
+
+                string sID = "";
+                foreach (Visio.Page ovPage in ovDocument.Pages)
+                {
+                    if (ovPage.PageSheet.CellExists["User.PageClass", 0] == -1)
+                    {
+                        //based on sClass populate a list of shapes on ther page 
+                        foreach (Visio.Shape ovShape in ovPage.Shapes)
+                        {
+                            if (ovShape.CellExists["User.Class", 0] == -1)
+                            {
+                                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+
+                                switch (sClassToGather)
+                                {
+                                    case "TerminalBlock":
+                                        {
+                                            //we want to gather terminal blocks
+                                            if (sClass == "TerminalBlock")
+                                            {
+                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+
+                                                lstShapesToReturn.Add(sID);
+                                            }
+
+                                            break;
+                                        }
+                                    case "SmartWire":
+                                        {
+                                            if (sClass == "SmartWire")
+                                            {
+                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+
+                                                lstShapesToReturn.Add(sID);
+                                            }
+                                            break;
+                                        }
+                                    case "ADC End Device":
+                                        {
+                                            if (sClass == "ADC End Device")
+                                            {
+                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+
+                                                lstShapesToReturn.Add(sID);
+                                            }
+                                            break;
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+                return lstShapesToReturn;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in PopulateShapesOnPage " + ex.Message, "VisAssist");
+            }
+            return lstShapesToReturn;
+        }
         internal static string GenerateShapeID(string sProjectID, string sFileID, string sPageID, string sShapeName, DateTime now)
         {
             string input = sProjectID + sFileID + sPageID + sShapeName + now.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
@@ -1227,143 +1305,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return $"({iPageIndex}, {sXMarker}{sYMarker})";
         }
 
-        internal static string GetColumnInfoInWireShapesTableFromDatabase(string sColumnName, string sID)
-        {
-            try
-            {
-                string sSpecificPiece = "";
-                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
-                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-                {
-                    //logging here
-                    sqliteconConnection.Open();
-                    string sSQL = $"SELECT [{sColumnName}] FROM [wire_shapes_table] WHERE [ShapeID] = @Id LIMIT 1";
-
-                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
-                    {
-                        sqlcmdCommand.Parameters.AddWithValue("@Id", sID);
-
-                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
-                        {
-                            if (sqlitereadReader.Read())
-                            {
-                                // Safe retrieval of value as string
-                                object dbValue = sqlitereadReader[sColumnName];
-                                return dbValue == DBNull.Value ? "" : dbValue.ToString();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in GetColumnInfoInProjectTableFromDatabase " + ex.Message, "VisAssist");
-            }
-            return "";
-        }
-
-        internal static void AddShapesToDatabase(Visio.Page ovVisioPage, string sProjectID)
-        {
-            try
-            {//gets called when we are adding a page that already has shapes on it and need to add the shapes to the db...
-                //this gets called when the user is bringing back a page from an undo event...
-                foreach (Visio.Shape ovShape in ovVisioPage.Shapes)
-                {
-                    if (ovShape.CellExists["User.Class", 0] == -1)
-                    {
-                        //this is one of our shapes..
-                        string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                        switch (sClass)
-                        {
-                            case "TerminalBlock":
-                                {
-                                    ShapesUtilities.AddTerminalBlockToDatabase(ovShape);
-                                    break;
-                                }
-                            case "ADC End Device":
-                                {
-                                    ShapesUtilities.AddWiringEndDeviceToDatabase(ovShape);
-                                    break;
-                                }
-                            case "SmartWire":
-                                {
-                                    break;
-                                }
-                        }
-                    }
-                }
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in AddShapesToDatabase " + ex.Message, "VisAssist");
-            }
-        }
-
-        internal static List<string> PopulateShapesInDocument(Visio.Document ovDocument, string sClassToGather)
-        {
-            //this populates a list of the shapes (given a class) on a given page
-            List<string> lstShapesToReturn = new List<string>();
-            try
-            {
-
-                string sID = "";
-                foreach (Visio.Page ovPage in ovDocument.Pages)
-                {
-                    if (ovPage.PageSheet.CellExists["User.PageClass", 0] == -1)
-                    {
-                        //based on sClass populate a list of shapes on ther page 
-                        foreach (Visio.Shape ovShape in ovPage.Shapes)
-                        {
-                            if (ovShape.CellExists["User.Class", 0] == -1)
-                            {
-                                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-
-                                switch (sClassToGather)
-                                {
-                                    case "TerminalBlock":
-                                        {
-                                            //we want to gather terminal blocks
-                                            if (sClass == "TerminalBlock")
-                                            {
-                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-
-                                                lstShapesToReturn.Add(sID);
-                                            }
-
-                                            break;
-                                        }
-                                    case "SmartWire":
-                                        {
-                                            if (sClass == "SmartWire")
-                                            {
-                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-
-                                                lstShapesToReturn.Add(sID);
-                                            }
-                                            break;
-                                        }
-                                    case "ADC End Device":
-                                        {
-                                            if (sClass == "ADC End Device")
-                                            {
-                                                sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-
-                                                lstShapesToReturn.Add(sID);
-                                            }
-                                            break;
-                                        }
-                                }
-                            }
-                        }
-                    }
-                }
-                return lstShapesToReturn;
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in PopulateShapesOnPage " + ex.Message, "VisAssist");
-            }
-            return lstShapesToReturn;
-        }
+       
     }
 }

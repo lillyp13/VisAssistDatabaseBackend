@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Office.Interop.Visio;
+using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
@@ -190,9 +191,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             try
             {
 
-                string sProjectFolderPath = Path.GetDirectoryName(sFilePath);
-                string sVisAssistFolderPath = Path.GetDirectoryName(sProjectFolderPath);
-                string sFileName = Path.GetFileName(sFilePath);
+                string sProjectFolderPath = System.IO.Path.GetDirectoryName(sFilePath);
+                string sVisAssistFolderPath = System.IO.Path.GetDirectoryName(sProjectFolderPath);
+                string sFileName = System.IO.Path.GetFileName(sFilePath);
                 // string sHiddenProjectFolder = Path.Combine(sVisAssistFolder, "Project Files", sFileName);
                 //this needs to create the new visio file now and then we can add the database...
                 Visio.Document ovDoc = FileUtilities.AddCoverPageDocument(sFilePath);
@@ -263,13 +264,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         string sBasePath = folderdialog.FileName; // folder path
 
                         string sVisAssist = "VisAssist";
-                        string sVisAssistFolderPath = Path.Combine(sBasePath, sVisAssist);
+                        string sVisAssistFolderPath = System.IO.Path.Combine(sBasePath, sVisAssist);
 
                         // If VisAssist already exists, append -1, -2, -3...
                         int iCounter = 1;
                         while (Directory.Exists(sVisAssistFolderPath))
                         {
-                            sVisAssistFolderPath = Path.Combine(sBasePath, $"{sVisAssist}-{iCounter}");
+                            sVisAssistFolderPath = System.IO.Path.Combine(sBasePath, $"{sVisAssist}-{iCounter}");
                             iCounter++;
                         }
 
@@ -277,20 +278,20 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         Directory.CreateDirectory(sVisAssistFolderPath);
 
                         //create a hidden directory for the Visio files...
-                        string sProjectFolderPath = Path.Combine(sVisAssistFolderPath, "Project Files");
+                        string sProjectFolderPath = System.IO.Path.Combine(sVisAssistFolderPath, "Project Files");
                         Directory.CreateDirectory(sProjectFolderPath);
                         File.SetAttributes(sProjectFolderPath, File.GetAttributes(sProjectFolderPath) | FileAttributes.Hidden);
 
                         //build the visio file name using our general Cover Pages
-                        string sClassAFilePath = Path.Combine(sProjectFolderPath, "Dwg - Cover Pages.vsdx");
+                        string sClassAFilePath = System.IO.Path.Combine(sProjectFolderPath, "Dwg - Cover Pages.vsdx");
 
                         //now we need to create a hidden folder that will contain the database..
-                        string sDbFolderPath = Path.Combine(sVisAssistFolderPath, "DB");
+                        string sDbFolderPath = System.IO.Path.Combine(sVisAssistFolderPath, "DB");
                         Directory.CreateDirectory(sDbFolderPath);
                         File.SetAttributes(sDbFolderPath, File.GetAttributes(sDbFolderPath) | FileAttributes.Hidden);
 
                         // Bind to the database inside the hidden folder
-                        DatabaseConfig.DatabasePath = Path.Combine(sDbFolderPath, "VisAssistBackEnd.db");
+                        DatabaseConfig.DatabasePath = System.IO.Path.Combine(sDbFolderPath, "VisAssistBackEnd.db");
 
                         folderdialog.Dispose();
                         return sClassAFilePath;
@@ -309,83 +310,109 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void DeleteProject()
         {
-
-            // i want to delete the project entireley so i will see if i can delete the folder (if everything in it is closed...)
-            //open a folder dialog box and have the user point to the folder they want to delete
-            //try to delete it-if we can't catch the exception and tell the user hey you need to close all the files in that project before i delete the project...
-            using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
+            try
             {
-                folderdialog.IsFolderPicker = true;
-                folderdialog.Title = "Select the VisAssist project folder to delete";
 
-                if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
+
+                // i want to delete the project entireley so i will see if i can delete the folder (if everything in it is closed...)
+                //open a folder dialog box and have the user point to the folder they want to delete
+                //try to delete it-if we can't catch the exception and tell the user hey you need to close all the files in that project before i delete the project...
+                using (CommonOpenFileDialog folderdialog = new CommonOpenFileDialog())
                 {
-                    string sVisAssistFolderPath = folderdialog.FileName;
+                    folderdialog.IsFolderPicker = true;
+                    folderdialog.Title = "Select the VisAssist project folder to delete";
 
-                    bool bHasNecessaryFolders = FileUtilities.CheckIfSubFoldersExist(sVisAssistFolderPath);
-
-                    if (bHasNecessaryFolders)
+                    if (folderdialog.ShowDialog() == CommonFileDialogResult.Ok)
                     {
-                        ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
+                        string sVisAssistFolderPath = folderdialog.FileName;
 
-                        try
+                        bool bHasNecessaryFolders = FileUtilities.CheckIfSubFoldersExist(sVisAssistFolderPath);
+
+                        if (bHasNecessaryFolders)
                         {
-                            bool bAllFilesUnlocked = true;
-                            string sProjectFolderPath = Path.Combine(sVisAssistFolderPath, "Project Files");
-                            foreach (string sFilePath in Directory.GetFiles(sProjectFolderPath, "*", SearchOption.AllDirectories))
+                            ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
+
+                            try
                             {
-                                bool bIsFileLocked = FileUtilities.IsFileLocked(sFilePath);
-                                if (bIsFileLocked)
+
+                                bool bAllFilesUnlocked = true;
+
+
+                                //check if ANY files in ANY of the Visassit subfolders are open, including the project files, the db, the launch file, json...
+                                foreach (string sFilePath in Directory.GetFiles(sVisAssistFolderPath, "*", SearchOption.AllDirectories))
                                 {
-                                    bAllFilesUnlocked = false;
-                                    break;
+                                    bool bIsFileLocked = FileUtilities.IsFileLocked(sFilePath);
+                                    if (bIsFileLocked)
+                                    {
+                                        bAllFilesUnlocked = false;
+                                    }
                                 }
+
+
+
+
+                                //if this files name is VisAssistBackEnd.db delete this last if we were succesfully in deleting the other projects
+                                // Attempt to delete entire project folder
+                                if (bAllFilesUnlocked)
+                                {
+                                    //reset the attributes in order to successfully delete now that we know nothing is open...
+                                    foreach (string sFile in Directory.GetFiles(sVisAssistFolderPath, "*", SearchOption.AllDirectories))
+                                    {
+                                        File.SetAttributes(sFile, FileAttributes.Normal);
+                                    }
+
+
+                                    foreach (string sDirectory in Directory.GetDirectories(sVisAssistFolderPath, "*", SearchOption.AllDirectories))
+                                    {
+                                        File.SetAttributes(sDirectory, FileAttributes.Normal);
+                                    }
+
+
+                                    File.SetAttributes(sVisAssistFolderPath, FileAttributes.Normal);
+
+                                    Directory.Delete(sVisAssistFolderPath, true);
+                                    MessageBox.Show("Project deleted successfully.", "VisAssist", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                }
+                                else
+                                {
+                                    //a file in the folder is locked...
+                                    MessageBox.Show("Unable to delete the project folder because the file is locked.\n\n" +
+                                    "Please make sure all Visio documents and related files in this project are closed, then try again.",
+                                    "VisAssist",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Warning
+                                );
+                                }
+
+                                folderdialog.Dispose();
+
+
                             }
 
-                            //MAY ALSO NEED TO CONFIRM THAT THE LAUNCH FILE IS ALSO NOTM OPEN...
-
-                            //if this files name is VisAssistBackEnd.db delete this last if we were succesfully in deleting the other projects
-                            // Attempt to delete entire project folder
-                            if (bAllFilesUnlocked)
+                            //add a few catches...
+                            catch (IOException)
                             {
-                                Directory.Delete(sVisAssistFolderPath, true);
-                                MessageBox.Show("Project deleted successfully.", "VisAssist", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                MessageBox.Show("Unable to delete the project folder.\n\n" +
+                                    "Please make sure all Visio documents and related files in this project are closed, then try again.",
+                                    "VisAssist",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Warning
+                                );
                             }
-                            else
-                            {
-                                //a file in the folder is locked...
-                                MessageBox.Show("Unable to delete the project folder because the file is locked.\n\n" +
-                                "Please make sure all Visio documents and related files in this project are closed, then try again.",
-                                "VisAssist",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning
-                            );
-                            }
-
-                            folderdialog.Dispose();
-
-
                         }
-
-                        //add a few catches...
-                        catch (IOException)
+                        else
                         {
-                            MessageBox.Show("Unable to delete the project folder.\n\n" +
-                                "Please make sure all Visio documents and related files in this project are closed, then try again.",
-                                "VisAssist",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning
-                            );
+                            MessageBox.Show("Please pick a VisAssist Project.", "VisAssist");
+                            DeleteProject();
                         }
-                    }
-                    else
-                    {
-                        MessageBox.Show("Please pick a VisAssist Project.", "VisAssist");
-                        DeleteProject();
-                    }
 
+                    }
+                    folderdialog.Dispose();
                 }
-                folderdialog.Dispose();
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in DeleteProject " + ex.Message, "VisAssist");
             }
 
 
@@ -508,7 +535,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //file: projectID + filepath + created date
             //page: ProjectID + FileID + page name + created date
 
-            string sProjectFolderPath = Path.Combine(sVisAssistFolderPath, "Project Files");
+            string sProjectFolderPath = System.IO.Path.Combine(sVisAssistFolderPath, "Project Files");
             string sInput = sProjectFolderPath + "Dwg - Cover Pages.vsdx" + sProjectName + createdDate.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
             using (SHA256 sha = SHA256.Create())
             {
@@ -711,8 +738,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     //we are adding a project for the first time there isn't a projectId assigned yet...
 
-                    string sProjectFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(Path.DirectorySeparatorChar);
-                    string sVisAssistFolderPath = Path.GetDirectoryName(sProjectFolderPath);
+                    string sProjectFolderPath = FileUtilities.ReturnFileStructurePath(ovDoc.Path).TrimEnd(System.IO.Path.DirectorySeparatorChar);
+                    string sVisAssistFolderPath = System.IO.Path.GetDirectoryName(sProjectFolderPath);
                     //the created date doesn't exist yet...
                     DateTime dtCreatedDate = DateTime.Now;
                     oDictToUpdate["CreatedDate"] = dtCreatedDate.ToString("yyyy-MM-dd HH:mm:ss");
