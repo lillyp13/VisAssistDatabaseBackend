@@ -370,8 +370,18 @@ namespace VisAssistDatabaseBackEnd
                 //PageDeleted
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage):
                     {
-
-                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDeleted((Visio.Page)subject);
+                        if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                        {
+                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDeleted((Visio.Page)subject);
+                        }
+                        else
+                        {
+                            Visio.Page ovPage = ((Visio.Page)subject);
+                            Visio.Document ovDocument = ovPage.Document;
+                            string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDocument);
+                            //we are doing a redo/undo that is causing a deletion of a page, however the pageid may not be the updated one because it reverts back to what is what duplicated from...
+                            DatabaseUtilities.CheckPageExistence(ovDocument, sVisAssistFolderPath);
+                        }
 
                         break;
                     }
@@ -385,7 +395,10 @@ namespace VisAssistDatabaseBackEnd
                         if (!m_pendingPageIds.Contains(sKey))
                         {
                             //if the page has shapes on it already this is a duplicate..
-                            m_bIsPageDuplicating = ovPage.Shapes.Count > 0;
+                            if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                            {
+                                m_bIsPageDuplicating = true; //we are duplicating a page...
+                            }
                             //if this is a duplicate then we are going to set the pagesheets formula first...
                            // ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio("LillY");
                            if(m_bIsPageDuplicating)

@@ -80,7 +80,12 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
 
                 string sNewPageID = PageUtilities.GeneratePageID(sProjectID, sFileID, ovPage.Name, DateTime.Now);
-                ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+                //if we are not doing a redo/undo...otherwise the formula will be correct...
+                if(!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                {
+                    ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+                }
+               
 
 
                 //need to update the shapes ids as well...
