@@ -18,9 +18,9 @@
 					<button id="btnGetProjectInfo"
 							 label="Get Project Info"
 							 onAction="btnGetProjectInfo_Click"/>
-					<button id="btnDeletePageInfo"
-						   label="Delete Pages"
-						   onAction="btnDeletePageInfo_Click"/>
+          <button id="btnDeleteProjectInfo"
+                   label="Delete Project"
+                   onAction="btnDeleteProjectInfo_Click"/>
 					<button id="btnOpenProject"
 						 label="Open Project"
 						 onAction="btnOpenProject_Click"/>
