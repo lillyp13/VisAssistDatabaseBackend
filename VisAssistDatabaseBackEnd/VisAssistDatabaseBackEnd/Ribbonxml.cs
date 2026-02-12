@@ -58,7 +58,6 @@ namespace VisAssistDatabaseBackEnd
         #region Ribbon Callbacks
         //Create callback methods here. For more information about adding callback methods, visit https://go.microsoft.com/fwlink/?LinkID=271226
 
-
         #endregion
 
         #region Helpers
@@ -97,9 +96,19 @@ namespace VisAssistDatabaseBackEnd
             PageUtilities.DeleteAllPages();
         }
 
-        public void OnCustomDuplicatePage(Office.IRibbonControl control)
+        public bool GetDuplicatePageEnabled(Office.IRibbonControl control)
         {
+            return false;
+        }
 
+        public void OnCustomDuplicateSinglePage(Office.IRibbonControl control)
+        {
+            MessageBox.Show("The " + control.Id + " control has been clicked.");
+        }
+
+        public void OnCustomDuplicateMultiplePages(Office.IRibbonControl control)
+        {
+            MessageBox.Show("The " + control.Id + " control has been clicked.");
         }
 
         public void btnDeleteProjectInfo_Click(Office.IRibbonControl control)
