@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+
+<!--WORKING SMALL SECTION-->
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
+	<ribbon>
+		<tabs>
+			<tab id="tabAddIn" label="Add In">
+				<group id="grpDatabase" label="Database">
+					<button id="btnAddDatabase" label="Add Database" onAction="btnAddDatabase_Click"/>
+					<button id="btnDeleteDatabase"
+						   label="Delete Database"
+						   onAction="btnDeleteDatabase_Click"/>
+				</group>
+				<group id="grpProject" label="Project">
+					<button id="btnAddProjectWithVisio"
+							label="Add Project"
+							onAction="btnAddProjectWithVisio_Click"/>
+					<button id="btnGetProjectInfo"
+							 label="Get Project Info"
+							 onAction="btnGetProjectInfo_Click"/>
+          <button id="btnDeleteProjectInfo"
+                   label="Delete Project"
+                   onAction="btnDeleteProjectInfo_Click"/>
+					<button id="btnOpenProject"
+						 label="Open Project"
+						 onAction="btnOpenProject_Click"/>
+				</group>
+				<group id="grpFile" label="File">
+					<button id="btnAddFile"
+						 label="Add File"
+						 onAction="btnAddFile_Click"/>
+					<button id="btnGetFileData"
+							label="Get File Data"
+							onAction="btnGetFileData_Click"/>
+					<button id="btnCopyAnotherFile"
+						   label="Copy File"
+						   onAction="btnCopyAnotherFile_Click"/>
+					<button id="btnDeleteFile"
+							label="Delete File"
+							onAction="btnDeleteFile_Click"/>
+					<button id="btnOpenFile"
+						 label="Open File"
+						 onAction="btnOpenFile_Click"/>
+					<button id="btnChangeFileName"
+						  label="Change File Name"
+						  onAction="btnChangeFileName_Click"/>
+				</group>
+        <group id="grpTests" label="Tests">
+          <button id="btnStressTest"
+						 label="Stress Test"
+						 onAction="btnPageAndTerminals_Click"/>
+         
+        </group>
+			</tab>
+		</tabs>
+	</ribbon>
+
+	<contextMenus>
+		<contextMenu idMso="ContextMenuPageTab">
+			<!--Disable Built-in duplicate page control-->
+			
+			
+			<!--Custom VisAssist duplicate buttons-->
+			<menuSeparator id="sepCustom1"/>
+			<button id="VisAssistDuplicateSinglePage"
+					label="VisAssist - Duplicate Single Page"
+					onAction="OnCustomDuplicateSinglePage"/>
+			
+			<button id="VisAssistDuplicateMultiplePages"
+					label="VisAssist - Duplicate Multiple Pages"
+					onAction="OnCustomDuplicateMultiplePages" />
+		</contextMenu>
+	</contextMenus>
+</customUI>
+<!--END OF WORKING SMALL SECTION-->
+
+
+<!--<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui"
+          onLoad="Ribbon_Load">
+  <ribbon>
+    <tabs>
+      -->
+<!-- Main Add-In tab -->
+<!--
+      <tab id="tabAddIn" label="Add In">
+        -->
+<!-- Database group -->
+<!--
+        <group id="grpDatabase" label="Database">
+          <button id="btnAddDatabase"
+                  label="Add Database"
+                  size="large"
+                  imageMso="Database"
+                  onAction="btnAddDatabase_Click"/>
+          <button id="btnDeleteProjectInfo"
+                  label="Delete Project"
+                  onAction="btnDeleteProjectInfo_Click"/>
+          <button id="btnDeletePageInfo"
+                  label="Delete Pages"
+                  onAction="btnDeletePageInfo_Click"/>
+        </group>
+
+        -->
+<!-- Project / File Management group -->
+<!--
+        <group id="grpProjectFile" label="Project And File">
+          -->
+<!--<button id="btnAddWireInfo"
+                  label="Add Wire Info"
+                  onAction="btnAddWireInfo_Click"/>-->
+<!--
+          <button id="btnGetPageName"
+                  label="Get Pages"
+                  onAction="btnGetPageName_Click"/>
+          <button id="btnDeleteDatabase"
+                  label="Delete Database"
+                  onAction="btnDeleteDatabase_Click"/>
+          <button id="btnGetProjectInfo"
+                  label="Get Project Info"
+                  onAction="btnGetProjectInfo_Click"/>
+          <button id="btnGetFileData"
+                  label="Get File Data"
+                  onAction="btnGetFileData_Click"/>
+          <button id="btnAddProjectWithVisio"
+                  label="Add Project"
+                  onAction="btnAddProjectWithVisio_Click"/>
+          <button id="btnAddFile"
+                  label="Add File"
+                  onAction="btnAddFile_Click"/>
+          <button id="btnDeleteFile"
+                  label="Delete File"
+                  onAction="btnDeleteFile_Click"/>
+          <button id="btnCopyAnotherFile"
+                  label="Copy File"
+                  onAction="btnCopyAnotherFile_Click"/>
+          <button id="btnChangeFileName"
+                  label="Change File Name"
+                  onAction="btnChangeFileName_Click"/>
+          <button id="btnOpenProject"
+                  label="Open Project"
+                  onAction="btnOpenProject_Click"/>
+          <button id="btnOpenFile"
+                  label="Open File"
+                  onAction="btnOpenFile_Click"/>
+          -->
+<!--<button id="btnPageAndTerminals"
+                  label="Page And Terminals"
+                  onAction="btnPageAndTerminals_Click"/>-->
+<!--
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+
+  -->
+<!-- Page tab right-click context menu -->
+<!--
+  <contextMenus>
+    <contextMenu idMso="VisioPageTabContextMenu">
+      <separator id="sepCustom"/>
+      <button id="CustomDuplicatePage"
+              label="Custom Duplicate"
+              imageMso="DuplicatePage"
+              onAction="OnCustomDuplicatePage"/>
+    </contextMenu>
+  </contextMenus>
+</customUI>-->
+

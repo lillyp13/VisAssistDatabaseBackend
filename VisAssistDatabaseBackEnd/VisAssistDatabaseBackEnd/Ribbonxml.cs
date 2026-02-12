@@ -1,29 +1,89 @@
-﻿using Microsoft.Office.Interop.Visio;
-using Microsoft.Office.Tools.Ribbon;
+﻿using Microsoft.Office.Tools.Ribbon;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
-using VisAssistDatabaseBackEnd.Forms;
-using VisAssistDatabaseBackEnd.Project_Manifest;
+using Office = Microsoft.Office.Core;
 using Visio = Microsoft.Office.Interop.Visio;
+
+// TODO:  Follow these steps to enable the Ribbon (XML) item:
+
+// 1: Copy the following code block into the ThisAddin, ThisWorkbook, or ThisDocument class.
+
+//  protected override Microsoft.Office.Core.IRibbonExtensibility CreateRibbonExtensibilityObject()
+//  {
+//      return new Ribbonxml();
+//  }
+
+// 2. Create callback methods in the "Ribbon Callbacks" region of this class to handle user
+//    actions, such as clicking a button. Note: if you have exported this Ribbon from the Ribbon designer,
+//    move your code from the event handlers to the callback methods and modify the code to work with the
+//    Ribbon extensibility (RibbonX) programming model.
+
+// 3. Assign attributes to the control tags in the Ribbon XML file to identify the appropriate callback methods in your code.  
+
+// For more information, see the Ribbon XML documentation in the Visual Studio Tools for Office Help.
+
 
 namespace VisAssistDatabaseBackEnd
 {
-    public partial class Ribbon
+    [ComVisible(true)]
+    public class Ribbonxml : Office.IRibbonExtensibility
     {
-        private void Ribbon_Load(object sender, RibbonUIEventArgs e)
-        {
+        private Office.IRibbonUI ribbon;
 
+        public Ribbonxml()
+        {
+            
         }
 
-        private void btnAddDatabase_Click(object sender, RibbonControlEventArgs e)
+        public void Ribbon_Load(Office.IRibbonUI ribbonUI)
+        {
+            this.ribbon = ribbonUI;
+        }
+        #region IRibbonExtensibility Members
+
+        public string GetCustomUI(string ribbonID)
+        {
+            return GetResourceText("VisAssistDatabaseBackEnd.Ribbonxml.xml");
+        }
+
+        #endregion
+
+        #region Ribbon Callbacks
+        //Create callback methods here. For more information about adding callback methods, visit https://go.microsoft.com/fwlink/?LinkID=271226
+
+        #endregion
+
+        #region Helpers
+
+        private static string GetResourceText(string resourceName)
+        {
+            Assembly asm = Assembly.GetExecutingAssembly();
+            string[] resourceNames = asm.GetManifestResourceNames();
+            for (int i = 0; i < resourceNames.Length; ++i)
+            {
+                if (string.Compare(resourceName, resourceNames[i], StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    using (StreamReader resourceReader = new StreamReader(asm.GetManifestResourceStream(resourceNames[i])))
+                    {
+                        if (resourceReader != null)
+                        {
+                            return resourceReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+
+        public void btnAddDatabase_Click(Office.IRibbonControl control)
         {
             //open and initialize the database
             DatabaseUtilities.InitializeDatabase("");
@@ -31,13 +91,27 @@ namespace VisAssistDatabaseBackEnd
         }
 
 
-        private void btnDeletePageInfo_Click(object sender, RibbonControlEventArgs e)
+        public void btnDeletePageInfo_Click(Office.IRibbonControl control)
         {
             PageUtilities.DeleteAllPages();
         }
 
+        public bool GetDuplicatePageEnabled(Office.IRibbonControl control)
+        {
+            return false;
+        }
 
-        private void btnDeleteProjectInfo_Click(object sender, RibbonControlEventArgs e)
+        public void OnCustomDuplicateSinglePage(Office.IRibbonControl control)
+        {
+            MessageBox.Show("The " + control.Id + " control has been clicked.");
+        }
+
+        public void OnCustomDuplicateMultiplePages(Office.IRibbonControl control)
+        {
+            MessageBox.Show("The " + control.Id + " control has been clicked.");
+        }
+
+        public void btnDeleteProjectInfo_Click(Office.IRibbonControl control)
         {
 
             ProjectUtilities.DeleteProject();
@@ -48,13 +122,13 @@ namespace VisAssistDatabaseBackEnd
         }
 
 
-        private void btnAddWireInfo_Click(object sender, RibbonControlEventArgs e)
+        public void btnAddWireInfo_Click(Office.IRibbonControl control)
         {
             // ConnectionsUtilities.AddWireInfo();
         }
 
 
-        private void btnGetPageName_Click(object sender, RibbonControlEventArgs e)
+        public void btnGetPageName_Click(Office.IRibbonControl control)
         {
             //grab all the pages and put them in a datagridview 
             //for now let's build a datagridview of all the pages in just one file...
@@ -63,7 +137,7 @@ namespace VisAssistDatabaseBackEnd
             {
 
                 string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                if(sVisAssistFolderPath != "")
+                if (sVisAssistFolderPath != "")
                 {
                     DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
@@ -95,24 +169,24 @@ namespace VisAssistDatabaseBackEnd
                 {
                     MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
-               
+
             }
 
         }
 
-        private void btnDeleteDatabase_Click(object sender, RibbonControlEventArgs e)
+        public void btnDeleteDatabase_Click(Office.IRibbonControl control)
         {
             DatabaseUtilities.DeleteDatabase();
         }
 
-        private void btnGetProjectInfo_Click(object sender, RibbonControlEventArgs e)
+        public void btnGetProjectInfo_Click(Office.IRibbonControl control)
         {
-                
+
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
                 string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                if(sVisAssistFolderPath != "")
+                if (sVisAssistFolderPath != "")
                 {
                     bool bHasNecessaryFolders = FileUtilities.CheckIfSubFoldersExist(sVisAssistFolderPath); //i dont think we need to always check this, I know when we choose to copy, or open a project (i think it is only for when we need to confirm that a folder path that was given to use is a visassist project...
                     if (bHasNecessaryFolders)
@@ -138,18 +212,18 @@ namespace VisAssistDatabaseBackEnd
                     MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
 
-               
+
             }
 
         }
 
-        private void btnGetFileData_Click(object sender, RibbonControlEventArgs e)
+        public void btnGetFileData_Click(Office.IRibbonControl control)
         {
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
                 string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                if(sVisAssistFolderPath != "")
+                if (sVisAssistFolderPath != "")
                 {
                     DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
@@ -185,12 +259,12 @@ namespace VisAssistDatabaseBackEnd
                 {
                     MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
-                
+
             }
 
         }
 
-        private void btnAddProjectWithVisio_Click(object sender, RibbonControlEventArgs e)
+        public void btnAddProjectWithVisio_Click(Office.IRibbonControl control)
         {
             //this creates the visio document
             //string sClass = "Master"; //i think this would always creating the Master File
@@ -227,7 +301,7 @@ namespace VisAssistDatabaseBackEnd
 
         }
 
-        private void btnAddFile_Click(object sender, RibbonControlEventArgs e)
+        public void btnAddFile_Click(Office.IRibbonControl control)
         {
             //this will create the class b file and add it to an existing project
             //could either add the file to the existing doc's project
@@ -236,7 +310,7 @@ namespace VisAssistDatabaseBackEnd
             if (ovDoc != null)
             {
                 string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                if(sVisAssistFolderPath != "")
+                if (sVisAssistFolderPath != "")
                 {
                     DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
@@ -248,7 +322,7 @@ namespace VisAssistDatabaseBackEnd
                         if (bIsFileAssignedToProject)
                         {
                             FileUtilities.AddNewFile();
-                           
+
                         }
                         else
                         {
@@ -265,18 +339,18 @@ namespace VisAssistDatabaseBackEnd
                 {
                     MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
-               
+
             }
 
         }
 
-        private void btnDeleteFile_Click(object sender, RibbonControlEventArgs e)
+        public void btnDeleteFile_Click(Office.IRibbonControl control)
         {
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
                 string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                if(sVisAssistFolderPath != "")
+                if (sVisAssistFolderPath != "")
                 {
                     DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
@@ -305,20 +379,20 @@ namespace VisAssistDatabaseBackEnd
                 {
                     MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
-                
+
             }
         }
 
-        
 
 
-        private void btnCopyAnotherFile_Click(object sender, RibbonControlEventArgs e)
+
+        public void btnCopyAnotherFile_Click(Office.IRibbonControl control)
         {
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
             {
                 string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                if(sVisAssistFolderPath != "")
+                if (sVisAssistFolderPath != "")
                 {
                     DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
@@ -340,12 +414,12 @@ namespace VisAssistDatabaseBackEnd
                 {
                     MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
                 }
-               
+
             }
         }
 
-       
-        private void btnChangeFileName_Click(object sender, RibbonControlEventArgs e)
+
+        public void btnChangeFileName_Click(Office.IRibbonControl control)
         {
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if (ovDoc != null)
@@ -361,7 +435,7 @@ namespace VisAssistDatabaseBackEnd
                         bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(Globals.ThisAddIn.Application.ActiveDocument);
                         if (bIsFileAssignedToProject)
                         {
-                           
+
                             DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
                             //open the naem form witn the current visio file name and allow them to change it...
                             string sCurrentName = Globals.ThisAddIn.Application.ActiveDocument.Name;
@@ -373,7 +447,7 @@ namespace VisAssistDatabaseBackEnd
 
                             if (sFileName != null && sFileName != "")
                             {
-                                if(sFileName != sCurrentName) //make sure the file name is different than when it came in...
+                                if (sFileName != sCurrentName) //make sure the file name is different than when it came in...
                                 {
                                     //before we go and update the file name we need to check to make sure there isn't another file in the project with the same file name
 
@@ -385,9 +459,9 @@ namespace VisAssistDatabaseBackEnd
                                     {
                                         FileUtilities.UpdateFileName(sFileName);
                                     }
-                                   
+
                                 }
-                                
+
                             }
                         }
                     }
@@ -406,12 +480,12 @@ namespace VisAssistDatabaseBackEnd
 
         }
 
-        private void btnOpenProject_Click(object sender, RibbonControlEventArgs e)
+        public void btnOpenProject_Click(Office.IRibbonControl control)
         {
             ProjectUtilities.OpenProject();
         }
 
-        private void btnOpenFile_Click(object sender, RibbonControlEventArgs e)
+        public void btnOpenFile_Click(Office.IRibbonControl control)
         {
             //get the folderpath from the current document 
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
@@ -440,8 +514,8 @@ namespace VisAssistDatabaseBackEnd
 
                     FileUtilities.CheckForLaunchFile(sVisAssistFolderPath);
 
-                    
-                  
+
+
                 }
                 else
                 {
@@ -458,10 +532,11 @@ namespace VisAssistDatabaseBackEnd
             }
         }
 
-        private void btnPageAndTerminals_Click(object sender, RibbonControlEventArgs e)
+        public void btnPageAndTerminals_Click(Office.IRibbonControl control)
         {
             PageUtilities.StressTest();
 
         }
+        #endregion
     }
 }
