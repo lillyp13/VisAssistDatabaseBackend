@@ -25,7 +25,7 @@
 						 label="Open Project"
 						 onAction="btnOpenProject_Click"/>
 				</group>
-				<group id="grFile" label="File">
+				<group id="grpFile" label="File">
 					<button id="btnAddFile"
 						 label="Add File"
 						 onAction="btnAddFile_Click"/>
@@ -45,6 +45,12 @@
 						  label="Change File Name"
 						  onAction="btnChangeFileName_Click"/>
 				</group>
+        <group id="grpTests" label="Tests">
+          <button id="btnStressTest"
+						 label="Stress Test"
+						 onAction="btnPageAndTerminals_Click"/>
+         
+        </group>
 			</tab>
 		</tabs>
 	</ribbon>
