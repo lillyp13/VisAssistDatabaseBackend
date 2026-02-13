@@ -16,6 +16,8 @@ using System.Runtime.InteropServices;
 using Microsoft.Office.Interop.Visio;
 using static System.Net.Mime.MediaTypeNames;
 using System.Diagnostics;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Reflection;
 
 namespace VisAssistDatabaseBackEnd
 {
@@ -28,6 +30,9 @@ namespace VisAssistDatabaseBackEnd
         public List<string> m_pendingShapeIds = new List<string>();
         public List<string> m_pendingPageIds = new List<string>();
         public bool m_bIsPageDuplicating = false;
+        public bool m_SyncedDB = false;
+        //public bool m_bIsCuttingShape = false;
+        public bool m_bIsCuttingShape { get; set; }
 
         private void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
@@ -131,7 +136,6 @@ namespace VisAssistDatabaseBackEnd
                 m_VisioEvents.Add(pageModifiedEvent);
 
 
-
                 ////Event Marker
                 //m_VisioEvents.Add(
                 //docEventList.AddAdvise(
@@ -213,6 +217,8 @@ namespace VisAssistDatabaseBackEnd
                 //    m_appSink,
                 //    string.Empty,
                 //    string.Empty));
+
+
 
 
                 // Page Deleted
@@ -301,12 +307,14 @@ namespace VisAssistDatabaseBackEnd
                m_appSink,
                string.Empty,
                string.Empty));
+
+
         }
 
 
 
         private static volatile bool m_visioIsIdle = false;
-
+       public Dictionary<string, Visio.Shape> oDictWiresComingFromRedo = new Dictionary<string, Shape>();
         private bool OnVisioEvent(
     short eventCode,
     object source,
@@ -347,9 +355,56 @@ namespace VisAssistDatabaseBackEnd
                     {
                         Visio.Shape ovShape = (Visio.Shape)subject;
                         string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                        
                         if (!m_pendingShapeIds.Contains(sKey))
                         {
-                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape);
+                            //we only care if we are cutting a wire shape...
+
+                            if (!m_bIsCuttingShape)
+                            {
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, ref oDictWiresComingFromRedo);
+                                if (oDictWiresComingFromRedo.Count > 0)
+                                {
+                                    //will need a delayed event to add these wires back to the db
+                                    bool bDelayedEventAlreadyExists = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "AddWiresToDB");
+                                    if(!bDelayedEventAlreadyExists)
+                                    {
+                                        DelayedEvent oNewDelayedEvent = new DelayedEvent();
+                                        oNewDelayedEvent.sOperationType = "AddWiresToDB";
+                                        oNewDelayedEvent.ovDocument = ovShape.Document;
+                                        oNewDelayedEvent.oDictOfShapes = oDictWiresComingFromRedo;
+                                        Globals.ThisAddIn.m_delayedEvents.Add(oNewDelayedEvent);
+                                    }
+                                   
+                                }
+                            }
+                            else
+                            {
+                                if (ovShape.CellExists["User.Class", 0] == -1)
+                                {
+                                    string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                                    if (sClass == "SmartWire")
+                                    {
+                                        //add a delayed event that will switch the duplicate bool to be false..
+                                        DelayedEvent oDelayedEvent = new DelayedEvent();
+                                        oDelayedEvent.ovDocument = ovShape.Document;
+                                        oDelayedEvent.sOperationType = "TurnOfCutShapesBool";
+                                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
+                                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnWireShapeCut(ovShape);
+
+                                    }
+                                    else
+                                    {
+                                        //we are cutting/pasting a non wire shape, add it normally..
+                                        
+                                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, ref oDictWiresComingFromRedo);
+                                        
+                                    }
+                                }
+
+
+                            }
 
                             m_pendingShapeIds.Add(sKey);
                         }
@@ -364,7 +419,37 @@ namespace VisAssistDatabaseBackEnd
                         string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
                         if (!m_pendingShapeIds.Contains(sKey))
                         {
-                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject);
+                            //need to check if this is a ctrl x or an actual delete..
+                            //Clipboard.ContainsData(DataFormats.EnhancedMetafile)
+                            //Clipboard.ContainsData(DataFormats.Serializable)
+                            if (!Application.IsUndoingOrRedoing)
+                            {
+                                if (Clipboard.ContainsData(DataFormats.EnhancedMetafile))
+                                {
+                                    m_bIsCuttingShape = true;
+
+                                }
+                                else
+                                {
+                                    //we are not doing an unod and we are not cutting
+                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject);
+                                }
+                            }
+
+                            else
+                            {
+                                //if (Clipboard.ContainsData(DataFormats.EnhancedMetafile))
+                                //{
+                                //    m_bIsCuttingShape = true;
+
+                                //}
+                                //else
+                                //{
+                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject);
+                                //}
+                               
+                            }
+
                             m_pendingShapeIds.Add(sKey);
                         }
 
@@ -405,18 +490,18 @@ namespace VisAssistDatabaseBackEnd
                                 m_bIsPageDuplicating = true; //we are duplicating a page...
                             }
                             //if this is a duplicate then we are going to set the pagesheets formula first...
-                           // ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio("LillY");
-                           if(m_bIsPageDuplicating)
+                            // ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio("LillY");
+                            if (m_bIsPageDuplicating)
                             {
                                 //we are duplicating a page...
                                 VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDuplicated(ovPage);
                             }
-                           else
+                            else
                             {
                                 //we are just adding a page
                                 VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
                             }
-                            
+
                             m_pendingPageIds.Add(sKey);
 
                         }
@@ -440,11 +525,11 @@ namespace VisAssistDatabaseBackEnd
                                 {
                                     if (m_bIsPageDuplicating)
                                     {
-                                       
+
                                         break;
                                     }
 
-                                    if(Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                                    if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
                                     {
                                         break;
                                     }
@@ -614,6 +699,11 @@ namespace VisAssistDatabaseBackEnd
             }
             return bCancelEvent;
         }
+
+
+
+
+
 
 
 

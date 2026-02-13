@@ -5,6 +5,7 @@
 	<ribbon>
 		<tabs>
 			<tab id="tabAddIn" label="Add In">
+      
 				<group id="grpDatabase" label="Database">
 					<button id="btnAddDatabase" label="Add Database" onAction="btnAddDatabase_Click"/>
 					<button id="btnDeleteDatabase"
@@ -58,8 +59,7 @@
 	<contextMenus>
 		<contextMenu idMso="ContextMenuPageTab">
 			<!--Disable Built-in duplicate page control-->
-			
-			
+   
 			<!--Custom VisAssist duplicate buttons-->
 			<menuSeparator id="sepCustom1"/>
 			<button id="VisAssistDuplicateSinglePage"

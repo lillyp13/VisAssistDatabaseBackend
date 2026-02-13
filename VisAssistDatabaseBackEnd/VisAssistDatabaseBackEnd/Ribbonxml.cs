@@ -36,7 +36,6 @@ namespace VisAssistDatabaseBackEnd
     public class Ribbonxml : Office.IRibbonExtensibility
     {
         private Office.IRibbonUI ribbon;
-
         public Ribbonxml()
         {
             
@@ -89,7 +88,6 @@ namespace VisAssistDatabaseBackEnd
             DatabaseUtilities.InitializeDatabase("");
 
         }
-
 
         public void btnDeletePageInfo_Click(Office.IRibbonControl control)
         {
@@ -537,6 +535,9 @@ namespace VisAssistDatabaseBackEnd
             PageUtilities.StressTest();
 
         }
+
+
+
         #endregion
     }
 }

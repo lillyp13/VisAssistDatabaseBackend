@@ -11,6 +11,7 @@ using VisAssistDatabaseBackEnd.Project_Manifest;
 using Visio = Microsoft.Office.Interop.Visio;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using System.Runtime.CompilerServices;
+using static VisAssistDatabaseBackEnd.ThisAddIn;
 
 namespace VisAssistDatabaseBackEnd.VisioUtilities
 {
@@ -331,13 +332,16 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     else
                     {
                         //we need to check to make sure that the visio file and the db are in sync 
-                        DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
+                        if(Globals.ThisAddIn.m_SyncedDB == false)
+                        {
+                            DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
+                        }
+                        
                     }
 
                     ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
 
 
-                    
                 }
                 //otherwise this is not a visassist project...
 
@@ -374,10 +378,14 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                     string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovThisVisioDocument);
 
-                    //we need to check to make sure that the visio file and the db are in sync 
-                    DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
+                    if (Globals.ThisAddIn.m_SyncedDB == false)
+                    {
+                        //we need to check to make sure that the visio file and the db are in sync 
+                        DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
+                    }
+                       
 
-
+                   
                 }
                 //otherwise this is not a visassist project...
 

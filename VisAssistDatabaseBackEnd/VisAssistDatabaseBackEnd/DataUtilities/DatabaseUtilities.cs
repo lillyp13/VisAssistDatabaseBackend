@@ -12,6 +12,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Web;
 using System.Windows.Forms;
+using VisAssistDatabaseBackEnd.VisioUtilities;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
@@ -332,6 +333,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             Conductor8Label TEXT,
                             Conductor9Label TEXT,
                             Conductor10Label TEXT,
+                            GridLocation TEXT,
                             Shield TEXT,
                             PRIMARY KEY(ShapeID),
                             CONSTRAINT WirePairsWireShapes
@@ -1021,6 +1023,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void SyncDBWithFile(Visio.Document ovDocument, string sVisAssistFolderPath)
         {
+            Globals.ThisAddIn.m_SyncedDB = true;
             //make sure the db is pointing towards correct location 
             DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
@@ -1029,70 +1032,112 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             CheckShapeExistence(ovDocument, sVisAssistFolderPath);
 
 
+            //add a delayd event to turn off m_SyncedDb
+            DelayedEvent oDelayedEvent = new DelayedEvent();
+            oDelayedEvent.ovDocument = ovDocument;
+            oDelayedEvent.sOperationType = "TurnOffSyncDBBool";
+            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
         }
 
         internal static void CheckShapeExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
         {
-            //first part checks to see if all the shape in the visio file exist in the db and that their information is up to date...
-            string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-            //create a new list for each shape that has its own table...
-            List<string> lstTerminals = new List<string>();
-            List<string> lstWires = new List<string>();
-            List<string> lstEndDevices = new List<string>();
-            foreach (Visio.Page ovPage in ovDocument.Pages)
+            try
             {
-                foreach (Visio.Shape ovShape in ovPage.Shapes)
+
+
+                //first part checks to see if all the shape in the visio file exist in the db and that their information is up to date...
+                string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                //create a new list for each shape that has its own table...
+                List<string> lstTerminals = new List<string>();
+                List<string> lstWires = new List<string>();
+                List<string> lstEndDevices = new List<string>();
+                Dictionary<string, Visio.Shape> oDictPrimaryWiresNotInDB = new Dictionary<string, Visio.Shape>();
+                Dictionary<string, Visio.Shape> oDictSecondaryWiresNotInDB = new Dictionary<string, Visio.Shape>();
+                foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
-                    string sClass = "";
-                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    foreach (Visio.Shape ovShape in ovPage.Shapes)
                     {
-                        //this is one of our shapes
-                        sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                        string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-
-                        if (sShapeID != "")
+                        string sClass = "";
+                        if (ovShape.CellExists["User.Class", 0] == -1)
                         {
+                            //this is one of our shapes
+                            sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                            string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
 
-                            bool bDoesRecordExist;
-                            switch (sClass)
+                            if (sShapeID != "")
                             {
-                                case "TerminalBlock":
-                                    {
-                                        //this checks that all the visio termianl blocks have a db record entry and makes sure the information is up to date..
-                                        CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape, sShapeID, ref lstTerminals);
+
+                                bool bDoesRecordExist;
+                                switch (sClass)
+                                {
+                                    case "TerminalBlock":
+                                        {
+                                            //this checks that all the visio termianl blocks have a db record entry and makes sure the information is up to date..
+                                            CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape, sShapeID, ref lstTerminals, ref oDictSecondaryWiresNotInDB);
 
 
 
-                                        break;
-                                    }
-                                case "SmartWire":
-                                    {
-                                        break;
-                                    }
-                                case "ADC End Device":
-                                    {
-                                        CheckShapeExistenceInDB(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape, sShapeID, ref lstEndDevices);
-                                        break;
-                                    }
+                                            break;
+                                        }
+                                    case "SmartWire":
+                                        {
+                                            CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovShape, sShapeID, ref lstWires, ref oDictPrimaryWiresNotInDB);
+
+                                           
+
+
+                                            break;
+                                        }
+                                    case "ADC End Device":
+                                        {
+                                            CheckShapeExistenceInDB(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape, sShapeID, ref lstEndDevices, ref oDictPrimaryWiresNotInDB);
+                                            break;
+                                        }
+                                }
                             }
+
+
                         }
 
+                    }
+                }
 
+
+
+                //clean up wires not in db...
+                if (oDictPrimaryWiresNotInDB.Count > 0)
+                {
+                    //now we need to drop secondary wires for each of the primary wires in oDictPrimaryWiresNotInDB and add them to the db...
+                    foreach (Visio.Shape ovPrimaryWire in oDictPrimaryWiresNotInDB.Values)
+                    {
+                        ShapesUtilities.AddWire(ovPrimaryWire, ref lstWires);
                     }
 
+
                 }
+
+
+                //now we need to check to make sure everything in the db exists in visio
+                CheckShapeExistenceInVisio(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument, ref lstTerminals);
+                CheckShapeExistenceInVisio(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovDocument, ref lstEndDevices);
+                CheckShapeExistenceInVisio(SqlTables.WireShapesTable.sWireShapeTable, ovDocument, ref lstWires);
+
+
+
+                //this last part checks all the shape tables to make sure that there pages actually exist and if they don't delete them..
+                CheckShapesPageExistence(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument);
+                CheckShapesPageExistence(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovDocument);
+                CheckShapesPageExistence(SqlTables.WireShapesTable.sWireShapeTable, ovDocument);
             }
-
-
-            //now we need to check to make sure everything in the db exists in visio
-            CheckShapeExistenceInVisio(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument, ref lstTerminals);
-            CheckShapeExistenceInVisio(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovDocument, ref lstEndDevices);
-
-
-
-            //this last part checks all the shape tables to make sure that there pages actually exist and if they don't delete them..
-            CheckShapesPageExistence(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument);
-            CheckShapesPageExistence(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovDocument);
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in CheckShapeExistence " + ex.Message, "VisAssist");
+            }
+            finally
+            {
+                ovDocument.Application.EventsEnabled = -1;
+            }
         }
 
         private static void CheckShapesPageExistence(string sShapeTable, Document ovDocument)
@@ -1161,10 +1206,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> lstShapes)
+        internal static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> lstShapes, ref Dictionary<string, Shape> oDictPrimaryWiresNotInDB)
         {
             bool bDoesRecordExist = DoesRecordExist(sTableName, sShapeID);
             string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+            bool bDontAddTolstShapes = false;
 
             if (!bDoesRecordExist)
             {
@@ -1173,12 +1219,39 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     case "TerminalBlock":
                         {
+                            bDontAddTolstShapes = false;
                             ShapesUtilities.AddTerminalBlockToDatabase(ovShape);
                             break;
                         }
                     case "ADC End Device":
                         {
+                            bDontAddTolstShapes = false;
                             ShapesUtilities.AddWiringEndDeviceToDatabase(ovShape);
+                            break;
+                        }
+                    case "SmartWire":
+                        {
+                            //we have a wire that is not in our database, which means we are missing the primary and secondary wire...
+                            //gather a list of all the secondarya and primaries, we will be deleting the secondaries and producing new ones and adding them to the db...
+                            string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
+                            bDontAddTolstShapes = true;
+                            switch (sWireRole)
+                            {
+                                case "P":
+                                    {
+                                        oDictPrimaryWiresNotInDB.Add(sShapeID, ovShape);
+                                        break;
+                                    }
+                                case "S":
+                                    {
+                                        //delete the secondary wire..
+                                        ovShape.Application.EventsEnabled = 0;
+                                        ovShape.Delete();
+                                        ovShape.Application.EventsEnabled = -1;
+                                        
+                                        break;
+                                    }
+                            }
                             break;
                         }
                 }
@@ -1201,6 +1274,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             mruBaseFileRecord = ShapesUtilities.BuildWiringEndDeviceInfo(ovShape);
                             break;
                         }
+                    case "SmartWire":
+                        {
+                            mruBaseFileRecord = ShapesUtilities.BuildWireShapeInfo(ovShape, "");
+                           
+                            break;
+                        }
                 }
 
                
@@ -1215,7 +1294,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
             }
-            lstShapes.Add(sShapeID);
+
+            if(!bDontAddTolstShapes)
+            {
+                lstShapes.Add(sShapeID);
+            }
+            
         }
 
         internal static void CheckPageExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
@@ -1232,10 +1316,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 
                 foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
-                    string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                    CheckPageExistenceInDB(ovPage, sProjectID, sPageID);
-                    //add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
-                    lstPages.Add(sPageID);
+                    if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                    {
+
+                        string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                        CheckPageExistenceInDB(ovPage, sProjectID, sPageID);
+                        //add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
+                        lstPages.Add(sPageID);
+                    }
                     ////check if that record exists in the db
                     //bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
                     //if (!bDoesRecordExist)
