@@ -91,7 +91,7 @@ namespace VisAssistDatabaseBackEnd
 
         public void btnDeletePageInfo_Click(Office.IRibbonControl control)
         {
-            PageUtilities.DeleteAllPages();
+            //PageUtilities.DeleteAllPages();
         }
 
         public bool GetDuplicatePageEnabled(Office.IRibbonControl control)
@@ -107,6 +107,8 @@ namespace VisAssistDatabaseBackEnd
         public void OnCustomDuplicateMultiplePages(Office.IRibbonControl control)
         {
             MessageBox.Show("The " + control.Id + " control has been clicked.");
+
+            PageUtilities.WhatPagesToDuplicate();
         }
 
         public void btnDeleteProjectInfo_Click(Office.IRibbonControl control)

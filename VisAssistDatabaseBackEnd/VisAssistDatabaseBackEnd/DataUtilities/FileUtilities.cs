@@ -9,6 +9,7 @@ using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.Project_Manifest;
+using VisAssistDatabaseBackEnd.ShapeUtilities;
 using WindowsAPICodePack.Dialogs;
 using Visio = Microsoft.Office.Interop.Visio;
 
@@ -1353,7 +1354,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 {
                                     case "TerminalBlock":
                                         {
-                                            ShapesUtilities.AddTerminalBlockToDatabase(ovShape);
+                                            TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
                                             break;
                                         }
                                     case "SmartWire":

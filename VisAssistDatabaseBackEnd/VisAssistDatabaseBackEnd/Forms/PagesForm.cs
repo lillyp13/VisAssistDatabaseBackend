@@ -19,60 +19,27 @@ namespace VisAssistDatabaseBackEnd.Forms
             InitializeComponent();
         }
 
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+
+        }
+
         private void PagesForm_Load(object sender, EventArgs e)
         {
 
         }
 
-        internal void Display()
+        public void Display()
         {
-
-        }
-        public string m_sFileID = "";
-        public bool m_bAllPages;
-        private void btnGetPages_Click(object sender, EventArgs e)
-        {
-            m_bAllPages = false;
-            //based on the fileid in the txtfileid retrieve all the pages associated with that file...
-
-            //get the file id from the current document...
-
-            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-            PageUtilities.GetPagesForCurrentFile(ovDoc);
+            //add all the page names to the the dgvPages (we will be automatically adding the current page that we are duplicating..)
             PageUtilities.PopulatePagesForm(this);
-
+          
         }
 
-        private void btnUpdatePages_Click(object sender, EventArgs e)
+        private void btnDuplicate_Click(object sender, EventArgs e)
         {
-            //based on if we are doing pages for a specific file or not we need to reset the baserecord set
-            PageUtilities.UpdatePage(this, m_bAllPages, m_sFileID);
-        }
-
-        private void btnGetAllPages_Click(object sender, EventArgs e)
-        {
-            m_bAllPages = true;
-            //get all the pages for every file in the pages_table
-            PageUtilities.GetAllPages();
-            PageUtilities.PopulatePagesForm(this);
-        }
-
-        private void btnDeletePage_Click(object sender, EventArgs e)
-        {
-            //delete the page that is selected
-            PageUtilities.DeletePageBasedOnForm(this);
-        }
-
-        private void btnGetCurrentPage_Click(object sender, EventArgs e)
-        {
-            //populate the dgv with the information from visio...this is to mimic how the change will start from visio...
-            PageUtilities.PopulatePagesFormForOnePage(this);
-
-        }
-
-        private void btnUpdatePage_Click(object sender, EventArgs e)
-        {
-            PageUtilities.UpdateCurrentPage(this);
+            //select all the pages that the user is going to duplicate....
+            PageUtilities.GatherPagesToDuplicate(this);
         }
     }
 }

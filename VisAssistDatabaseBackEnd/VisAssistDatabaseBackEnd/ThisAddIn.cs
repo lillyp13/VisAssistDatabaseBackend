@@ -18,6 +18,7 @@ using static System.Net.Mime.MediaTypeNames;
 using System.Diagnostics;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Reflection;
+using System.Net;
 
 namespace VisAssistDatabaseBackEnd
 {
@@ -314,7 +315,7 @@ namespace VisAssistDatabaseBackEnd
 
 
         private static volatile bool m_visioIsIdle = false;
-       public Dictionary<string, Visio.Shape> oDictWiresComingFromRedo = new Dictionary<string, Shape>();
+        public Dictionary<string, Visio.Shape> oDictWiresComingFromRedo = new Dictionary<string, Shape>();
         private bool OnVisioEvent(
     short eventCode,
     object source,
@@ -355,27 +356,36 @@ namespace VisAssistDatabaseBackEnd
                     {
                         Visio.Shape ovShape = (Visio.Shape)subject;
                         string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
-                        
+
+                        Visio.Selection ovSelection = null;
+
+                        if (Application.ActiveWindow != null)
+                        {
+                            ovSelection = Application.ActiveWindow.Selection;
+                        }
                         if (!m_pendingShapeIds.Contains(sKey))
                         {
                             //we only care if we are cutting a wire shape...
 
                             if (!m_bIsCuttingShape)
                             {
-                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, ref oDictWiresComingFromRedo);
-                                if (oDictWiresComingFromRedo.Count > 0)
+                                if (!m_bIsPageDuplicating)
                                 {
-                                    //will need a delayed event to add these wires back to the db
-                                    bool bDelayedEventAlreadyExists = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "AddWiresToDB");
-                                    if(!bDelayedEventAlreadyExists)
+                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, ovSelection, ref oDictWiresComingFromRedo);
+                                    if (oDictWiresComingFromRedo.Count > 0)
                                     {
-                                        DelayedEvent oNewDelayedEvent = new DelayedEvent();
-                                        oNewDelayedEvent.sOperationType = "AddWiresToDB";
-                                        oNewDelayedEvent.ovDocument = ovShape.Document;
-                                        oNewDelayedEvent.oDictOfShapes = oDictWiresComingFromRedo;
-                                        Globals.ThisAddIn.m_delayedEvents.Add(oNewDelayedEvent);
+                                        //will need a delayed event to add these wires back to the db
+                                        bool bDelayedEventAlreadyExists = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "AddWiresToDB");
+                                        if (!bDelayedEventAlreadyExists)
+                                        {
+                                            DelayedEvent oNewDelayedEvent = new DelayedEvent();
+                                            oNewDelayedEvent.sOperationType = "AddWiresToDB";
+                                            oNewDelayedEvent.ovDocument = ovShape.Document;
+                                            oNewDelayedEvent.oDictOfShapes = oDictWiresComingFromRedo;
+                                            Globals.ThisAddIn.m_delayedEvents.Add(oNewDelayedEvent);
+                                        }
+
                                     }
-                                   
                                 }
                             }
                             else
@@ -397,9 +407,9 @@ namespace VisAssistDatabaseBackEnd
                                     else
                                     {
                                         //we are cutting/pasting a non wire shape, add it normally..
-                                        
-                                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, ref oDictWiresComingFromRedo);
-                                        
+
+                                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, ovSelection, ref oDictWiresComingFromRedo);
+
                                     }
                                 }
 
@@ -417,13 +427,19 @@ namespace VisAssistDatabaseBackEnd
                     {
                         Visio.Shape ovShape = (Visio.Shape)subject;
                         string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                        Visio.Selection ovSelection = null;
+
+                        if (Application.ActiveWindow != null)
+                        {
+                            ovSelection = Application.ActiveWindow.Selection;
+                        }
+
                         if (!m_pendingShapeIds.Contains(sKey))
                         {
-                            //need to check if this is a ctrl x or an actual delete..
-                            //Clipboard.ContainsData(DataFormats.EnhancedMetafile)
-                            //Clipboard.ContainsData(DataFormats.Serializable)
+                            //check if we are doing an undo
                             if (!Application.IsUndoingOrRedoing)
                             {
+                                //we are not undoing, check if this is a cut
                                 if (Clipboard.ContainsData(DataFormats.EnhancedMetafile))
                                 {
                                     m_bIsCuttingShape = true;
@@ -432,7 +448,7 @@ namespace VisAssistDatabaseBackEnd
                                 else
                                 {
                                     //we are not doing an unod and we are not cutting
-                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject);
+                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject, ovSelection);
                                 }
                             }
 
@@ -445,9 +461,9 @@ namespace VisAssistDatabaseBackEnd
                                 //}
                                 //else
                                 //{
-                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject);
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject, ovSelection);
                                 //}
-                               
+
                             }
 
                             m_pendingShapeIds.Add(sKey);
@@ -468,9 +484,15 @@ namespace VisAssistDatabaseBackEnd
                         {
                             Visio.Page ovPage = ((Visio.Page)subject);
                             Visio.Document ovDocument = ovPage.Document;
-                            string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDocument);
-                            //we are doing a redo/undo that is causing a deletion of a page, however the pageid may not be the updated one because it reverts back to what is what duplicated from...
-                            DatabaseUtilities.CheckPageExistence(ovDocument, sVisAssistFolderPath);
+                            //this should be a delayed event because i want it to happen after visio gets rid of the pages in the undo...
+                            DelayedEvent oDelayedEvent = new DelayedEvent();
+                            oDelayedEvent.ovDocument = ovDocument;
+                            oDelayedEvent.sOperationType = "CheckPageExistence";
+                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                           
+                            //string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDocument);
+                            ////we are doing a redo/undo that is causing a deletion of a page, however the pageid may not be the updated one because it reverts back to what is what duplicated from...
+                            //DatabaseUtilities.CheckPageExistence(ovDocument, sVisAssistFolderPath);
                         }
 
                         break;
@@ -487,19 +509,47 @@ namespace VisAssistDatabaseBackEnd
                             //if the page has shapes on it already this is a duplicate..
                             if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                             {
-                                m_bIsPageDuplicating = true; //we are duplicating a page...
+                                //want to make sure we are not undoing/redoing..
+                               // if(!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                               // {
+                                    m_bIsPageDuplicating = true; //we are duplicating a page...
+                               // }
+                                
                             }
                             //if this is a duplicate then we are going to set the pagesheets formula first...
                             // ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio("LillY");
                             if (m_bIsPageDuplicating)
                             {
-                                //we are duplicating a page...
-                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDuplicated(ovPage);
+                                if (!Application.IsUndoingOrRedoing)
+                                {
+                                    //we are duplicating a page...
+                                    Dictionary<string, Visio.Page> oDictPagesToDuplicate = new Dictionary<string, Visio.Page>();
+                                    oDictPagesToDuplicate.Add(ovPage.Name, ovPage);
+                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDuplicated(oDictPagesToDuplicate);
+                                }
+                                else
+                                {
+                                    //we are doing a redo/undo..
+                                    //need to update the pageids...
+                                  
+                                    VisioUtilities.Application.OnPageAdded(ovPage);
+                                    bool bAlreadyAdded = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "CheckShapeExistence");
+                                    if(!bAlreadyAdded)
+                                    {
+                                        //make sure we don't add this event twice...
+                                        DelayedEvent oDelayedEvent = new DelayedEvent();
+                                        oDelayedEvent.ovDocument = ovPage.Document;
+                                        oDelayedEvent.ovPage = ovPage;
+                                        oDelayedEvent.sOperationType = "CheckShapeExistence";
+                                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                    }
+                                    
+                                }
                             }
                             else
                             {
                                 //we are just adding a page
-                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded((Visio.Page)subject);
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(ovPage);
                             }
 
                             m_pendingPageIds.Add(sKey);
@@ -556,7 +606,10 @@ namespace VisAssistDatabaseBackEnd
                 //page changed / modified 8208
                 case (short)((short)VisEventCodes.visEvtMod + (short)Visio.VisEventCodes.visEvtPage):
                     {
-                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageChanged((Visio.Page)subject);
+                        if (!m_bIsPageDuplicating)
+                        {
+                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageChanged((Visio.Page)subject);
+                        }
                         break;
                     }
 
@@ -622,7 +675,11 @@ namespace VisAssistDatabaseBackEnd
 
                 case (short)(short)Visio.VisEventCodes.visEvtDoc + (short)Visio.VisEventCodes.visEvtMod:
                     {
-                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnDocumentChanged((Visio.Document)subject);
+                        if(!m_bIsPageDuplicating)
+                        {
+                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnDocumentChanged((Visio.Document)subject);
+                        }
+                        
                         break;
                     }
 

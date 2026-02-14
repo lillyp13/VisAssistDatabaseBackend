@@ -12,6 +12,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Web;
 using System.Windows.Forms;
+using VisAssistDatabaseBackEnd.ShapeUtilities;
 using VisAssistDatabaseBackEnd.VisioUtilities;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
@@ -1111,7 +1112,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //now we need to drop secondary wires for each of the primary wires in oDictPrimaryWiresNotInDB and add them to the db...
                     foreach (Visio.Shape ovPrimaryWire in oDictPrimaryWiresNotInDB.Values)
                     {
-                        ShapesUtilities.AddWire(ovPrimaryWire, ref lstWires);
+                        WireUtilities.AddWire(ovPrimaryWire, ref lstWires);
                     }
 
 
@@ -1220,13 +1221,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     case "TerminalBlock":
                         {
                             bDontAddTolstShapes = false;
-                            ShapesUtilities.AddTerminalBlockToDatabase(ovShape);
+                            TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
                             break;
                         }
                     case "ADC End Device":
                         {
                             bDontAddTolstShapes = false;
-                            ShapesUtilities.AddWiringEndDeviceToDatabase(ovShape);
+                            EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
                             break;
                         }
                     case "SmartWire":
@@ -1266,17 +1267,17 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     case "TerminalBlock":
                         {
-                            mruBaseFileRecord = ShapesUtilities.BuildTerminalBlockInfo(ovShape);
+                            mruBaseFileRecord = TerminalBlockUtilities.BuildTerminalBlockInfo(ovShape);
                             break;
                         }
                     case "ADC End Device":
                         {
-                            mruBaseFileRecord = ShapesUtilities.BuildWiringEndDeviceInfo(ovShape);
+                            mruBaseFileRecord = EndDeviceUtilities.BuildWiringEndDeviceInfo(ovShape);
                             break;
                         }
                     case "SmartWire":
                         {
-                            mruBaseFileRecord = ShapesUtilities.BuildWireShapeInfo(ovShape, "");
+                            mruBaseFileRecord = WireUtilities.BuildWireShapeInfo(ovShape, "");
                            
                             break;
                         }
@@ -1324,74 +1325,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         //add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
                         lstPages.Add(sPageID);
                     }
-                    ////check if that record exists in the db
-                    //bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
-                    //if (!bDoesRecordExist)
-                    //{
-                    //    //this is a freak accident add the record to the db...
-                    //    PageUtilities.AddPageToDatabase(ovPage, sProjectID);
-
-                    //}
-                    //else
-                    //{
-                    //    //the record exists, we want to make sure that the information in the db matches the information in the visio file
-                    //    MultipleRecordUpdates mruBaseFileRecord = PageUtilities.BuildPageInformation(ovPage, sProjectID);
-                    //    //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
-                    //    MultipleRecordUpdates mruDBRecord = GetRecordInformation(SqlTables.PagesTable.sPagesTable, sPageID);
-                    //    if (mruDBRecord.ruRecords != null)
-                    //    {
-                    //        MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
-                    //        if (mruRecordToUpdate.ruRecords.Count > 0)
-                    //        {
-                    //            BuildUpdateSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruBaseFileRecord);
-                    //        }
-                    //    }
-
-                    //}
-                    ////add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
-                    //lstPages.Add(sPageID);
+                   
                 }
                 
 
 
 
                 CheckPageExistenceInVisio(ovDocument, ref lstPages);
-                ////This checks to see if we need to delete any records from the DB
-                ////now check if any records exist in db that don't in lstPages then delete them from the db...
-                //PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
-                //List<string> lstPagesToRemove = new List<string>();
-                //foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
-                //{
-                //    string sPageID = ru.sId;
-                //    if (lstPages.Contains(sPageID))
-                //    {
-                //        //the page exists in visio and in the db...
-                //    }
-                //    else
-                //    {
-                //        //the page exists in the db and not in visio, we want to delete it from the db
-                //        lstPagesToRemove.Add(sPageID);
-                //    }
-                //}
-
-                //if (lstPagesToRemove.Count > 0)
-                //{
-                //    //we have records in our pages table that don't actually exist-go delete them from db...
-                //    //build a delete sql for each record...
-                //    List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                //    foreach (string sPageID in lstPagesToRemove)
-                //    {
-                //        RecordUpdate ru = new RecordUpdate();
-                //        ru.sId = sPageID;
-                //        ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
-                //        ru.odictColumnValues = null;
-
-                //        ruRecords.Add(ru);
-                //    }
-
-                //    MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
-                //    BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
-                //}
+               
             }
             catch (Exception ex)
             {
