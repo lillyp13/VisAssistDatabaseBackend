@@ -28,18 +28,46 @@ namespace VisAssistDatabaseBackEnd.Forms
         {
 
         }
-
-        public void Display()
+        string m_sAction = "";
+        public void Display(string sAction)
         {
             //add all the page names to the the dgvPages (we will be automatically adding the current page that we are duplicating..)
             PageUtilities.PopulatePagesForm(this);
-          
+            m_sAction = sAction;
+            if(m_sAction == "Duplicate")
+            {
+                btnDuplicate.Text = "Duplicate";
+            }
+            else
+            {
+                if(m_sAction == "Move")
+                {
+                    btnDuplicate.Text = "Move";
+                }
+            }
         }
 
         private void btnDuplicate_Click(object sender, EventArgs e)
         {
-            //select all the pages that the user is going to duplicate....
-            PageUtilities.GatherPagesToDuplicate(this);
+            //check the source if we are moving or duplicating...
+            if(m_sAction == "Duplicate")
+            {
+                //select all the pages that the user is going to duplicate....
+                PageUtilities.GatherPagesToDuplicate(this);
+            }
+            else
+            {
+                if(m_sAction == "Move")
+                {
+                    //we are moving a selection of shapes to a different page...
+                    //get the selected page
+                    PageUtilities.GetPageToMoveShapesTo(this);
+
+                }
+            }
+
+            this.Close();
+            
         }
     }
 }

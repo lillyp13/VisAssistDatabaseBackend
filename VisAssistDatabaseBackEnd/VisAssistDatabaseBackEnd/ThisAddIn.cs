@@ -19,6 +19,7 @@ using System.Diagnostics;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Reflection;
 using System.Net;
+using VisAssistDatabaseBackEnd.ShapeUtilities;
 
 namespace VisAssistDatabaseBackEnd
 {
@@ -219,7 +220,7 @@ namespace VisAssistDatabaseBackEnd
                 //    string.Empty,
                 //    string.Empty));
 
-
+              
 
 
                 // Page Deleted
@@ -258,6 +259,8 @@ namespace VisAssistDatabaseBackEnd
                 //    m_appSink,
                 //    string.Empty,
                 //    string.Empty));
+
+
 
             }
             catch (Exception ex)
@@ -443,12 +446,37 @@ namespace VisAssistDatabaseBackEnd
                                 if (Clipboard.ContainsData(DataFormats.EnhancedMetafile))
                                 {
                                     m_bIsCuttingShape = true;
+                                    bool bDoesClipboardContainWire = ClipboardContainsWireShape();
+                                    if(bDoesClipboardContainWire)
+                                    {
+                                        //there is a wire in this movement
+                                        //pull open the form for the user to choose where to paste the selection...
+                                        foreach(Visio.Shape ovShapeToCheck in ovSelection)
+                                        {
+                                            //for all other shapes besides wires we want to call OnShapeDeleted first..
+                                            if (ovShapeToCheck.CellExists["User.Class",0] == -1)
+                                            {
+                                                if (ovShapeToCheck.Cells["User.Class"].get_ResultStr(0) != "SmartWire")
+                                                {
+                                                    VisioUtilities.Application.OnShapeDeleted(ovShapeToCheck, ovSelection);
+                                                }
+                                            }
+                                        }
+                                        ShapesUtilities.CutShapes(ovSelection);
+                                    }
+                                    else
+                                    {
+                                        //there are no wires in this cut..
+                                        m_bIsCuttingShape = false;
+                                        VisioUtilities.Application.OnShapeDeleted(ovShape, ovSelection);
+                                    }
+
 
                                 }
                                 else
                                 {
                                     //we are not doing an unod and we are not cutting
-                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject, ovSelection);
+                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted(ovShape, ovSelection);
                                 }
                             }
 
@@ -471,7 +499,6 @@ namespace VisAssistDatabaseBackEnd
 
                         break;
                     }
-
 
                 //PageDeleted
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage):
@@ -683,39 +710,16 @@ namespace VisAssistDatabaseBackEnd
                         break;
                     }
 
+                   
+
                 case (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtMarker:
                     {
 
-                        string markerName = (string)moreInformation;
 
-                        if (markerName.StartsWith("PageDeleted_"))
-                        {
-                            string pageID = markerName.Substring("PageDeleted_".Length);
 
-                            // Get the document (usually via subject or Globals)
-                            Visio.Document doc = Globals.ThisAddIn.Application.ActiveDocument;
+                        //Visio.Application ovApplication = Globals.ThisAddIn.Application;
 
-                            // Find the restored page
-                            Visio.Page restoredPage = null;
-                            foreach (Visio.Page p in doc.Pages)
-                            {
-                                string pID = p.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                                if (pID == pageID)
-                                {
-                                    restoredPage = p;
-                                    break;
-                                }
-                            }
-
-                            if (restoredPage != null)
-                            {
-                                // Call your OnPageAdded logic
-                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(restoredPage);
-                            }
-                        }
-                        // Visio.Application ovApplication = Globals.ThisAddIn.Application;
-
-                        // string sContextString = (string)moreInformation;
+                        //string sContextString = (string)moreInformation;
 
                         //VisAssistDatabaseBackEnd.VisioUtilities.VisioHelper.VisioApplication_MarkerEvent(ovApplication, eventSequenceNumber, sContextString);
 
@@ -757,11 +761,47 @@ namespace VisAssistDatabaseBackEnd
             return bCancelEvent;
         }
 
+        private bool ClipboardContainsWireShape()
+        {
+            //turn off events for this..
 
+            Visio.Application app = Globals.ThisAddIn.Application;
+            app.EventsEnabled = 0;
+            Visio.Page activePage = app.ActivePage;
 
+            if (!Clipboard.ContainsData(DataFormats.EnhancedMetafile) &&
+                !Clipboard.ContainsData(DataFormats.Text)) // adjust formats
+                return false;
 
+            int undoScope = activePage.Application.BeginUndoScope("CheckClipboardWire");
 
+          
 
+            try
+            {
+                activePage.Paste();
+                Visio.Selection ovSelection = activePage.Application.ActiveWindow.Selection;
+                foreach (Visio.Shape ovShape in ovSelection)
+                {
+                    // Detect wire by Master name or User cell
+                    if ((ovShape.CellExistsU["User.Class", 0] == -1 && ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire"))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                 activePage.Application.EndUndoScope(undoScope, false);
+                app.EventsEnabled = -1;
+            }
+        }
 
 
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)

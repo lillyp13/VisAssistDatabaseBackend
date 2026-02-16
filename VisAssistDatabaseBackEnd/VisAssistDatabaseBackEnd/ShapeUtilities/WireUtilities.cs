@@ -61,6 +61,9 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 MultipleRecordUpdates oWireInfo = BuildWireShapeInfo(ovShape, sWirePairID);
                 DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oWireInfo);
 
+                //we also want to update the mates information and the features in visio (if the user changed the priamry wires # of conductors we need to make the same thing happen to its mate
+                WireUtilities.MatchWireFeatures(ovShape, sWirePairID);
+
                 //this needs to update this wires mates location...
                 UpdateWireGridLocation(ovShape, oWireInfo);
             }
@@ -68,6 +71,89 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             {
                 MessageBox.Show("Error in UpdateWireInDatabase " + ex.Message, "VisAssist");
             }
+        }
+
+        private static void MatchWireFeatures(Shape ovShape, string sWirePairID)
+        {
+            Visio.Document ovDocument = ovShape.Document;
+            //this will update the mates features to match ovShape...
+            //get the mates shape in visio
+            string sMateID = "";
+            string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
+            switch (sWireRole)
+            {
+                case "P":
+                    {
+                        sMateID = GetColumnInfoInWirePairsTableFromDatabase("SecondaryWireID", sWirePairID);
+                        break;
+                    }
+                case "S":
+                    {
+                        sMateID = GetColumnInfoInWirePairsTableFromDatabase("PrimaryWireID", sWirePairID);
+                        break;
+                    }
+            }
+
+            string sMatePageID = GetColumnInfoInWireShapesTableFromDatabase("PageID", sMateID);
+            foreach (Visio.Page ovPage in ovDocument.Pages)
+            {
+                if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                {
+                    string sPageIDToCheck = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    if (sPageIDToCheck == sMatePageID)
+                    {
+                        //this is the page the mate lives on
+                        foreach (Visio.Shape ovShapeToCheck in ovPage.Shapes)
+                        {
+                            if (ovShapeToCheck.CellExists["User.Class", 0] == -1)
+                            {
+                                if (ovShapeToCheck.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                                {
+                                    string sShapeIDToCheck = ovShapeToCheck.Cells["User.ShapeID"].get_ResultStr(0);
+                                    if (sShapeIDToCheck == sMateID)
+                                    {
+                                        //this is the mate shape
+                                        UpdateMatesFeatures(ovShapeToCheck, ovShape, sWirePairID);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void UpdateMatesFeatures(Visio.Shape ovShapeToUpdate, Visio.Shape ovShape, string sWirePairID)
+        {
+            //need to match the # of conductors, color, wire label, auto labelling, and all the conductor labels...
+            string sPageID = ovShape.Cells["User.PageID"].get_ResultStr(0);
+            Dictionary<string, string> oDictWireInfo = GatherWireInformation(ovShape, sPageID, sWirePairID);
+
+            //based on the info in oDictWireInfo update ovShapeToUpdate with the values..
+
+            //go through the dicionaty and pull out the following values:
+            string sColor = oDictWireInfo["Color"];
+
+            string sWireLabel = oDictWireInfo["WireLabel"];
+
+
+            int iNumberOfConductors = Convert.ToInt32(oDictWireInfo["ConductorCount"]);
+            int iAutoLabel = Convert.ToInt32(oDictWireInfo["AutoLabeling"]);
+            string sConductor1 = oDictWireInfo["Conductor1Label"];
+            string sConductor2 = oDictWireInfo["Conductor2Label"];
+            string sConductor3 = oDictWireInfo["Conductor3Label"];
+            string sConductor4 = oDictWireInfo["Conductor4Label"];
+            string sConductor5 = oDictWireInfo["Conductor5Label"];
+            string sConductor6 = oDictWireInfo["Conductor6Label"];
+            string sConductor7 = oDictWireInfo["Conductor7Label"];
+            string sConductor8 = oDictWireInfo["Conductor8Label"];
+            string sConductor9 = oDictWireInfo["Conductor9Label"];
+            string sConductor10 = oDictWireInfo["Conductor10Label"];
+
+            ovShapeToUpdate.Cells["Prop.NumberOfConductors"].ResultIU = iNumberOfConductors;
+            ovShapeToUpdate.Cells["Prop.WireLabel"].Formula = VisioUtilities.Application.FormatStringForVisio(sWireLabel);
+
+
         }
 
 
@@ -256,13 +342,13 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                                     if (sShapeIDToCheck == sMatesID)
                                     {
                                         //this is our shape to update...
-                                        if(!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                                        if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
                                         {
                                             ovShapeToCheck.Application.EventsEnabled = 0;
                                             ovShapeToCheck.Cells["User.WireLocation"].Formula = VisioUtilities.Application.FormatStringForVisio(sGridLocation);
                                             ovShapeToCheck.Application.EventsEnabled = -1;
                                         }
-                                        
+
                                     }
                                 }
                             }
@@ -386,7 +472,18 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 //add the y location 
                 oDictFileValues.Add("YLocation", dPageY.ToString());
                 //add the autolabelling
-                oDictFileValues.Add("AutoLabeling", "0"); //integer...
+                //get the value of autolabelling from Prop.ConductorLabeling
+                string sLabelling = ovMainWire.Cells["Prop.ConductorLabeling"].get_ResultStr(0);
+                int iAutoLabel = 0;
+                if(sLabelling == "Auto Labeling")
+                {
+                    iAutoLabel = 0;
+                }
+                else
+                {
+                    iAutoLabel = 1; //this is manual labelling...
+                }
+                oDictFileValues.Add("AutoLabeling", iAutoLabel.ToString()); //integer...
                 oDictFileValues.Add("ConductorCount", iNumberOfConductors.ToString());
 
 
@@ -823,7 +920,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                             //now add the wires to the db
                             MultipleRecordUpdates mruPrimaryRecord = new MultipleRecordUpdates();
                             MultipleRecordUpdates mruSecondaryRecord = new MultipleRecordUpdates();
-                            if(bShapeIsPrimary)
+                            if (bShapeIsPrimary)
                             {
                                 mruPrimaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairId);
                                 mruSecondaryRecord = BuildWireShapeInfo(ovOtherWire, sNewWirePairId);
@@ -850,7 +947,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                                     }
                             }
 
-                            
+
                         }
                     }
 
@@ -859,6 +956,92 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             catch (Exception ex)
             {
                 MessageBox.Show("Error in CheckForWirePairs " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static void CheckForWireMateOnPageDelete(Page ovPage, string sPageID)
+        {
+            try
+            {
+                foreach (Visio.Shape ovShape in ovPage.Shapes)
+                {
+                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    {
+                        string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                        if (sClass == "SmartWire")
+                        {
+                            //check if its mate is on a different page...
+                            string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+                            //use the shapeid to get the wirepairid and therefore the other wires id...
+                            string sWirePairID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("WirePairID", sShapeID);
+                            string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
+                            string sMateID = "";
+                            switch (sWireRole)
+                            {
+                                case "P":
+                                    {
+                                        // we need to go find the secondary....
+                                        sMateID = WireUtilities.GetColumnInfoInWirePairsTableFromDatabase("SecondaryWireID", sWirePairID);
+                                        break;
+                                    }
+                                case "S":
+                                    {
+                                        //we need to go find the primary...
+                                        sMateID = WireUtilities.GetColumnInfoInWirePairsTableFromDatabase("PrimaryWireID", sWirePairID);
+                                        break;
+                                    }
+                            }
+
+                            //now use the sMateID to find what page it is on...
+                            string sMatesPageID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("PageID", sMateID);
+
+                            if (sMatesPageID != sPageID)
+                            {
+                                //only do this if the mate lives on a differnet page than we are deleting..
+
+                                foreach (Visio.Page ovMatesPage in ovPage.Document.Pages)
+                                {
+                                    if (ovMatesPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                                    {
+                                        string sPageIDToCheck = ovMatesPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                                        if (sPageIDToCheck == sMatesPageID)
+                                        {
+                                            //this is the page the mate lives on..
+                                            foreach (Visio.Shape ovShapeToCheck in ovMatesPage.Shapes)
+                                            {
+                                                if (ovShapeToCheck.CellExists["User.Class", 0] == -1)
+                                                {
+                                                    if (ovShapeToCheck.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                                                    {
+                                                        string sShapeIDToCheck = ovShapeToCheck.Cells["User.ShapeID"].get_ResultStr(0);
+                                                        if (sShapeIDToCheck == sMateID)
+                                                        {
+                                                            //this is the mate we need to delete...
+                                                            ovPage.Application.EventsEnabled = 0;
+                                                            ovShapeToCheck.Delete();
+                                                            ovPage.Application.EventsEnabled = -1;
+                                                        }
+                                                    }
+
+
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in CheckForWireMateOnPageDelete " + ex.Message, "VisAssist");
+            }
+            finally
+            {
+                ovPage.Application.EventsEnabled = -1;
             }
         }
     }

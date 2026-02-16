@@ -247,6 +247,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     Class TEXT,
                     DrawingType TEXT,
                     WirePrefix TEXT,
+                    NextWireColor TEXT,
+                    NextWireNumber TEXT,
                     IgnoreWireColor INTEGER DEFAULT 0,
                     AllowDuplicateTags INTEGER DEFAULT 0,
                     ShowPointData INTEGER DEFAULT 0,

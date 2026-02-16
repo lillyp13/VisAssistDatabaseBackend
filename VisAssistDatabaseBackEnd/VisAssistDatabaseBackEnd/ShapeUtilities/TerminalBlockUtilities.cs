@@ -27,20 +27,21 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 else
                 {
                     //the record already exists this is a copy of a shape...
-                    if (Globals.ThisAddIn.m_delayedEvents.Count > 0)
-                    {
-                        string sPageID = Globals.ThisAddIn.m_delayedEvents[0].sPageID;
+                    //if (Globals.ThisAddIn.m_delayedEvents.Count > 0)
+                    //{
+                    //    string sPageID = Globals.ThisAddIn.m_delayedEvents[0].sPageID;
 
-                        oTerminalRecord = AddTerminalBlockInfo(ovShape, sPageID);
-                        DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, oTerminalRecord);
-                    }
-                    else
-                    {
-                        //the uer pressed redo a second or third time....
-                        string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                        oTerminalRecord = AddTerminalBlockInfo(ovShape, sPageID);
-                        DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, oTerminalRecord);
-                    }
+                    //    oTerminalRecord = AddTerminalBlockInfo(ovShape, sPageID);
+                    //    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, oTerminalRecord);
+                    //}
+                    //else
+                    //{
+                    //    //the uer pressed redo a second or third time....
+                    //    string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    //    oTerminalRecord = AddTerminalBlockInfo(ovShape, sPageID);
+                    //    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, oTerminalRecord);
+                    //}
+                    UpdateTerminalBlockInDatabase(ovShape);
                 }
             }
             catch (Exception ex)

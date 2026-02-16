@@ -14,6 +14,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Visio = Microsoft.Office.Interop.Visio;
@@ -248,7 +249,12 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             return $"({iPageIndex}, {sXMarker}{sYMarker})";
         }
 
-       
-        
+        internal static void CutShapes(Selection ovSelection)
+        {
+            string sAction = "Move";
+            PagesForm oNewForm = new PagesForm();
+            oNewForm.Display(sAction);
+            oNewForm.Show();
+        }
     }
 }

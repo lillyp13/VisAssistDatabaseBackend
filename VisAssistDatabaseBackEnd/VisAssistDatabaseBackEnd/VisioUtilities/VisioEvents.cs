@@ -335,8 +335,11 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         if(Globals.ThisAddIn.m_SyncedDB == false)
                         {
                             DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
+                            //hook the double click event...
+                            
+
                         }
-                        
+
                     }
 
                     ProjectManifest.CheckForManifestIntegrity(sVisAssistFolderPath);
@@ -402,6 +405,14 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
         }
 
+
+
+
+
+       
+
+
+
         internal static void VisioApplication_MarkerEvent(
            Visio.Application ovVisioApplication,
            int iSequenceNum,
@@ -429,8 +440,8 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
 
 
-                //PULLED THIS FROM VISASSIST AND THIS IS FOR GETTING PERFORM ACTION TO BE CALLED (ANYTHING WE RIGHT CLICK..ex: opening IO Sheet, spec sheet...)
-                //// get the marker event context string from the last Visio event that fired
+                ////PULLED THIS FROM VISASSIST AND THIS IS FOR GETTING PERFORM ACTION TO BE CALLED (ANYTHING WE RIGHT CLICK..ex: opening IO Sheet, spec sheet...)
+                ////// get the marker event context string from the last Visio event that fired
                 //string eventInfoFromVisio = ovVisioApplication.get_EventInfo((int)Visio.VisEventCodes.visEvtIdMostRecent);
 
                 //// make sure this markerevent has some arguments with it before we continue
@@ -462,12 +473,12 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 //        out additionalArgs);
 
                 //    // make sure this action is for this application before we proceed
-                //    if (appArgValue == this.ApplicationID)
-                //    {
+                //   // if (appArgValue == this.ApplicationID)
+                //    //{
                 //        // if this is an action at the application level we need to deal with it
                 //        // otherwise the default case passes it on to the Documents collection
                 //        PerformAction(actionArgValue, visioShape, ovVisioApplication.ActiveDocument, sPartNumber, sNewManufacturer);
-                //    }
+                //    //}
                 //}
             }
             catch (System.Exception ex)

@@ -176,6 +176,11 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             catch (Exception ex)
             {
                 MessageBox.Show("Error in OnPageDuplicated " + ex.Message, "VisAssist");
+            
+            }
+            finally
+            {
+                Globals.ThisAddIn.Application.EventsEnabled = -1;
             }
         }
         internal static void OnPageChanged(Visio.Page ovVisioPage)
@@ -254,6 +259,9 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                     if (bRecordExists)
                     {
+                        //before we deelte the page from the database we need to see if we need to delete any wire mates that don't live on the page we are deleting...
+                        WireUtilities.CheckForWireMateOnPageDelete(ovPage, sPageID);
+                       
                         //we need to see if the id matches the pages name-we could have duplicated a page and then want to undo it so the page would have the same id as the orignal duplicated one...
                         string sPageNameInDB = PageUtilities.GetColumnInfoInPagesTableFromDatabase("PageName", sPageID);
                         if (sPageNameInDB == ovPage.Name)
@@ -278,6 +286,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         }
 
                     }
+                   
                 }
                 else
                 {

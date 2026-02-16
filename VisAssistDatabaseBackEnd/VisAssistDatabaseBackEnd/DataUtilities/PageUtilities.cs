@@ -713,8 +713,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void WhatPagesToDuplicate()
         {
             //ask the user which other pages the user wants to duplicate..
+            string sAction = "Duplicate";
             PagesForm oNewForm = new PagesForm();
-            oNewForm.Display();
+            oNewForm.Display(sAction);
             oNewForm.Show();
 
         }
@@ -878,6 +879,41 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     sqlitecmdCommand.Parameters.AddWithValue("@OldPageID", sOldPageID);
 
                     sqlitecmdCommand.ExecuteNonQuery();
+                }
+            }
+        }
+
+        internal static void GetPageToMoveShapesTo(PagesForm pagesForm)
+        {
+            string sPageNameToMoveTo = "";
+            foreach (DataGridViewRow dgvRow in pagesForm.dgvPages.SelectedRows)
+            {
+                if (!dgvRow.IsNewRow)
+                {
+                   sPageNameToMoveTo = dgvRow.Cells["PageName"].Value?.ToString();
+                    
+                }
+            }
+
+            //ok now paste what we have in our clipboard on the visio page sPageNameToMoveTo
+            Visio.Application ovApp = Globals.ThisAddIn.Application;
+            Visio.Document ovDocument = ovApp.ActiveDocument;
+            foreach(Visio.Page ovPage in ovDocument.Pages)
+            {
+                if(ovPage.Name == sPageNameToMoveTo)
+                {
+                    string sNewPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    //this is the page we want to paste what is in our clipboard...
+                    ovPage.Paste();
+                    Visio.Selection ovPastedShapes = ovApp.ActiveWindow.Selection;
+                    //we will need to update the shapes we just pasted (most likely just the pageid...)
+                    foreach(Visio.Shape ovShape in ovPastedShapes)
+                    {
+                        if (ovShape.CellExists["User.PageID",0] == -1)
+                        {
+                            ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+                        }
+                    }
                 }
             }
         }
