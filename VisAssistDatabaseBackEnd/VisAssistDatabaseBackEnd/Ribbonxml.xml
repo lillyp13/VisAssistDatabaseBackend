@@ -52,6 +52,12 @@
 						 onAction="btnPageAndTerminals_Click"/>
          
         </group>
+        <group id="grpUtilities" label="Utilities">
+          <button id="btnResetWireColorAndNumber"
+						 label="Reset Wire Color and Number"
+						 onAction="btnResetWireColorandNumber_Click"/>
+
+        </group>
 			</tab>
 		</tabs>
 	</ribbon>

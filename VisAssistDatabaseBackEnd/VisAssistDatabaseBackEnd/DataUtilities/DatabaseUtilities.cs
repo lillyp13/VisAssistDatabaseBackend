@@ -152,24 +152,26 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         public static readonly Dictionary<string, string> ColorMap =
      new Dictionary<string, string>
  {
-    { "Red", "RGB(255,0,0)" },
-    { "Blue", "RGB(0,0,255)" },
-    { "Green", "RGB(0,128,0)" },
-    { "Yellow", "RGB(255,255,0)" },
-    { "Orange", "RGB(255,165,0)" },
-    { "Purple", "RGB(128,0,128)" },
-    { "Brown", "RGB(139,69,19)" }
+    { "Yellow", "RGB(255,255,170)" },
+    { "Red", "RGB(255,164,164)" },
+    { "Green", "RGB(198,230,162)" },
+    { "Blue", "RGB(136,196,255)" },
+    { "Pink", "RGB(255,193,255)" },
+    { "Orange", "RGB(255,224,132)" },
+    { "Purple", "RGB(200,188,214)" },
+     {"Teal", "RGB(166,255,255)" }
  };
         // Ordered color sequence
         public static readonly string[] WireColorOrder =
         {
-    "Red",
-    "Blue",
-    "Green",
     "Yellow",
+    "Red",
+    "Green",
+    "Blue",
+    "Pink",
     "Orange",
     "Purple",
-    "Brown"
+    "Teal"
 };
 
 

@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using VisAssistDatabaseBackEnd.ShapeUtilities;
 using Office = Microsoft.Office.Core;
 using Visio = Microsoft.Office.Interop.Visio;
 
@@ -536,6 +537,11 @@ namespace VisAssistDatabaseBackEnd
         {
             PageUtilities.StressTest();
 
+        }
+
+        public void btnResetWireColorandNumber_Click(Office.IRibbonControl control)
+        {
+            WireUtilities.ResetWireColorandNumber();
         }
 
 

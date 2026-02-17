@@ -301,12 +301,14 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         if (sLastPageID != sPageID)
                         {
                             PageUtilities.UpdatePageInDatabase(ovPage, sProjectID);
+                            WireUtilities.UpdateWiresInDatabase(ovPage);
                             sLastPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
                         }
                     }
                     else
                     {
                         PageUtilities.UpdatePageInDatabase(ovPage, sProjectID);
+                        WireUtilities.UpdateWiresInDatabase(ovPage);
                         sLastPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
                     }
 
