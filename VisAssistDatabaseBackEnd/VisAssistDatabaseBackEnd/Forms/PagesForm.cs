@@ -4,10 +4,12 @@ using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using VisAssistDatabaseBackEnd.VisioUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.Forms
@@ -21,7 +23,19 @@ namespace VisAssistDatabaseBackEnd.Forms
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-
+            if(m_sAction == "Duplicate")
+            {
+                this.Close();
+            }
+            else
+            {
+                if(m_sAction == "Move")
+                {
+                    //we need to paste the shapes back to where they were...
+                    Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
+                    ovPage.Paste();
+                }
+            }
         }
 
         private void PagesForm_Load(object sender, EventArgs e)
@@ -62,9 +76,11 @@ namespace VisAssistDatabaseBackEnd.Forms
                     //we are moving a selection of shapes to a different page...
                     //get the selected page
                     PageUtilities.GetPageToMoveShapesTo(this);
-
+                   
                 }
             }
+
+            this.Dispose();
 
             this.Close();
             

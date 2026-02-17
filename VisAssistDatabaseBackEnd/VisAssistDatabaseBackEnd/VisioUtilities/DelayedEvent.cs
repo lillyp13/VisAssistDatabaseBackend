@@ -21,6 +21,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         public Visio.Cell ovCell;
         public Visio.Shape ovOtherShape;
         public string sPageID;
+        public List<Visio.Page> oListPages;
         public Dictionary<string, Visio.Shape> oDictOfShapes;
 
         public DelayedEvent() { }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Data.SQLite;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Runtime.Remoting.Lifetime;
@@ -147,6 +148,30 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
 
         }
+
+        public static readonly Dictionary<string, string> ColorMap =
+     new Dictionary<string, string>
+ {
+    { "Red", "RGB(255,0,0)" },
+    { "Blue", "RGB(0,0,255)" },
+    { "Green", "RGB(0,128,0)" },
+    { "Yellow", "RGB(255,255,0)" },
+    { "Orange", "RGB(255,165,0)" },
+    { "Purple", "RGB(128,0,128)" },
+    { "Brown", "RGB(139,69,19)" }
+ };
+        // Ordered color sequence
+        public static readonly string[] WireColorOrder =
+        {
+    "Red",
+    "Blue",
+    "Green",
+    "Yellow",
+    "Orange",
+    "Purple",
+    "Brown"
+};
+
 
         internal static string GetPrimaryKey(string tableName)
         {
@@ -1114,7 +1139,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //now we need to drop secondary wires for each of the primary wires in oDictPrimaryWiresNotInDB and add them to the db...
                     foreach (Visio.Shape ovPrimaryWire in oDictPrimaryWiresNotInDB.Values)
                     {
-                        WireUtilities.AddWire(ovPrimaryWire, ref lstWires);
+                        WireUtilities.AddWire(ovPrimaryWire, ref lstWires, true);
                     }
 
 

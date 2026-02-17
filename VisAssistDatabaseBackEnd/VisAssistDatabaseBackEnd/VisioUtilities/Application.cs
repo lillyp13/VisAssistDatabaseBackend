@@ -44,8 +44,10 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         {
                             //need to add the page to the database...
                             PageUtilities.AddPageToDatabase(ovVisioPage, sProjectID, "Visio");
-                            //will need to also add all the shapes on the page back to the db...
-                            ShapesUtilities.AddShapesToDatabase(ovVisioPage, sProjectID);
+                            List<Visio.Page> oListPages = new List<Visio.Page>();
+                            oListPages.Add(ovVisioPage);
+                            //will need to also add all the shapes on the page back to the db...check if this gets called when copying a file...
+                            ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID);
                         }
                         else
                         {
@@ -54,14 +56,39 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             //the user has duplicated a page using visio...
                             //we need to assign this page a new id and add it to the db as well as upate the ids of the shapes on the page...
                             string sFileID = ovVisioPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-
+                            
 
 
                             //i need to do this after as a processdelayed event i think....
                             // FileUtilities.UpdatePageAndShapeIDs(ovVisioPage, sProjectID, sFileID);
                             //now that all the ids are updated, we need to add the page and the shpaes...
                             PageUtilities.AddPageToDatabase(ovVisioPage, sProjectID, "New");
-                            //ShapesUtilities.AddShapesToDatabase(ovVisioPage, sProjectID);
+
+                            DelayedEvent existingEvent = Globals.ThisAddIn.m_delayedEvents.FirstOrDefault(e => e.sOperationType == "AddShapesToDatabase" && e.ovDocument == ovVisioPage.Document);
+
+                            if (existingEvent != null)
+                            {
+                                // Only add page if not already in list
+                                if (!existingEvent.oListPages.Contains(ovVisioPage))
+                                {
+                                    existingEvent.oListPages.Add(ovVisioPage);
+                                }
+                                    
+                            }
+                            else
+                            {
+                                DelayedEvent oDelayedEvent = new DelayedEvent();
+                                oDelayedEvent.ovDocument = ovVisioPage.Document;
+                                oDelayedEvent.sOperationType = "AddShapesToDatabase";
+                                if(oDelayedEvent.oListPages == null)
+                                {
+                                    oDelayedEvent.oListPages = new List<Visio.Page>();
+                                }
+                                oDelayedEvent.oListPages.Add(ovVisioPage);
+
+                                Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                            }
+
 
                         }
                     }
@@ -111,6 +138,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                    
                 }
                 WireUtilities.CheckForWirePairs(oDictWires);
+                List<string> oListWirePairIDUpdated = new List<string>();
                 foreach (Visio.Page ovPageToDuplicate in oDictPagesToDuplicate.Values)
                 {
 
@@ -138,11 +166,61 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                                 string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
                                 if (sClass != "SmartWire")
                                 {
+                                    
                                     //i don't want to update the wires ids right away because I need to do a little bit of more research on them...
                                     //this is one of our shapes..
-                                    ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+                                    //ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
                                     string sNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sFileID, sNewPageID, ovShape.Name, DateTime.Now);
                                     ovShape.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewShapeID);
+
+                                    //string sFirstKey = ovShape.ContainingPage.Name + "|" + ovShape.Name;
+                                    
+
+                                    ////we also need to create the new wirepairid and update it for the mate...
+                                    //string sCurrentWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
+                                    //string sNewWirePairID = "";
+                                    //foreach(Visio.Shape ovMateShape in ovPageToDuplicate.Shapes)
+                                    //{
+                                    //    if (ovMateShape.CellExists["User.Class",0] == -1)
+                                    //    {
+                                    //        if (ovMateShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                                    //        {
+                                    //            if(ovMateShape.Name != ovShape.Name)
+                                    //            {
+                                    //                //now check the wirepairid....
+                                    //                if (ovMateShape.Cells["User.WirePairID"].get_ResultStr(0) == sCurrentWirePairID)
+                                    //                {
+                                    //                    string sSecondKey = ovMateShape.ContainingPage.Name + "|" + ovMateShape.Name;
+                                    //                    //only continue if we haven't alrady updated the wirepairid...
+                                    //                    if (!oListWirePairIDUpdated.Contains(sFirstKey) && !oListWirePairIDUpdated.Contains(sSecondKey))
+                                    //                    {
+                                    //                        //this is the mate shape
+                                    //                        string sWireRole = ovMateShape.Cells["User.WireRole"].get_ResultStr(0);
+                                    //                        if (sWireRole == "P")
+                                    //                        {
+                                    //                            //ovshape is the secondary and ovmateshape is the primary...
+                                    //                            sNewWirePairID = WireUtilities.GenerateWirePairID(sProjectID, sFileID, sNewPageID, ovMateShape.Name, ovShape.Name, DateTime.Now);
+                                    //                        }
+                                    //                        else
+                                    //                        {
+                                    //                            //ovshape is the priamry and ovmateshape is the secondary
+                                    //                            sNewWirePairID = WireUtilities.GenerateWirePairID(sProjectID, sFileID, sNewPageID, ovShape.Name, ovMateShape.Name, DateTime.Now);
+                                    //                        }
+
+                                    //                        ovMateShape.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewWirePairID);
+                                    //                        ovShape.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewWirePairID);
+
+
+                                    //                        oListWirePairIDUpdated.Add(sFirstKey);
+                                    //                        oListWirePairIDUpdated.Add(sSecondKey);
+                                    //                    }
+                                    //                }
+                                    //            }
+                                    //        }
+                                    //    }
+                                    //}
+
+
 
                                     //add the shapes to m_pendingShapeIDs (so that onshapeadded doesn't get fired for them...)
                                     string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
@@ -352,7 +430,22 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             }
                             else
                             {
-                                WireUtilities.AddWire(ovShape, ref lstWires); //lstWires here should be empty we utiltize this when we use addwiretodatabase during the sync...
+                                //TEMPORARILY ADD THE USER.WIREPAIRID 
+                                if (ovShape.CellExists["User.WirePairID",0] == 0)
+                                {
+                                    ovShape.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "WirePairID", 0);
+                                }
+                                string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+                                bool bNewWire = true;
+                                if(sShapeID == "")
+                                {
+                                    bNewWire = true;
+                                }
+                                else
+                                {
+                                    bNewWire = false; //this is probably a copy...
+                                }
+                                WireUtilities.AddWire(ovShape, ref lstWires, bNewWire); //lstWires here should be empty we utiltize this when we use addwiretodatabase during the sync...
                             }
 
                             break;
@@ -458,11 +551,14 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                                                             for (int ithShape = 1; ithShape <= iSelectedShapes; ithShape++)
                                                             {
                                                                 Visio.Shape ovShapeInSelection = ovSelection[ithShape];
-                                                                string sShapeIDToPossiblyDelete = ovShapeInSelection.Cells["User.ShapeID"].get_ResultStr(0);
-                                                                if (sShapeIDToPossiblyDelete == sMateID)
+                                                                if (ovShapeInSelection.CellExists["User.ShapeID", 0] == -1)
                                                                 {
-                                                                    //it is already going to be deleted because the user chose to delete it..
-                                                                    bDeleteMateShape = false;
+                                                                    string sShapeIDToPossiblyDelete = ovShapeInSelection.Cells["User.ShapeID"].get_ResultStr(0);
+                                                                    if (sShapeIDToPossiblyDelete == sMateID)
+                                                                    {
+                                                                        //it is already going to be deleted because the user chose to delete it..
+                                                                        bDeleteMateShape = false;
+                                                                    }
                                                                 }
                                                             }
 
@@ -631,7 +727,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     Visio.Page ovPage = oThisDelayedEvent.ovPage;
                     string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
                     string sPageID = oThisDelayedEvent.sPageID;
-                    int undoScope = ovPage.Application.BeginUndoScope("Update PageID");
+                   
                    // Visio.Cell pageCell = ovPage.PageSheet.CellsU["User.PageID"];
 
                     string sCurrentPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
@@ -640,18 +736,19 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                     PageUtilities.UpdatePageIDInDatabase(sPageID, sCurrentPageID, ovPage);
 
+                    //int undoScope = ovPage.Application.BeginUndoScope("Update PageID");
+                    //ovPage.Application.EventsEnabled = 0;
+                    //// Update all shapes' User.PageID without adding undo steps
+                    // foreach (Visio.Shape ovShape in ovPage.Shapes)
+                    //{
+                    //    if (ovShape.CellExists["User.PageID", 0] == -1)
+                    //    {
+                    //        ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sCurrentPageID);
+                    //    }
 
-                    // Update all shapes' User.PageID without adding undo steps
-                    foreach (Visio.Shape ovShape in ovPage.Shapes)
-                    {
-                        if (ovShape.CellExists["User.PageID", 0] == -1)
-                        {
-                            ovShape.Cells["User.PageID"].FormulaU = VisioUtilities.Application.FormatStringForVisio(sCurrentPageID);
-                        }
-
-                    }
-                    
-                    ovPage.Application.EndUndoScope(undoScope, false);
+                    //}
+                    //ovPage.Application.EventsEnabled = -1;
+                    //ovPage.Application.EndUndoScope(undoScope, false);
                     // }
 
                 }
@@ -745,11 +842,26 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     DatabaseUtilities.CheckShapeExistence(ovDocument, sVisAssistFolderPath);
                 }
 
+                if(oThisDelayedEvent.sOperationType == "AddShapesToDatabase")
+                {
+                    Visio.Document ovDocument = oThisDelayedEvent.ovDocument;
+                    string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                    List<Visio.Page> oListPages = oThisDelayedEvent.oListPages;
+
+                    ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID);
+                }
+
+                
+
 
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error in ProcessThisDelayedEvent " + ex.Message, "VisAssist");
+            }
+            finally
+            {
+               
             }
 
         }

@@ -482,6 +482,42 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+
+        internal static string GetColumnInfoInFilesTableFromDatabase(string sColumnName, string sFileID)
+        {
+            //this is usually going to get a mates id
+            try
+            {
+                string sSpecificPiece = "";
+                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    //logging here
+                    sqliteconConnection.Open();
+                    string sSQL = $"SELECT [{sColumnName}] FROM [files_table] WHERE [FileID] = @Id LIMIT 1";
+
+                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                    {
+                        sqlcmdCommand.Parameters.AddWithValue("@Id", sFileID);
+
+                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
+                        {
+                            if (sqlitereadReader.Read())
+                            {
+                                // Safe retrieval of value as string
+                                object dbValue = sqlitereadReader[sColumnName];
+                                return dbValue == DBNull.Value ? "" : dbValue.ToString();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetColumnInfoInWirePairsTableFromDatabase " + ex.Message, "VisAssist");
+            }
+            return "";
+        }
         internal static MultipleRecordUpdates BuildFileInformation(Visio.Document ovDoc, string sFilePath, string sProjectGuid)
         {
             //this should build a multiple record update of the file...
@@ -506,6 +542,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 oDictFileValues.Add("LastModifiedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
                 oDictFileValues.Add("Version", "1.0.0");
                 oDictFileValues.Add("Class", "VisAssistDocument");
+                
 
 
                 ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
@@ -535,6 +572,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     oDictFileValues["CreatedDate"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); //we are creating this for the first time
                 }
 
+                //add the NextWireColor and the NextWireenumber (get rid of Wire Prefix..)
+                oDictFileValues.Add("NextWireNumber", "1");
 
 
                 ruFileRecord.sId = sID;

@@ -14,6 +14,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using VisAssistDatabaseBackEnd.DataUtilities;
 using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
@@ -28,42 +29,112 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
         public static MultipleRecordUpdates m_mruRecordsBase = new MultipleRecordUpdates();
         public static MultipleRecordUpdates m_mruRecordsToCompare = new MultipleRecordUpdates();
         public static MultipleRecordUpdates m_mruRecordsToUpdate = new MultipleRecordUpdates();
-
+        private static PagesForm m_PagesForm;
         
       
 
-        internal static void AddShapesToDatabase(Visio.Page ovVisioPage, string sProjectID)
+        internal static void AddShapesToDatabase(List<Visio.Page> oListVisioPages, string sProjectID)
         {
             try
             {
                 //gets called when we are adding a page that already has shapes on it and need to add the shapes to the db...
                 //this gets called when the user is bringing back a page from an undo event...
-                foreach (Visio.Shape ovShape in ovVisioPage.Shapes)
+                Dictionary<string, Visio.Shape> oDictWires = new Dictionary<string, Visio.Shape>();
+                foreach (Visio.Page ovPage in oListVisioPages)
                 {
-                    if (ovShape.CellExists["User.Class", 0] == -1)
+                    foreach (Visio.Shape ovShape in ovPage.Shapes)
                     {
-                        //this is one of our shapes..
-                        string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                        switch (sClass)
+                        if (ovShape.CellExists["User.Class", 0] == -1)
                         {
-                            case "TerminalBlock":
-                                {
-                                    TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
-                                    break;
-                                }
-                            case "ADC End Device":
-                                {
-                                    EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
-                                    break;
-                                }
-                            case "SmartWire":
-                                {
-                                    //THESE ARE ADDED BEOFRE THIS FUNCTION GETS CALLED SO NOTHING TO DO HERE...
-                                    break;
-                                }
+                            //this is one of our shapes..
+                            string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                            switch (sClass)
+                            {
+                                case "TerminalBlock":
+                                    {
+                                        TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
+                                        break;
+                                    }
+                                case "ADC End Device":
+                                    {
+                                        EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
+                                        break;
+                                    }
+                                case "SmartWire":
+                                    {
+                                        //gather a list of the wires to add...
+                                        string sKey = ovShape.Cells["User.WirePairID"].get_ResultStr(0) + "|" + ovShape.ID + "|" + ovShape.ContainingPage.Name;
+
+                                        oDictWires.Add(sKey, ovShape);
+                                        break;
+                                    }
+                            }
                         }
                     }
                 }
+
+                //now we have a full list of wires and we need to pair them based on their wirepairids..
+                //the wire pair id is the the first part of the key in the dictionary (before the first pipe |)
+                //use that to find the other matching wirepairid in the dictionary...
+                // Group shapes by WirePairID
+                Dictionary<string, List<Visio.Shape>> odictWirePairs = new Dictionary<string, List<Visio.Shape>>();
+
+                foreach (KeyValuePair<string, Visio.Shape> BaseItem in oDictWires)
+                {
+                    string sKey = BaseItem.Key;
+                    Visio.Shape shape = BaseItem.Value;
+
+                    // Extract WirePairID (everything before the first '|')
+                    string sWirePairID = sKey.Split('|')[0];
+
+                    if (!odictWirePairs.ContainsKey(sWirePairID))
+                    {
+                        odictWirePairs[sWirePairID] = new List<Visio.Shape>();
+                    }
+                        
+
+                    odictWirePairs[sWirePairID].Add(shape);
+                }
+
+                foreach (KeyValuePair<string, List<Visio.Shape>> BaseItem in odictWirePairs)
+                {
+                    string wirePairID = BaseItem.Key;
+                    List<Visio.Shape> pairShapes = BaseItem.Value;
+
+                    if (pairShapes.Count == 2)
+                    {
+                        Visio.Shape wireA = pairShapes[0];
+                        Visio.Shape wireB = pairShapes[1];
+
+                        MultipleRecordUpdates oPrimaryRecord = new MultipleRecordUpdates();
+                        MultipleRecordUpdates oSecondaryRecord = new MultipleRecordUpdates();
+                        //determine which is the primary...
+                        if (wireA.Cells["User.WireRole"].get_ResultStr(0) == "P")
+                        {
+                            //wireA is the priamry
+                            oPrimaryRecord = WireUtilities.BuildWireShapeInfo(wireA, wirePairID);
+                            oSecondaryRecord = WireUtilities.BuildWireShapeInfo(wireB, wirePairID);
+
+                        }
+                        else
+                        {
+                            //wireA is the secondary
+                            oPrimaryRecord = WireUtilities.BuildWireShapeInfo(wireB, wirePairID);
+                            oSecondaryRecord = WireUtilities.BuildWireShapeInfo(wireA, wirePairID);
+                        }
+
+                        //only add them to the db if they don't exist yet..
+                        bool bDoesWireRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oPrimaryRecord.ruRecords[0].sId);
+                        if(!bDoesWireRecordExist)
+                        {
+                            WireUtilities.AddWireToDatabase(oPrimaryRecord, oSecondaryRecord);
+                        }
+                        
+                    }
+                    
+                }
+
+
             }
             catch (Exception ex)
             {
@@ -252,9 +323,22 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
         internal static void CutShapes(Selection ovSelection)
         {
             string sAction = "Move";
-            PagesForm oNewForm = new PagesForm();
-            oNewForm.Display(sAction);
-            oNewForm.Show();
+
+            if(m_PagesForm == null || m_PagesForm.IsDisposed)
+            {
+                PagesForm oNewForm = new PagesForm();
+                oNewForm.Display(sAction);
+                oNewForm.Show();
+                m_PagesForm = oNewForm;
+            }
+            else
+            {
+                m_PagesForm.WindowState = FormWindowState.Normal;
+                m_PagesForm.BringToFront();
+                m_PagesForm.Activate();
+            }
+            
+
         }
     }
 }

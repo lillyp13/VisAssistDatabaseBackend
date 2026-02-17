@@ -92,40 +92,40 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 Visio.Document ovDoc = ovShape.ContainingPage.Document;
                 string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
                 string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-                string sPageIDFromShape = ovShape.Cells["User.PageID"].get_ResultStr(0);
+                string sPageIDFromShape = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
-                string sPageIDFromPage = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                if (sPageIDFromShape == "")
-                {
-                    //we are adding the shape for the first time so let's apply the page id from the current page 
-                    if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                    {
-                        //turn off events before adding the pageid to the shape..
-                        ovDoc.Application.EventsEnabled = 0;
-                        ovShape.Cells["User.PageID"].Formula = "\"" + sPageIDFromPage + "\"";
-                        ovDoc.Application.EventsEnabled = -1;
-                        sPageIDFromShape = sPageIDFromPage;
-                    }
-                }
-                else
-                {
-                    if (sPageIDFromShape == sPageIDFromPage)
-                    {
-                        //this is correct
-                    }
-                    else
-                    {
-                        if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                        {
-                            //the shape pages id and page id don't match this is a cut or copy to another page...
-                            sPageIDFromShape = sPageIDFromPage;
-                            //turn off events befroe updating the shapes pageid
-                            ovDoc.Application.EventsEnabled = 0;
-                            ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sPageIDFromShape);
-                            ovDoc.Application.EventsEnabled = -1;
-                        }
-                    }
-                }
+                //string sPageIDFromPage = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                //if (sPageIDFromShape == "")
+                //{
+                //    //we are adding the shape for the first time so let's apply the page id from the current page 
+                //    if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                //    {
+                //        //turn off events before adding the pageid to the shape..
+                //        ovDoc.Application.EventsEnabled = 0;
+                //        ovShape.Cells["User.PageID"].Formula = "\"" + sPageIDFromPage + "\"";
+                //        ovDoc.Application.EventsEnabled = -1;
+                //        sPageIDFromShape = sPageIDFromPage;
+                //    }
+                //}
+                //else
+                //{
+                //    if (sPageIDFromShape == sPageIDFromPage)
+                //    {
+                //        //this is correct
+                //    }
+                //    else
+                //    {
+                //        if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                //        {
+                //            //the shape pages id and page id don't match this is a cut or copy to another page...
+                //            sPageIDFromShape = sPageIDFromPage;
+                //            //turn off events befroe updating the shapes pageid
+                //            ovDoc.Application.EventsEnabled = 0;
+                //            ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sPageIDFromShape);
+                //            ovDoc.Application.EventsEnabled = -1;
+                //        }
+                //    }
+                //}
 
                 Dictionary<string, string> oDictFileValues = GatherEndDeviceInformation(ovShape, sPageIDFromShape);
 
@@ -178,9 +178,9 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 //turn off events befroe updating the shapes pageid
                 if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
                 {
-                    ovDoc.Application.EventsEnabled = 0;
-                    ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sPageID);
-                    ovDoc.Application.EventsEnabled = -1;
+                    //ovDoc.Application.EventsEnabled = 0;
+                    //ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sPageID);
+                    //ovDoc.Application.EventsEnabled = -1;
 
                 }
 

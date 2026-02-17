@@ -904,16 +904,17 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     string sNewPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
                     //this is the page we want to paste what is in our clipboard...
+                   
                     ovPage.Paste();
                     Visio.Selection ovPastedShapes = ovApp.ActiveWindow.Selection;
                     //we will need to update the shapes we just pasted (most likely just the pageid...)
-                    foreach(Visio.Shape ovShape in ovPastedShapes)
-                    {
-                        if (ovShape.CellExists["User.PageID",0] == -1)
-                        {
-                            ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
-                        }
-                    }
+                    //foreach(Visio.Shape ovShape in ovPastedShapes)
+                    //{
+                    //    if (ovShape.CellExists["User.PageID",0] == -1)
+                    //    {
+                    //        ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
+                    //    }
+                    //}
                 }
             }
         }

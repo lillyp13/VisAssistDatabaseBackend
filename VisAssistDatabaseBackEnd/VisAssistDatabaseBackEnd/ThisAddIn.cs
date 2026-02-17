@@ -220,7 +220,7 @@ namespace VisAssistDatabaseBackEnd
                 //    string.Empty,
                 //    string.Empty));
 
-              
+
 
 
                 // Page Deleted
@@ -447,14 +447,14 @@ namespace VisAssistDatabaseBackEnd
                                 {
                                     m_bIsCuttingShape = true;
                                     bool bDoesClipboardContainWire = ClipboardContainsWireShape();
-                                    if(bDoesClipboardContainWire)
+                                    if (bDoesClipboardContainWire)
                                     {
                                         //there is a wire in this movement
                                         //pull open the form for the user to choose where to paste the selection...
-                                        foreach(Visio.Shape ovShapeToCheck in ovSelection)
+                                        foreach (Visio.Shape ovShapeToCheck in ovSelection)
                                         {
                                             //for all other shapes besides wires we want to call OnShapeDeleted first..
-                                            if (ovShapeToCheck.CellExists["User.Class",0] == -1)
+                                            if (ovShapeToCheck.CellExists["User.Class", 0] == -1)
                                             {
                                                 if (ovShapeToCheck.Cells["User.Class"].get_ResultStr(0) != "SmartWire")
                                                 {
@@ -462,7 +462,11 @@ namespace VisAssistDatabaseBackEnd
                                                 }
                                             }
                                         }
+
+                                        int iUndoScope = ovSelection.Application.BeginUndoScope("Cut Shape");
                                         ShapesUtilities.CutShapes(ovSelection);
+                                        ovSelection.Application.EndUndoScope(iUndoScope, true);
+
                                     }
                                     else
                                     {
@@ -516,7 +520,7 @@ namespace VisAssistDatabaseBackEnd
                             oDelayedEvent.ovDocument = ovDocument;
                             oDelayedEvent.sOperationType = "CheckPageExistence";
                             Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                           
+
                             //string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDocument);
                             ////we are doing a redo/undo that is causing a deletion of a page, however the pageid may not be the updated one because it reverts back to what is what duplicated from...
                             //DatabaseUtilities.CheckPageExistence(ovDocument, sVisAssistFolderPath);
@@ -537,11 +541,15 @@ namespace VisAssistDatabaseBackEnd
                             if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                             {
                                 //want to make sure we are not undoing/redoing..
-                               // if(!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                               // {
-                                    m_bIsPageDuplicating = true; //we are duplicating a page...
-                               // }
-                                
+                                // if(!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                                // {
+                                m_bIsPageDuplicating = true; //we are duplicating a page...
+                                                             // }
+
+                            }
+                            else
+                            {
+                                m_bIsPageDuplicating = false;
                             }
                             //if this is a duplicate then we are going to set the pagesheets formula first...
                             // ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio("LillY");
@@ -558,19 +566,25 @@ namespace VisAssistDatabaseBackEnd
                                 {
                                     //we are doing a redo/undo..
                                     //need to update the pageids...
-                                  
+
                                     VisioUtilities.Application.OnPageAdded(ovPage);
-                                    bool bAlreadyAdded = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "CheckShapeExistence");
-                                    if(!bAlreadyAdded)
-                                    {
-                                        //make sure we don't add this event twice...
-                                        DelayedEvent oDelayedEvent = new DelayedEvent();
-                                        oDelayedEvent.ovDocument = ovPage.Document;
-                                        oDelayedEvent.ovPage = ovPage;
-                                        oDelayedEvent.sOperationType = "CheckShapeExistence";
-                                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                                    }
-                                    
+                                    //this could be a redo of pagduplicated...
+                                    //add a delayed event that will switch the duplicate bool to be false..
+                                    DelayedEvent oDelayedEvent = new DelayedEvent();
+                                    oDelayedEvent.ovDocument = ovPage.Document;
+                                    oDelayedEvent.sOperationType = "TurnOffDuplicateBool";
+                                    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                    //bool bAlreadyAdded = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "CheckShapeExistence");
+                                    //if(!bAlreadyAdded)
+                                    //{
+                                    //    //make sure we don't add this event twice...
+                                    //    DelayedEvent oDelayedEvent = new DelayedEvent();
+                                    //    oDelayedEvent.ovDocument = ovPage.Document;
+                                    //    oDelayedEvent.ovPage = ovPage;
+                                    //    oDelayedEvent.sOperationType = "CheckShapeExistence";
+                                    //    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                    //}
+
                                 }
                             }
                             else
@@ -702,15 +716,15 @@ namespace VisAssistDatabaseBackEnd
 
                 case (short)(short)Visio.VisEventCodes.visEvtDoc + (short)Visio.VisEventCodes.visEvtMod:
                     {
-                        if(!m_bIsPageDuplicating)
+                        if (!m_bIsPageDuplicating)
                         {
                             VisAssistDatabaseBackEnd.VisioUtilities.Application.OnDocumentChanged((Visio.Document)subject);
                         }
-                        
+
                         break;
                     }
 
-                   
+
 
                 case (short)(short)Visio.VisEventCodes.visEvtApp + (short)Visio.VisEventCodes.visEvtMarker:
                     {
@@ -775,7 +789,7 @@ namespace VisAssistDatabaseBackEnd
 
             int undoScope = activePage.Application.BeginUndoScope("CheckClipboardWire");
 
-          
+
 
             try
             {
@@ -798,7 +812,7 @@ namespace VisAssistDatabaseBackEnd
             }
             finally
             {
-                 activePage.Application.EndUndoScope(undoScope, false);
+                activePage.Application.EndUndoScope(undoScope, false);
                 app.EventsEnabled = -1;
             }
         }
