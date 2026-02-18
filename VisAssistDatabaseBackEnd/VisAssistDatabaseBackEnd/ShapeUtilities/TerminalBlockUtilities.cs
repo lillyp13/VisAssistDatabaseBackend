@@ -26,21 +26,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 }
                 else
                 {
-                    //the record already exists this is a copy of a shape...
-                    //if (Globals.ThisAddIn.m_delayedEvents.Count > 0)
-                    //{
-                    //    string sPageID = Globals.ThisAddIn.m_delayedEvents[0].sPageID;
-
-                    //    oTerminalRecord = AddTerminalBlockInfo(ovShape, sPageID);
-                    //    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, oTerminalRecord);
-                    //}
-                    //else
-                    //{
-                    //    //the uer pressed redo a second or third time....
-                    //    string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                    //    oTerminalRecord = AddTerminalBlockInfo(ovShape, sPageID);
-                    //    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, oTerminalRecord);
-                    //}
+                  
                     UpdateTerminalBlockInDatabase(ovShape);
                 }
             }
@@ -115,36 +101,6 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
                 string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
                 string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-
-                //check to see if the sPageID and the sPageIDOnPage are the same...
-                //string sPageIDofPage = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-
-                //if (sPageID == "")
-                //{
-                //    //we are adding the shape for the first time so let's apply the page id from the current page 
-
-                //    //turn off events before adding the pageid to the shape..
-                //    ovDoc.Application.EventsEnabled = 0;
-                //    ovShape.Cells["User.PageID"].Formula = "\"" + sPageIDofPage + "\"";
-                //    ovDoc.Application.EventsEnabled = -1;
-                //    sPageID = sPageIDofPage;
-                //}
-                //else
-                //{
-                //    if (sPageID == sPageIDofPage)
-                //    {
-                //        //this is correct
-                //    }
-                //    else
-                //    {
-                //        //the shape pages id and page id don't match this is a cut or copy to another page...
-                //        sPageID = sPageIDofPage;
-                //        //turn off events befroe updating the shapes pageid
-                //        ovDoc.Application.EventsEnabled = 0;
-                //        ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sPageID);
-                //        ovDoc.Application.EventsEnabled = -1;
-                //    }
-                //}
 
                 Dictionary<string, string> oDictFileValues = GatherTerminalBlockInformation(ovShape, sPageID);
 

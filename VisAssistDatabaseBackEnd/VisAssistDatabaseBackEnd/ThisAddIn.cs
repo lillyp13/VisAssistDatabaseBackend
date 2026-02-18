@@ -20,6 +20,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Reflection;
 using System.Net;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
+using System.Globalization;
 
 namespace VisAssistDatabaseBackEnd
 {
@@ -33,6 +34,7 @@ namespace VisAssistDatabaseBackEnd
         public List<string> m_pendingPageIds = new List<string>();
         public bool m_bIsPageDuplicating = false;
         public bool m_SyncedDB = false;
+        public bool m_bAskWhereToCutTo = true;
         //public bool m_bIsCuttingShape = false;
         public bool m_bIsCuttingShape { get; set; }
 
@@ -181,16 +183,11 @@ namespace VisAssistDatabaseBackEnd
                     string.Empty);
                 m_VisioEvents.Add(evtCellModified);
 
-                //// Filter only custom property cells
-                //System.Array filterArray = Array.CreateInstance(typeof(short), 7);
-                //filterArray.SetValue((short)Visio.VisSectionIndices.visSectionProp, 0);
-                //filterArray.SetValue((short)Visio.VisRowIndices.visRowFirst, 1);
-                //filterArray.SetValue((short)Visio.VisCellIndices.visCustPropsValue, 2);
-                //filterArray.SetValue((short)Visio.VisSectionIndices.visSectionProp, 3);
-                //filterArray.SetValue((short)Visio.VisRowIndices.visRowLast, 4);
-                //filterArray.SetValue((short)Visio.VisCellIndices.visCustPropsValue, 5);
-                //filterArray.SetValue((short)1, 6); // true
-                //evtCellModified.SetFilterSRC(ref filterArray);
+
+                // Hook CellChanged event
+               
+ 
+
 
                 //// Connections Added
                 //m_appEvents.Add(docEventList.AddAdvise(
@@ -463,9 +460,12 @@ namespace VisAssistDatabaseBackEnd
                                             }
                                         }
 
-                                        int iUndoScope = ovSelection.Application.BeginUndoScope("Cut Shape");
-                                        ShapesUtilities.CutShapes(ovSelection);
-                                        ovSelection.Application.EndUndoScope(iUndoScope, true);
+                                        if (m_bAskWhereToCutTo)
+                                        {
+                                            int iUndoScope = ovSelection.Application.BeginUndoScope("Cut Shape");
+                                            ShapesUtilities.CutShapes(ovSelection);
+                                            ovSelection.Application.EndUndoScope(iUndoScope, true);
+                                        }
 
                                     }
                                     else
@@ -486,16 +486,51 @@ namespace VisAssistDatabaseBackEnd
 
                             else
                             {
-                                //if (Clipboard.ContainsData(DataFormats.EnhancedMetafile))
-                                //{
-                                //    m_bIsCuttingShape = true;
+                                //this is part of an undo/redo event...
+                                List<string> lstShapesRemoved = VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject, ovSelection);
+                                bool bUndoEvent = false;
+                                //check if we should add this event by looking at the db and seeing if we have any wires in visio with no mate in visio 
+                                if(lstShapesRemoved.Count > 0)
+                                {
+                                    //we removed wires from the db
+                                    foreach(string sShapeID in lstShapesRemoved)
+                                    {
+                                        //we removed a wire...
+                                        bUndoEvent = WireUtilities.CheckForWireMate(sShapeID);
+                                        if (bUndoEvent)
+                                        {
+                                            bool bUndoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Undo");
+                                            if (!bUndoAlreadyScheduled)
+                                            {
+                                                //add delayed event to undo the cut...
+                                                DelayedEvent oDelayedEvent = new DelayedEvent();
+                                                oDelayedEvent.sOperationType = "Undo";
+                                                Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                            }
 
-                                //}
-                                //else
-                                //{
-                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeleted((Visio.Shape)subject, ovSelection);
-                                //}
-
+                                        }
+                                    }
+                                    
+                                }
+                                else
+                                {
+                                    //we didn't remove any wires from the db (doing an undo/redo of a cut/move)
+                                    string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+                                    bUndoEvent = WireUtilities.CheckForWireMate(sShapeID);
+                                    if(bUndoEvent)
+                                    {
+                                        bool bUndoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Undo");
+                                        if (!bUndoAlreadyScheduled)
+                                        {
+                                            //add delayed event to undo the cut...
+                                            DelayedEvent oDelayedEvent = new DelayedEvent();
+                                            oDelayedEvent.sOperationType = "Undo";
+                                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                        }
+                                    }
+                                }
+                                
+                                
                             }
 
                             m_pendingShapeIds.Add(sKey);
@@ -521,9 +556,6 @@ namespace VisAssistDatabaseBackEnd
                             oDelayedEvent.sOperationType = "CheckPageExistence";
                             Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
 
-                            //string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDocument);
-                            ////we are doing a redo/undo that is causing a deletion of a page, however the pageid may not be the updated one because it reverts back to what is what duplicated from...
-                            //DatabaseUtilities.CheckPageExistence(ovDocument, sVisAssistFolderPath);
                         }
 
                         break;
@@ -540,15 +572,13 @@ namespace VisAssistDatabaseBackEnd
                             //if the page has shapes on it already this is a duplicate..
                             if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                             {
-                                //want to make sure we are not undoing/redoing..
-                                // if(!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                                // {
                                 m_bIsPageDuplicating = true; //we are duplicating a page...
-                                                             // }
+                                                            
 
                             }
                             else
                             {
+                                //we aren't duplicating a page
                                 m_bIsPageDuplicating = false;
                             }
                             //if this is a duplicate then we are going to set the pagesheets formula first...
@@ -574,16 +604,7 @@ namespace VisAssistDatabaseBackEnd
                                     oDelayedEvent.ovDocument = ovPage.Document;
                                     oDelayedEvent.sOperationType = "TurnOffDuplicateBool";
                                     Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                                    //bool bAlreadyAdded = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "CheckShapeExistence");
-                                    //if(!bAlreadyAdded)
-                                    //{
-                                    //    //make sure we don't add this event twice...
-                                    //    DelayedEvent oDelayedEvent = new DelayedEvent();
-                                    //    oDelayedEvent.ovDocument = ovPage.Document;
-                                    //    oDelayedEvent.ovPage = ovPage;
-                                    //    oDelayedEvent.sOperationType = "CheckShapeExistence";
-                                    //    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                                    //}
+                                   
 
                                 }
                             }

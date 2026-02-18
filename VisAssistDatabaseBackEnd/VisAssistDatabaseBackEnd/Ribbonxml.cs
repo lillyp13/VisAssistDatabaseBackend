@@ -1,4 +1,5 @@
-﻿using Microsoft.Office.Tools.Ribbon;
+﻿using Microsoft.Office.Core;
+using Microsoft.Office.Tools.Ribbon;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -541,11 +542,20 @@ namespace VisAssistDatabaseBackEnd
 
         public void btnResetWireColorandNumber_Click(Office.IRibbonControl control)
         {
-            WireUtilities.ResetWireColorandNumber();
+            WireUtilities.ResetWireColorAndNumber();
         }
 
+        public void btnFirstStep_Click(Office.IRibbonControl control)
+        {
+            //this drops 100 pages and drops 10 wires on each page
+            PageUtilities.FirstStepInStressTest();
+        }
 
-
+        public void btnSecondStep_Click(Office.IRibbonControl control)
+        {
+            PageUtilities.SecondStepInStressTest();
+            Globals.ThisAddIn.m_bAskWhereToCutTo = true;
+        }
         #endregion
     }
 }

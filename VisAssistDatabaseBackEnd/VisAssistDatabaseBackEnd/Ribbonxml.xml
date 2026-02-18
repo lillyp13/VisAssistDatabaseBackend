@@ -2,6 +2,7 @@
 
 <!--WORKING SMALL SECTION-->
 <customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
+
 	<ribbon>
 		<tabs>
 			<tab id="tabAddIn" label="Add In">
@@ -47,9 +48,15 @@
 						  onAction="btnChangeFileName_Click"/>
 				</group>
         <group id="grpTests" label="Tests">
-          <button id="btnStressTest"
-						 label="Stress Test"
+          <button id="btnTerminalBlockStressTest"
+						 label="Terminal Block Stress Test"
 						 onAction="btnPageAndTerminals_Click"/>
+          <button id="btnFirstStep"
+            label="Drop 100 Pages and 1000 Wires"
+            onAction="btnFirstStep_Click"/>
+          <button id="btnSecondStep"
+           label="Drop 50 Pages and Move Secondary Wires"
+           onAction="btnSecondStep_Click"/>
          
         </group>
         <group id="grpUtilities" label="Utilities">

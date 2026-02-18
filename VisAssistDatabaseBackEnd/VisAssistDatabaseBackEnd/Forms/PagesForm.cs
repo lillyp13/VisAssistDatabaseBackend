@@ -75,7 +75,7 @@ namespace VisAssistDatabaseBackEnd.Forms
                 {
                     //we are moving a selection of shapes to a different page...
                     //get the selected page
-                    PageUtilities.GetPageToMoveShapesTo(this);
+                    PageUtilities.PasteShapesOnPageUserSpecified(this);
                    
                 }
             }

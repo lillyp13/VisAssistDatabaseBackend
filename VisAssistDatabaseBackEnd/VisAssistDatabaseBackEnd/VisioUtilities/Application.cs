@@ -137,7 +137,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     }
                    
                 }
-                WireUtilities.CheckForWirePairs(oDictWires);
+                WireUtilities.CheckForWirePairsOnPageDuplicated(oDictWires);
                 List<string> oListWirePairIDUpdated = new List<string>();
                 foreach (Visio.Page ovPageToDuplicate in oDictPagesToDuplicate.Values)
                 {
@@ -391,94 +391,104 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         //SHAPE LEVEL EVENTS
         internal static void OnShapeAdded(Visio.Shape ovShape, Visio.Selection ovSelection, ref Dictionary<string, Shape> oDictWiresComingFromRedo)
         {
-            if (ovShape.CellExists["User.Class", 0] == -1)
-            {
-                //this is one of our shapes...
-                string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovShape.ContainingPage.Document);
-                DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
-                string sProjectID = ovShape.ContainingPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                List<string> lstWires = new List<string>();
-                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                switch (sClass)
-                {
-                    case "NewWire":
-                    case "SmartWire":
-                        {
-                            if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                            {
-                                //we are doing an undo/redo
-
-                                string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-
-                                //we need to make sure the sShapeID exists in the table to update..
-                                bool bDoesRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, sShapeID);
-                                if (bDoesRecordExist)
-                                {
-                                    //this is from undoing a ctrl x...that is why it still lives in the db
-                                    WireUtilities.UpdateWireInDatabase(ovShape);
-                                }
-                                else
-                                {
-                                    //this is part of an undo/redo and the record doesn't exist which means it is not in the db..
-                                    //check how many shapes we are adding (we should be pairing these wires together and if there is an odd number drop antoher wire?
-                                    oDictWiresComingFromRedo.Add(sShapeID, ovShape);
-
-                                }
-
-
-
-
-
-                            }
-                            else
-                            {
-                                //TEMPORARILY ADD THE USER.WIREPAIRID 
-                                if (ovShape.CellExists["User.WirePairID",0] == 0)
-                                {
-                                    ovShape.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "WirePairID", 0);
-                                }
-                                string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-                                bool bNewWire = true;
-                                if(sShapeID == "")
-                                {
-                                    bNewWire = true;
-                                }
-                                else
-                                {
-                                    bNewWire = false; //this is probably a copy...
-                                }
-                                WireUtilities.AddWire(ovShape, ref lstWires, bNewWire); //lstWires here should be empty we utiltize this when we use addwiretodatabase during the sync...
-                            }
-
-                            break;
-                        }
-                    case "TerminalBlock":
-                        {
-                            TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
-                            break;
-                        }
-                    case "ADC End Device":
-                        {
-                            EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
-                            break;
-                        }
-                }
-
-                //we should add a delayed event to clear the clipbaord after adding shapes...
-                DelayedEvent oDelayedEvent = new DelayedEvent();
-                oDelayedEvent.sOperationType = "TurnOfCutShapesBool";
-                oDelayedEvent.ovDocument = ovShape.Document;
-                Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-
-
-            }
-        }
-        internal static void OnShapeDeleted(Visio.Shape ovShape, Selection ovSelection)
-        {
-            Visio.Document ovDoc = ovShape.Document;
             try
             {
 
+
+                if (ovShape.CellExists["User.Class", 0] == -1)
+                {
+                    //this is one of our shapes...
+                    string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovShape.ContainingPage.Document);
+                    DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+                    string sProjectID = ovShape.ContainingPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                    List<string> lstWires = new List<string>();
+                    string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                    switch (sClass)
+                    {
+                        case "NewWire":
+                        case "SmartWire":
+                            {
+                                if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                                {
+                                    //we are doing an undo/redo
+
+                                    string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+
+                                    //we need to make sure the sShapeID exists in the table to update..
+                                    bool bDoesRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, sShapeID);
+                                    if (bDoesRecordExist)
+                                    {
+                                        //this is from undoing a ctrl x...that is why it still lives in the db
+                                        WireUtilities.UpdateWireInDatabase(ovShape);
+                                    }
+                                    else
+                                    {
+                                        //this is part of an undo/redo and the record doesn't exist which means it is not in the db..
+                                        //check how many shapes we are adding (we should be pairing these wires together and if there is an odd number drop antoher wire?
+                                        oDictWiresComingFromRedo.Add(sShapeID, ovShape);
+
+                                    }
+
+
+
+
+
+                                }
+                                else
+                                {
+                                    //TEMPORARILY ADD THE USER.WIREPAIRID 
+                                    if (ovShape.CellExists["User.WirePairID", 0] == 0)
+                                    {
+                                        ovShape.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "WirePairID", 0);
+                                    }
+                                    string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+                                    bool bNewWire = true;
+                                    if (sShapeID == "")
+                                    {
+                                        bNewWire = true;
+                                    }
+                                    else
+                                    {
+                                        bNewWire = false; //this is probably a copy...
+                                    }
+                                    WireUtilities.AddWire(ovShape, ref lstWires, bNewWire); //lstWires here should be empty we utiltize this when we use addwiretodatabase during the sync...
+                                }
+
+                                break;
+                            }
+                        case "TerminalBlock":
+                            {
+                                TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
+                                break;
+                            }
+                        case "ADC End Device":
+                            {
+                                EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
+                                break;
+                            }
+                    }
+
+                    //we should add a delayed event to clear the clipbaord after adding shapes...
+                    DelayedEvent oDelayedEvent = new DelayedEvent();
+                    oDelayedEvent.sOperationType = "TurnOfCutShapesBool";
+                    oDelayedEvent.ovDocument = ovShape.Document;
+                    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
+
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in OnShapeAdded " + ex.Message, "VisAssist");
+            }
+        }
+        internal static List<string> OnShapeDeleted(Visio.Shape ovShape, Selection ovSelection)
+        {
+            Visio.Document ovDoc = ovShape.Document;
+            List<string> lstShapesRemoved = new List<string>();
+            try
+            {
+                
                 if (ovShape.CellExists["User.Class", 0] == -1)
                 {
                     //this is one of our shapes...
@@ -498,7 +508,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                                 {
                                     List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
                                     //need to clean up the db based on the shapes on this page left...
-                                    DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovShape.Document, ref lstShapes);
+                                   lstShapesRemoved = DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovShape.Document, ref lstShapes);
                                 }
                                 else
                                 {
@@ -621,10 +631,13 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
 
                 }
+
+                return lstShapesRemoved;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error in OnShapeDeleted " + ex.Message, "VisAssist");
+                return lstShapesRemoved;
             }
             finally
             {
@@ -853,7 +866,10 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID);
                 }
 
-                
+                if(oThisDelayedEvent.sOperationType == "Undo")
+                {
+                    Globals.ThisAddIn.Application.Undo();
+                }
 
 
             }

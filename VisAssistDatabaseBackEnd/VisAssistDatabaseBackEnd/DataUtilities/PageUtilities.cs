@@ -13,6 +13,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using VisAssistDatabaseBackEnd.Forms;
+using VisAssistDatabaseBackEnd.ShapeUtilities;
 using VisAssistDatabaseBackEnd.VisioUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
 
@@ -59,111 +60,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
       
-        //internal static void UpdatePage(PagesInformationForm pagesForm, bool bAllPages, string sFileID)
-        //{
-        //    if (m_mruRecordsToCompare.ruRecords != null)
-        //    {
-        //        m_mruRecordsToCompare.ruRecords.Clear();
-        //    }
-
-        //    bool bIsNull = false;
-        //    List<RecordUpdate> lstRecordUpdate = new List<RecordUpdate>();
-        //    foreach (DataGridViewRow dgvRow in pagesForm.dgvPages.Rows)
-        //    {
-        //        Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
-
-        //        string sPrimaryKey = "";
-
-        //        for (int i = 0; i <= pagesForm.dgvPages.Columns.Count - 1; i++)
-        //        {
-        //            DataGridViewColumn dgvColumn = pagesForm.dgvPages.Columns[i];
-        //            string sColumnName = dgvColumn.Name;
-        //            if (dgvRow.Cells[i].Value != null)
-        //            {
-        //                string sValue = dgvRow.Cells[i].Value.ToString();
-
-        //                if (sColumnName != DatabaseUtilities.SqlTables.PagesTable.sPagesTablePK)
-        //                {
-        //                    //check to see if this is the LastModifiedDate
-        //                    //we only want to add the lastmodifieddate if something else about the page has changed, this cannot be the only value...
-        //                    if (sColumnName == "LastModifiedDate")
-        //                    {
-        //                        oDictColumnValues.Add(sColumnName, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-        //                    }
-        //                    else
-        //                    {
-        //                        oDictColumnValues.Add(sColumnName, sValue); //this is not the primary key or the last modiifed date...
-        //                    }
-
-        //                }
-        //                else
-        //                {
-        //                    //this is the primary key
-        //                    sPrimaryKey = sValue;
-        //                }
-        //            }
-        //            else
-        //            {
-        //                bIsNull = true;
-        //            }
-        //        }
-
-
-        //        //create a recordupdate for this row only if it is not null
-        //        if (!bIsNull)
-        //        {
-        //            RecordUpdate ruRecordUpdate = new RecordUpdate();
-        //            ruRecordUpdate.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.PagesTable.sPagesTablePK;
-        //            ruRecordUpdate.sId = sPrimaryKey;
-        //            ruRecordUpdate.odictColumnValues = oDictColumnValues;
-
-        //            lstRecordUpdate.Add(ruRecordUpdate);
-        //        }
-
-        //    }
-
-        //    //wrap all the records into a multiple recorsupdates object
-        //    m_mruRecordsToCompare = new MultipleRecordUpdates(lstRecordUpdate);
-
-        //    m_mruRecordsToUpdate = DatabaseUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
-
-
-
-
-        //    if (m_mruRecordsToUpdate.ruRecords.Count > 0)
-        //    {
-        //        //there is something to update
-        //        //sync with visio this is to simulate the actual event (user changes a page name in visio and it triggers the update to db 
-        //        //this method is just to keep visio and our db in sync as of today (our event handlers...)
-
-
-        //        //will need to add the page name no matter what..but should only update the LastModifiedDate if something else was updated...
-
-        //        PageUtilities.UpdateVisioPages();
-
-
-        //        DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, m_mruRecordsToUpdate);
-        //        //I think we will also want to update the files and projects LastModifiedDate-right???
-
-
-        //        if (bAllPages)
-        //        {
-        //            //get the pages for all the files
-        //            PageUtilities.GetAllPages();
-        //        }
-        //        else
-        //        {
-        //            //get the pages for a specific file
-        //            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-        //            PageUtilities.GetPagesForCurrentFile(ovDoc);
-        //        }
-
-
-
-
-        //    }
-        //}
-
 
         internal static void AddPageToDatabase(Visio.Page ovPage, string sProjectID, string sSource)
         {
@@ -241,92 +137,102 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             //Class
             //Orientation
             //Scale
-
-            string sPageName = ovPage.Name;
-            if (sProjectID == "")
-            {
-                //we have sufficient data in the page's document shapesheet, grab the project id from there
-                sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);//this will take the old project id if we are associating...
-            }
-
-
-            //we are in the process of associating a file so we have a different projectID we will be adding for pages..
-
-
-
-            string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-            int iPageIndex = ovPage.Index;
-            //get created date from a user cell?
-            //for now it will the current date 
-
-
-            string sLastModifiedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
-            //get version and class also from user cells
-            string sVersion = ovPage.PageSheet.Cells["User.Version"].get_ResultStr(0);
-            string sClass = ovPage.PageSheet.Cells["User.PageClass"].get_ResultStr(0);
-
-
-            //get the orientation and scale based on the attributes.. for now i might cheapen this process
-            int iPageWidth = Convert.ToInt32(ovPage.PageSheet.Cells["PageWidth"].ResultIU);
-            int iPageHeight = Convert.ToInt32(ovPage.PageSheet.Cells["PageHeight"].ResultIU);
-            string sOrientation = "";
-            int iScale = Convert.ToInt32(ovPage.PageSheet.Cells["PageScale"].ResultIU);
-            string sScale = iScale.ToString();
-            if (iPageWidth > iPageHeight)
-            {
-                //the width is larger than the height this is horizontal
-                sOrientation = "Horizontal";
-            }
-            else
-            {
-                //the width is smaller than the height this is vertical 
-                sOrientation = "Vertical";
-            }
-
-
-
-
-            Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
-            oDictFileValues.Add("PageName", sPageName);
-            oDictFileValues.Add("ProjectID", sProjectID);
-            oDictFileValues.Add("FileID", sFileID);
-            oDictFileValues.Add("PageIndex", iPageIndex.ToString());
-            // oDictFileValues.Add("CreatedDate", dtCreatedDate.ToString());
-
-            oDictFileValues.Add("LastModifiedDate", sLastModifiedDate);
-            oDictFileValues.Add("Version", sVersion);
-            oDictFileValues.Add("Class", sClass);
-            oDictFileValues.Add("Orientation", sOrientation);
-            oDictFileValues.Add("Scale", sScale);
-
-            string sPageID = "";
-            if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
-            {
-                oDictFileValues["CreatedDate"] = ovPage.Document.DocumentSheet.Cells["User.CreatedDate"].get_ResultStr(0);
-                sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-            }
-
-            if (sPageID == "")
-            {
-                //this is us adding a page there isn't a page id yet...
-                oDictFileValues["CreatedDate"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                sPageID = PageUtilities.GeneratePageID(sProjectID, sFileID, sPageName, DateTime.Now);
-                ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0);
-                ovPage.PageSheet.Cells["User.PageID"].Formula = "\"" + sPageID + "\"";
-
-            }
-            else
-            {
-
-            }
-
             RecordUpdate ruFileRecord = new RecordUpdate();
-            ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.PagesTable.sPagesTablePK;
-            ruFileRecord.sId = sPageID;
-            ruFileRecord.odictColumnValues = oDictFileValues;
+            try
+            {
 
+
+                string sPageName = ovPage.Name;
+                if (sProjectID == "")
+                {
+                    //we have sufficient data in the page's document shapesheet, grab the project id from there
+                    sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);//this will take the old project id if we are associating...
+                }
+
+
+                //we are in the process of associating a file so we have a different projectID we will be adding for pages..
+
+
+
+                string sFileID = ovPage.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                int iPageIndex = ovPage.Index;
+                //get created date from a user cell?
+                //for now it will the current date 
+
+
+                string sLastModifiedDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                //get version and class also from user cells
+                string sVersion = ovPage.PageSheet.Cells["User.Version"].get_ResultStr(0);
+                string sClass = ovPage.PageSheet.Cells["User.PageClass"].get_ResultStr(0);
+
+
+                //get the orientation and scale based on the attributes.. for now i might cheapen this process
+                int iPageWidth = Convert.ToInt32(ovPage.PageSheet.Cells["PageWidth"].ResultIU);
+                int iPageHeight = Convert.ToInt32(ovPage.PageSheet.Cells["PageHeight"].ResultIU);
+                string sOrientation = "";
+                int iScale = Convert.ToInt32(ovPage.PageSheet.Cells["PageScale"].ResultIU);
+                string sScale = iScale.ToString();
+                if (iPageWidth > iPageHeight)
+                {
+                    //the width is larger than the height this is horizontal
+                    sOrientation = "Horizontal";
+                }
+                else
+                {
+                    //the width is smaller than the height this is vertical 
+                    sOrientation = "Vertical";
+                }
+
+
+
+
+                Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
+                oDictFileValues.Add("PageName", sPageName);
+                oDictFileValues.Add("ProjectID", sProjectID);
+                oDictFileValues.Add("FileID", sFileID);
+                oDictFileValues.Add("PageIndex", iPageIndex.ToString());
+                // oDictFileValues.Add("CreatedDate", dtCreatedDate.ToString());
+
+                oDictFileValues.Add("LastModifiedDate", sLastModifiedDate);
+                oDictFileValues.Add("Version", sVersion);
+                oDictFileValues.Add("Class", sClass);
+                oDictFileValues.Add("Orientation", sOrientation);
+                oDictFileValues.Add("Scale", sScale);
+
+                string sPageID = "";
+                if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                {
+                    oDictFileValues["CreatedDate"] = ovPage.Document.DocumentSheet.Cells["User.CreatedDate"].get_ResultStr(0);
+                    sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                }
+
+                if (sPageID == "")
+                {
+                    //this is us adding a page there isn't a page id yet...
+                    oDictFileValues["CreatedDate"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    sPageID = PageUtilities.GeneratePageID(sProjectID, sFileID, sPageName, DateTime.Now);
+                    ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0);
+                    ovPage.PageSheet.Cells["User.PageID"].Formula = "\"" + sPageID + "\"";
+
+                }
+                else
+                {
+
+                }
+
+                
+                ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.PagesTable.sPagesTablePK;
+                ruFileRecord.sId = sPageID;
+                ruFileRecord.odictColumnValues = oDictFileValues;
+                
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in BuildPageInfoBasedOnVisioPage " + ex.Message, "VisAssist");
+            }
             return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
+
         }
 
         internal static string GeneratePageID(string sProjectID, string sFileID, string sPageName, DateTime now)
@@ -538,7 +444,33 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
+        internal static void PasteShapesOnPageUserSpecified(PagesForm pagesForm)
+        {
+            string sPageNameToMoveTo = "";
+            foreach (DataGridViewRow dgvRow in pagesForm.dgvPages.SelectedRows)
+            {
+                if (!dgvRow.IsNewRow)
+                {
+                    sPageNameToMoveTo = dgvRow.Cells["PageName"].Value?.ToString();
 
+                }
+            }
+
+            //ok now paste what we have in our clipboard on the visio page sPageNameToMoveTo
+            Visio.Application ovApp = Globals.ThisAddIn.Application;
+            Visio.Document ovDocument = ovApp.ActiveDocument;
+            foreach (Visio.Page ovPage in ovDocument.Pages)
+            {
+                if (ovPage.Name == sPageNameToMoveTo)
+                {
+                    string sNewPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    //this is the page we want to paste what is in our clipboard...
+
+                    ovPage.Paste();
+
+                }
+            }
+        }
 
         //GATHERING INFORMATION
         internal static void GetPagesForCurrentFile(Visio.Document ovDoc)
@@ -832,90 +764,180 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
         
-
-        internal static List<string> PopulateShapesListBasedOnPage(Visio.Page ovPage, string sTableName)
+        internal static void UpdatePageIDInDatabase(string sOldPageID, string sCurrentPageID, Page ovPage)
         {
-            List<string> lstResults = new List<string>();
-            //gather all the shapes in the table for the given page...
-            string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-            string sPk = DatabaseUtilities.GetPrimaryKey(sTableName);
-            //query all the shapes in the table for sPageID...
-            using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+            try
             {
-                sqliteconConnection.Open();
 
-                string sSQL = $@"SELECT {sPk} FROM {sTableName} WHERE PageID = @PageID;";
+                //update the entry record in pages_table where sPageID and update the pageID to sCurrentPageID
 
-                using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                 {
-                    sqlcmdCommand.Parameters.Add("@PageID", DbType.String).Value = sPageID;
+                    sqliteconConnection.Open();
 
-                    using (SQLiteDataReader reader = sqlcmdCommand.ExecuteReader())
+                    string sSql = @"UPDATE pages_table SET PageID = @NewPageID WHERE PageID = @OldPageID";
+
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
                     {
-                        while (reader.Read())
+                        sqlitecmdCommand.Parameters.AddWithValue("@NewPageID", sCurrentPageID);
+                        sqlitecmdCommand.Parameters.AddWithValue("@OldPageID", sOldPageID);
+
+                        sqlitecmdCommand.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in UpdatePageIDInDatabase " + ex.Message, "VisAssist");
+            }
+        }
+
+        
+
+        internal static void FirstStepInStressTest()
+        {
+            try
+            {
+
+
+                Visio.Document ovCurrentDoc = Globals.ThisAddIn.Application.ActiveDocument;
+
+                Visio.Document ovStencilDoc = null;
+
+                // Find the stencil containing the SmartWire master
+                foreach (Visio.Document ovDoc in Globals.ThisAddIn.Application.Documents)
+                {
+                    if (ovDoc.Type == Visio.VisDocumentTypes.visTypeStencil &&
+                        ovDoc.Name.Equals("TestStencil.vssx", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ovStencilDoc = ovDoc;
+                        break;
+                    }
+                }
+
+                if (ovStencilDoc == null)
+                {
+                    MessageBox.Show("Stencil 'TestStencil.vssx' not found.", "VisAssist");
+                    return;
+                }
+
+                // Get the SmartWire master
+                Visio.Master ovWireMaster = ovStencilDoc.Masters["SmartWire"];
+
+
+
+                if (ovCurrentDoc != null)
+                {
+                    // Add 100 Visio pages
+                    for (int ithPage = 1; ithPage <= 100; ithPage++)
+                    {
+                        Visio.Page ovPage = ovCurrentDoc.Pages.Add();
+
+                        double dX = 1.0;
+
+                        // Start at the top of the page
+                        double dY = ovPage.PageSheet.CellsU["PageHeight"].ResultIU - 0.5;
+
+                        // Drop 10 wires on the page
+                        for (int i = 0; i < 10; i++)
                         {
-                            lstResults.Add(reader.GetString(0));
+                            Visio.Shape ovShape = ovPage.Drop(ovWireMaster, dX, dY);
+
+                            // Move Y down by the shape's actual height + small gap
+                            double dHeight = ovShape.Cells["Height"].ResultIU;
+                            dY -= dHeight + 0.2;
                         }
                     }
                 }
             }
-            return lstResults;
-        }
-
-        internal static void UpdatePageIDInDatabase(string sOldPageID, string sCurrentPageID, Page ovPage)
-        {
-            //update the entry record in pages_table where sPageID and update the pageID to sCurrentPageID
-
-            using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+            catch(Exception ex)
             {
-                sqliteconConnection.Open();
-
-                string sSql = @"UPDATE pages_table SET PageID = @NewPageID WHERE PageID = @OldPageID";
-
-
-                using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
-                {
-                    sqlitecmdCommand.Parameters.AddWithValue("@NewPageID", sCurrentPageID);
-                    sqlitecmdCommand.Parameters.AddWithValue("@OldPageID", sOldPageID);
-
-                    sqlitecmdCommand.ExecuteNonQuery();
-                }
-            }
-        }
-
-        internal static void GetPageToMoveShapesTo(PagesForm pagesForm)
-        {
-            string sPageNameToMoveTo = "";
-            foreach (DataGridViewRow dgvRow in pagesForm.dgvPages.SelectedRows)
-            {
-                if (!dgvRow.IsNewRow)
-                {
-                   sPageNameToMoveTo = dgvRow.Cells["PageName"].Value?.ToString();
-                    
-                }
+                MessageBox.Show("Error in FirstStepInStressTest " + ex.Message, "VisAssist");
             }
 
-            //ok now paste what we have in our clipboard on the visio page sPageNameToMoveTo
-            Visio.Application ovApp = Globals.ThisAddIn.Application;
-            Visio.Document ovDocument = ovApp.ActiveDocument;
-            foreach(Visio.Page ovPage in ovDocument.Pages)
+        }
+
+        internal static void SecondStepInStressTest()
+        {
+            try
             {
-                if(ovPage.Name == sPageNameToMoveTo)
+
+                //add 50 pages and then go through all the pages and move all the secondary wires in the document to these 50 pages (there should be 1000 secondary wires so split them accordingly..)
+                Visio.Document ovCurrentDoc = Globals.ThisAddIn.Application.ActiveDocument;
+                Globals.ThisAddIn.m_bAskWhereToCutTo = false;
+
+                if (ovCurrentDoc == null)
+                    return;
+
+                const int numberOfPages = 50;
+                const int wiresPerPage = 20; // 1000 wires / 50 pages
+
+                List<Visio.Shape> allSecondaryWires = new List<Visio.Shape>();
+
+                // Collect all secondary wires in the document
+                foreach (Visio.Page page in ovCurrentDoc.Pages)
                 {
-                    string sNewPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                    //this is the page we want to paste what is in our clipboard...
-                   
-                    ovPage.Paste();
-                    Visio.Selection ovPastedShapes = ovApp.ActiveWindow.Selection;
-                    //we will need to update the shapes we just pasted (most likely just the pageid...)
-                    //foreach(Visio.Shape ovShape in ovPastedShapes)
-                    //{
-                    //    if (ovShape.CellExists["User.PageID",0] == -1)
-                    //    {
-                    //        ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sNewPageID);
-                    //    }
-                    //}
+                    foreach (Visio.Shape ovShape in page.Shapes)
+                    {
+                        if (ovShape.CellExists["User.Class", 0] == -1)
+                        {
+                            if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                            {
+                                //grab the seconary wire..
+                                if (ovShape.Cells["User.WireRole"].get_ResultStr(0) == "S")
+                                {
+                                    allSecondaryWires.Add(ovShape);
+                                }
+                            }
+                        }
+
+                    }
                 }
+
+                if (allSecondaryWires.Count == 0)
+                {
+                    MessageBox.Show("No secondary wires found in the document.", "VisAssist");
+                    return;
+                }
+
+                // Add 50 new pages
+                List<Visio.Page> newPages = new List<Visio.Page>();
+                for (int i = 0; i < numberOfPages; i++)
+                {
+                    Visio.Page newPage = ovCurrentDoc.Pages.Add();
+                    newPages.Add(newPage);
+                }
+
+                int wireIndex = 0;
+
+                foreach (var page in newPages)
+                {
+                    double dX = 1.0;
+                    double dY = page.PageSheet.CellsU["PageHeight"].ResultIU - 0.5;
+
+                    for (int i = 0; i < wiresPerPage && wireIndex < allSecondaryWires.Count; i++)
+                    {
+                        Visio.Shape wire = allSecondaryWires[wireIndex];
+                        wireIndex++;
+
+                        // Cut the wire from its original page
+                        Visio.Page originalPage = wire.ContainingPage;
+                        Visio.Selection sel = originalPage.CreateSelection(
+                            Visio.VisSelectionTypes.visSelTypeEmpty, 0, 0);
+                        sel.Select(wire, (short)Visio.VisSelectArgs.visSelect);
+                        sel.Cut();
+
+                        // Paste onto the new page
+
+                        page.Paste();
+
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in SecondStepInStressTest " + ex.Message, "VisAssist");
             }
         }
     }

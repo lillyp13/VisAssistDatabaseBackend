@@ -1198,9 +1198,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void CheckShapeExistenceInVisio(string sTableName, Visio.Document ovDocument, ref List<string> lstShapes)
+        internal static List<string> CheckShapeExistenceInVisio(string sTableName, Visio.Document ovDocument, ref List<string> lstShapes)
         {
             ShapesUtilities.GetShapesInTable(sTableName, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
+           
             List<string> lstShapesToRemove = new List<string>();
             string sPK = GetPrimaryKey(sTableName);
             foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
@@ -1234,6 +1235,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
                 BuildDeleteSqlForMultipleRecords(sTableName, mruRecordsToDelete);
             }
+            return lstShapesToRemove;
         }
 
         internal static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> lstShapes, ref Dictionary<string, Shape> oDictPrimaryWiresNotInDB)
@@ -1253,7 +1255,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
                             break;
                         }
-                    case "ADC End Device":
+                    case "ADC End Device": //this class has changed to End Device...
                         {
                             bDontAddTolstShapes = false;
                             EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);

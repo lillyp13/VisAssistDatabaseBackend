@@ -407,117 +407,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
-        internal static void GetFileDataFromDatabase(FilePropertiesForm filePropertiesForm)
-        {
-            try
-            {
-                //logging statement placeholder
-                //m_dictFileDataInfoBase.Clear(); 
-                if (m_mruRecordsBase.ruRecords != null)
-                {
-                    m_mruRecordsBase.ruRecords.Clear();
-                }
 
-
-                //select all the files from the files_table
-                //string sSQl = @"SELECT * FROM files_table";
-                string sSQl = @"SELECT * FROM " + DatabaseUtilities.SqlTables.FilesTable.sFilesTable;
-                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
-
-                //logging statement placeholder
-                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-                {
-                    //logging statement placeholder
-                    sqliteconConnection.Open();
-                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSQl, sqliteconConnection))
-                    {
-                        //logging here
-                        //execute the query and read the result
-                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
-                        {
-                            while (sqlitereadReader.Read())
-                            {
-                                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
-
-                                string sID = "";
-                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
-                                {
-                                    string sColumnName = sqlitereadReader.GetName(i);
-                                    string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
-
-                                    if (sColumnName != DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK)
-                                    {
-                                        odictColumnValues.Add(sColumnName, sValue);
-                                    }
-                                    else
-                                    {
-                                        sID = sqlitereadReader.GetValue(i).ToString(); //this is the PK
-                                    }
-
-
-
-                                }
-                                //create a recordupdate for this specfic record (row)
-                                RecordUpdate ruRecordUpdate = new RecordUpdate();
-                                ruRecordUpdate.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
-                                ruRecordUpdate.sId = sID;
-                                ruRecordUpdate.odictColumnValues = odictColumnValues;
-
-                                lstRecords.Add(ruRecordUpdate);
-
-
-                            }
-
-
-                        }
-                    }
-                }
-
-                //warp everything in a multiple record updates struct
-                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in GetProjectInfoFromDatabase " + ex.Message, "ViAssist");
-            }
-        }
-
-
-        internal static string GetColumnInfoInFilesTableFromDatabase(string sColumnName, string sFileID)
-        {
-            //this is usually going to get a mates id
-            try
-            {
-                string sSpecificPiece = "";
-                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
-                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-                {
-                    //logging here
-                    sqliteconConnection.Open();
-                    string sSQL = $"SELECT [{sColumnName}] FROM [files_table] WHERE [FileID] = @Id LIMIT 1";
-
-                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
-                    {
-                        sqlcmdCommand.Parameters.AddWithValue("@Id", sFileID);
-
-                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
-                        {
-                            if (sqlitereadReader.Read())
-                            {
-                                // Safe retrieval of value as string
-                                object dbValue = sqlitereadReader[sColumnName];
-                                return dbValue == DBNull.Value ? "" : dbValue.ToString();
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in GetColumnInfoInWirePairsTableFromDatabase " + ex.Message, "VisAssist");
-            }
-            return "";
-        }
+        //GATHERING DATA
+       
         internal static MultipleRecordUpdates BuildFileInformation(Visio.Document ovDoc, string sFilePath, string sProjectGuid)
         {
             //this should build a multiple record update of the file...
@@ -591,6 +483,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
+        //SQL HELPERS
         internal static void AdjustFileCountInDB(Visio.Document ovDoc)
         {
             //sAdjustment will either be Increase or Decrease
@@ -2068,7 +1961,117 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             return "";
         }
+        internal static void GetFileDataFromDatabase(FilePropertiesForm filePropertiesForm)
+        {
+            try
+            {
+                //logging statement placeholder
+                //m_dictFileDataInfoBase.Clear(); 
+                if (m_mruRecordsBase.ruRecords != null)
+                {
+                    m_mruRecordsBase.ruRecords.Clear();
+                }
 
+
+                //select all the files from the files_table
+                //string sSQl = @"SELECT * FROM files_table";
+                string sSQl = @"SELECT * FROM " + DatabaseUtilities.SqlTables.FilesTable.sFilesTable;
+                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
+
+                //logging statement placeholder
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    //logging statement placeholder
+                    sqliteconConnection.Open();
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSQl, sqliteconConnection))
+                    {
+                        //logging here
+                        //execute the query and read the result
+                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
+                        {
+                            while (sqlitereadReader.Read())
+                            {
+                                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
+
+                                string sID = "";
+                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                                {
+                                    string sColumnName = sqlitereadReader.GetName(i);
+                                    string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
+
+                                    if (sColumnName != DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK)
+                                    {
+                                        odictColumnValues.Add(sColumnName, sValue);
+                                    }
+                                    else
+                                    {
+                                        sID = sqlitereadReader.GetValue(i).ToString(); //this is the PK
+                                    }
+
+
+
+                                }
+                                //create a recordupdate for this specfic record (row)
+                                RecordUpdate ruRecordUpdate = new RecordUpdate();
+                                ruRecordUpdate.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
+                                ruRecordUpdate.sId = sID;
+                                ruRecordUpdate.odictColumnValues = odictColumnValues;
+
+                                lstRecords.Add(ruRecordUpdate);
+
+
+                            }
+
+
+                        }
+                    }
+                }
+
+                //warp everything in a multiple record updates struct
+                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetProjectInfoFromDatabase " + ex.Message, "ViAssist");
+            }
+        }
+
+
+        internal static string GetColumnInfoInFilesTableFromDatabase(string sColumnName, string sFileID)
+        {
+            //this is usually going to get a mates id
+            try
+            {
+                string sSpecificPiece = "";
+                //use the dbPath which is the db file and open it and get the ProjectID from the project_table
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    //logging here
+                    sqliteconConnection.Open();
+                    string sSQL = $"SELECT [{sColumnName}] FROM [files_table] WHERE [FileID] = @Id LIMIT 1";
+
+                    using (SQLiteCommand sqlcmdCommand = new SQLiteCommand(sSQL, sqliteconConnection))
+                    {
+                        sqlcmdCommand.Parameters.AddWithValue("@Id", sFileID);
+
+                        using (SQLiteDataReader sqlitereadReader = sqlcmdCommand.ExecuteReader())
+                        {
+                            if (sqlitereadReader.Read())
+                            {
+                                // Safe retrieval of value as string
+                                object dbValue = sqlitereadReader[sColumnName];
+                                return dbValue == DBNull.Value ? "" : dbValue.ToString();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetColumnInfoInWirePairsTableFromDatabase " + ex.Message, "VisAssist");
+            }
+            return "";
+        }
 
 
         /// <summary>
