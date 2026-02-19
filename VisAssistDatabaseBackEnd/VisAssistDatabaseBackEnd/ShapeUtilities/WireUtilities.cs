@@ -56,7 +56,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
 
         }
-        internal static void DeleteWireFromDatabase(Visio.Shape ovShape)
+        internal static void DeleteWireFromDatabaseUsingShape(Visio.Shape ovShape)
         {
             try
             {
@@ -159,7 +159,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                     }
                     else
                     {
-                        if (Globals.ThisAddIn.m_MatesInSelection != null)
+                        if (Globals.ThisAddIn.m_MatesInSelection.Count > 0)
                         {
                             ovSecondaryWire = ovShape;
                             ovPrimaryWire = Globals.ThisAddIn.m_MatesInSelection[sKey].ovMateShape;
@@ -839,6 +839,22 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
         internal static string GenerateWirePairID(string sProjectID, string sFileID, string sPageID, string sPrimaryWire, string sSecondaryWire, DateTime now)
         {
             string input = sProjectID + sFileID + sPageID + sPrimaryWire + sSecondaryWire + now.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] bytehashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in bytehashBytes)
+                {
+                    sb.Append(b.ToString("x2")); // hex
+                }
+
+                return sb.ToString();
+            }
+        }
+
+        internal static string GenerateNewWirePairID(string sProjectID, string sFileID, string sPageID, string sWireID, DateTime now)
+        {
+            string input = sProjectID + sFileID + sPageID + sWireID + now.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
             using (SHA256 sha = SHA256.Create())
             {
                 byte[] bytehashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(input));
@@ -1531,6 +1547,28 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 MessageBox.Show("Error in IsMateInSelection " + ex.Message, "VisAssist");
             }
             return sKey;
+        }
+
+        internal static void DeleteWireFromDatabase(string sShapeID)
+        {
+            try
+            {
+
+
+                MultipleRecordUpdates oWireRecord = new MultipleRecordUpdates();
+                oWireRecord.ruRecords = new List<RecordUpdate>();
+                RecordUpdate ru = new RecordUpdate();
+                ru.sId = sShapeID;
+                ru.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.WirePairsTable.sWirePairsTablePK;
+                oWireRecord.ruRecords.Add(ru);
+
+                //before deleting it in the DB we should also delete the secondary wire off of the page (or the primary-whatever is the opposite..)
+                DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oWireRecord);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in DeleteWireFromDatabase " + ex.Message, "VisAssist");
+            }
         }
     }
 }

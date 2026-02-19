@@ -840,6 +840,42 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
 
+        internal static List<string> GetTableRecordCountForSpecificFile(string sTableName, string sFileID)
+        {
+            List<string> shapeIDs = new List<string>();
+
+            try
+            {
+                string sSql = @"SELECT ws.WirePairID FROM wire_shapes_table ws INNER JOIN pages_table p ON ws.PageID = p.PageID WHERE p.FileID = @FileID;";
+
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
+                    {
+                        sqlitecmdCommand.Parameters.AddWithValue("@FileID", sFileID);
+
+                        using (SQLiteDataReader reader = sqlitecmdCommand.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                // Assuming ShapeID is stored as TEXT in SQLite
+                                shapeIDs.Add(reader["WirePairID"].ToString());
+                            }
+                        }
+                    }
+                }
+
+                return shapeIDs;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in GetShapeIDsForFile: " + ex.Message, "VisAssist");
+                return shapeIDs; // return empty list on error
+            }
+
+        }
         internal static int GetTableRecordCount(string sTableName)
         {
             try
