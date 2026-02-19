@@ -289,10 +289,22 @@ namespace VisAssistDatabaseBackEnd
                 {
                     //otherwise the user cancelled the project name...
                     //we need to delete the folder that we created because no file or project was added
-                    string sDirectory = System.IO.Path.GetDirectoryName(sFilePath);
-                    if (Directory.Exists(sDirectory))
+                    string sProjectFolderPath = Path.GetDirectoryName(sFilePath).TrimEnd(Path.DirectorySeparatorChar);
+                    string sVisAssistFolderPath = Path.GetDirectoryName(sProjectFolderPath).TrimEnd(Path.DirectorySeparatorChar);
+                   
+                    if (Directory.Exists(sVisAssistFolderPath))
                     {
-                        Directory.Delete(sDirectory, true); //delete recursively...
+                        //before deleting it i need to turn off the hidden attributes...
+                        foreach(string sDir in Directory.GetDirectories(sVisAssistFolderPath, "*", SearchOption.AllDirectories))
+                        {
+                            File.SetAttributes(sDir, FileAttributes.Normal);
+                        }
+                        foreach(string sfile in Directory.GetFiles(sVisAssistFolderPath, "*", SearchOption.AllDirectories))
+                        {
+                            File.SetAttributes(sfile, FileAttributes.Normal);
+                        }
+                        File.SetAttributes(sVisAssistFolderPath, FileAttributes.Normal);
+                        Directory.Delete(sVisAssistFolderPath, true); //delete recursively...
                     }
                 }
 
@@ -548,13 +560,31 @@ namespace VisAssistDatabaseBackEnd
         public void btnFirstStep_Click(Office.IRibbonControl control)
         {
             //this drops 100 pages and drops 10 wires on each page
-            PageUtilities.FirstStepInStressTest();
+            PageUtilities.FirstStepInStressTest(100, 10); 
         }
 
         public void btnSecondStep_Click(Office.IRibbonControl control)
         {
-            PageUtilities.SecondStepInStressTest();
+            PageUtilities.SecondStepInStressTest(50, 20);
             Globals.ThisAddIn.m_bAskWhereToCutTo = true;
+        }
+
+        public void btnSmallTestCaseSecond_Click(Office.IRibbonControl control)
+        {
+            int iUndoScope = Globals.ThisAddIn.Application.BeginUndoScope("Small Stress Test Step 2");
+            PageUtilities.SecondStepInStressTest(5, 10);
+            Globals.ThisAddIn.m_bAskWhereToCutTo = true;
+            Globals.ThisAddIn.Application.EndUndoScope(iUndoScope, true);
+            Globals.ThisAddIn.m_sLastUndoScope = "Stress Test";
+        }
+
+        public void btnSmallTestCaseFirst_Click(Office.IRibbonControl control)
+        {
+            //drop 10 pages 5 wires on each page (10 wires in total 5 pairs...)
+            int iUndoScope = Globals.ThisAddIn.Application.BeginUndoScope("Small Stress Test Step 1");
+            PageUtilities.FirstStepInStressTest(10, 5);
+            Globals.ThisAddIn.Application.EndUndoScope(iUndoScope, true);
+            Globals.ThisAddIn.m_sLastUndoScope = "Stress Test";
         }
         #endregion
     }

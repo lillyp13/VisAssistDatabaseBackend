@@ -112,15 +112,15 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                         if (wireA.Cells["User.WireRole"].get_ResultStr(0) == "P")
                         {
                             //wireA is the priamry
-                            oPrimaryRecord = WireUtilities.BuildWireShapeInfo(wireA, wirePairID);
-                            oSecondaryRecord = WireUtilities.BuildWireShapeInfo(wireB, wirePairID);
+                            oPrimaryRecord = WireUtilities.BuildWireShapeInfo(wireA, wirePairID, false);
+                            oSecondaryRecord = WireUtilities.BuildWireShapeInfo(wireB, wirePairID, false);
 
                         }
                         else
                         {
                             //wireA is the secondary
-                            oPrimaryRecord = WireUtilities.BuildWireShapeInfo(wireB, wirePairID);
-                            oSecondaryRecord = WireUtilities.BuildWireShapeInfo(wireA, wirePairID);
+                            oPrimaryRecord = WireUtilities.BuildWireShapeInfo(wireB, wirePairID, false);
+                            oSecondaryRecord = WireUtilities.BuildWireShapeInfo(wireA, wirePairID, false);
                         }
 
                         //only add them to the db if they don't exist yet..
@@ -229,8 +229,6 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
         {
             try
             {
-                //Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-
                 string sFileID = ovDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
 
                 if (m_mruRecordsBase.ruRecords != null)
@@ -240,17 +238,13 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
                 List<RecordUpdate> lstRecords = new List<RecordUpdate>();
 
-
-
                 string sSql = $@"SELECT tb.* FROM {sTableName} tb INNER JOIN pages_table p ON tb.PageID = p.PageID WHERE p.FileID = @FileID;";
-
 
                 using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
                 {
                     sqliteconConnection.Open();
                     using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
                     {
-                        // add parameter to avoid SQL injection
                         sqlitecmdCommand.Parameters.AddWithValue("@FileID", sFileID);
 
                         using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
@@ -260,8 +254,19 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                                 RecordUpdate ru = new RecordUpdate();
                                 ru.sId = sqlitereadReader["ShapeID"].ToString();
                                 ru.sPrimaryKeyColumn = "ShapeID";
-                                ru.odictColumnValues = null;
 
+                                // Create dictionary for all columns except ShapeID, values as string
+                                Dictionary<string, string> oDictColumns = new Dictionary<string, string>();
+                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
+                                {
+                                    string columnName = sqlitereadReader.GetName(i);
+                                    if (columnName == "ShapeID") continue; // skip ShapeID
+
+                                    object value = sqlitereadReader.GetValue(i);
+                                    oDictColumns[columnName] = value == DBNull.Value ? "" : value.ToString();
+                                }
+
+                                ru.odictColumnValues = oDictColumns;
                                 lstRecords.Add(ru);
                             }
                         }
@@ -269,15 +274,13 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 }
 
                 m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
-
-
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error in GetPagesForFile: " + ex.Message, "VisAssist");
-
+                MessageBox.Show($"Error in GetShapesInTable: {ex.Message}", "VisAssist");
             }
         }
+
 
         public static string GetShapeGridLocation(
     double dLeft,

@@ -465,8 +465,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     string sNewPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
                     //this is the page we want to paste what is in our clipboard...
-
+                    int iUndoScope = ovApp.BeginUndoScope("Cut and Paste Action");
+                    Globals.ThisAddIn.m_sLastUndoScope = "Cut and Paste Action";
                     ovPage.Paste();
+                    ovApp.EndUndoScope(iUndoScope, true);
+
 
                 }
             }
@@ -795,7 +798,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         
 
-        internal static void FirstStepInStressTest()
+        internal static void FirstStepInStressTest(int iPageNumber, int iWireNumber)
         {
             try
             {
@@ -830,7 +833,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 if (ovCurrentDoc != null)
                 {
                     // Add 100 Visio pages
-                    for (int ithPage = 1; ithPage <= 100; ithPage++)
+                    for (int ithPage = 1; ithPage <= iPageNumber; ithPage++)
                     {
                         Visio.Page ovPage = ovCurrentDoc.Pages.Add();
 
@@ -840,7 +843,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         double dY = ovPage.PageSheet.CellsU["PageHeight"].ResultIU - 0.5;
 
                         // Drop 10 wires on the page
-                        for (int i = 0; i < 10; i++)
+                        for (int i = 0; i < iWireNumber; i++)
                         {
                             Visio.Shape ovShape = ovPage.Drop(ovWireMaster, dX, dY);
 
@@ -858,7 +861,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        internal static void SecondStepInStressTest()
+        internal static void SecondStepInStressTest(int numberOfPages, int wiresPerPage)
         {
             try
             {
@@ -870,8 +873,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 if (ovCurrentDoc == null)
                     return;
 
-                const int numberOfPages = 50;
-                const int wiresPerPage = 20; // 1000 wires / 50 pages
+                //const int numberOfPages = 50;
+                //const int wiresPerPage = 20; // 1000 wires / 50 pages
 
                 List<Visio.Shape> allSecondaryWires = new List<Visio.Shape>();
 
@@ -911,7 +914,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 int wireIndex = 0;
 
-                foreach (var page in newPages)
+                foreach (Visio.Page page in newPages)
                 {
                     double dX = 1.0;
                     double dY = page.PageSheet.CellsU["PageHeight"].ResultIU - 0.5;

@@ -76,7 +76,10 @@ namespace VisAssistDatabaseBackEnd.Forms
                     //we are moving a selection of shapes to a different page...
                     //get the selected page
                     PageUtilities.PasteShapesOnPageUserSpecified(this);
-                   
+                    //add a custom undo event so we can get the name of it...
+                    //Visio.Application ovApp = Globals.ThisAddIn.Application;
+                    //int iUndoScope = ovApp.BeginUndoScope("Cut and Paste Action");
+                    //ovApp.EndUndoScope(iUndoScope, true);
                 }
             }
 

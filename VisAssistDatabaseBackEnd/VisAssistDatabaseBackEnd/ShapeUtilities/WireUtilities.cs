@@ -23,19 +23,31 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             try
             {
 
-
-                //this will insert the primary wire to the db
-                DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oPrimaryWireRecord);
-                DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oSecondaryWireRecord);
-                //will also need to add it to the wire_pairs_table....
-                //and also add the ovSeconaryWire to the db...
-                //now we need to add the primary wire id and the secondary wire id as well as the wirepairid to the wire_pairs_table
-                MultipleRecordUpdates oWirePairRecord = BuildWirePairInfo(oPrimaryWireRecord, oSecondaryWireRecord);
-
-                if (oWirePairRecord.ruRecords != null)
+                //double check to make sure the record doesn't exist...
+                bool bDoesRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oPrimaryWireRecord.ruRecords[0].sId);
+                if (!bDoesRecordExist)
                 {
-                    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.WirePairsTable.sWirePairsTable, oWirePairRecord);
+                    //this is our final safeguard from adding multiples and getting an error-log it if this occurs...
+                    //this will insert the primary wire to the db
+                    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oPrimaryWireRecord);
+                    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oSecondaryWireRecord);
+                    //will also need to add it to the wire_pairs_table....
+                    //and also add the ovSeconaryWire to the db...
+                    //now we need to add the primary wire id and the secondary wire id as well as the wirepairid to the wire_pairs_table
+                    MultipleRecordUpdates oWirePairRecord = BuildWirePairInfo(oPrimaryWireRecord, oSecondaryWireRecord);
+
+                    if (oWirePairRecord.ruRecords != null)
+                    {
+
+
+                        DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.WirePairsTable.sWirePairsTable, oWirePairRecord);
+                    }
                 }
+                else
+                {
+                    //logging here because we tried to add a duplicate of a wire...
+                }
+
             }
             catch (Exception ex)
             {
@@ -50,7 +62,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             {
 
 
-                MultipleRecordUpdates oWireRecord = BuildWireShapeInfo(ovShape, "");
+                MultipleRecordUpdates oWireRecord = BuildWireShapeInfo(ovShape, "", false);
 
                 //before deleting it in the DB we should also delete the secondary wire off of the page (or the primary-whatever is the opposite..)
                 DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oWireRecord);
@@ -69,7 +81,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 //get the WirePairID for ovShape
                 string sWirePairID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("WirePairID", sShapeID);
                 //this gets' called when the user moves a shape...
-                MultipleRecordUpdates oWireInfo = BuildWireShapeInfo(ovShape, sWirePairID);
+                MultipleRecordUpdates oWireInfo = BuildWireShapeInfo(ovShape, sWirePairID, false);
                 DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oWireInfo);
 
                 //we also want to update the mates information and the features in visio (if the user changed the priamry wires # of conductors we need to make the same thing happen to its mate
@@ -101,87 +113,125 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
                 //check to see if the wireshape we are dropping (ovShape) is a primary or secondary wire..
                 string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
-                Visio.Shape ovPrimaryWire;
-                Visio.Shape ovSecondaryWire;
+                Visio.Shape ovPrimaryWire = null;
+                Visio.Shape ovSecondaryWire = null;
                 MultipleRecordUpdates oPrimaryWireRecord;
                 MultipleRecordUpdates oSecondaryWireRecord;
-                if (sWireRole == "P")
+                string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                if (!Globals.ThisAddIn.m_MatesMated.Contains(sKey))
                 {
-                    //ovShape is a primary wire
-                    //drop another wire
-                    ovPrimaryWire = ovShape;
-                    ovSecondaryWire = AddOtherWire(ovShape, "Secondary");
-                    oPrimaryWireRecord = AddWireShapeInfo(ovPrimaryWire, ovSecondaryWire);
-                    //need to add the wirepairid to the otherwire...
-                    ovShape.Application.EventsEnabled = 0;
-                    ovSecondaryWire.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(oPrimaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"]);
-                    ovShape.Application.EventsEnabled = -1;
-                    oSecondaryWireRecord = BuildWireShapeInfo(ovSecondaryWire, oPrimaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"]);
 
-                    lstWires.Add(oPrimaryWireRecord.ruRecords[0].sId);
-                    lstWires.Add(oSecondaryWireRecord.ruRecords[0].sId);
+                    if (sWireRole == "P")
+                    {
+                        //ovShape is a primary wire
+                        //drop another wire
+
+
+                        //BEFORE WE BLINDLY DROP A NEW WIRE FOR THIS SHAPE CHECK IF IT IS IN OUR SELECTION TO BE DROPPED...
+                        if (Globals.ThisAddIn.m_MatesInSelection.Count > 0)
+                        {
+                            //check if the mate for this shape is in the selection (therefore we dont' need to drop another wire)
+
+                            //get the mate shape ..
+                            ovPrimaryWire = ovShape;
+                            ovSecondaryWire = Globals.ThisAddIn.m_MatesInSelection[sKey].ovMateShape;
+
+                            string sMateKey = ovSecondaryWire.ID + "|" + ovSecondaryWire.ContainingPage.Name;
+                            Globals.ThisAddIn.m_MatesMated.Add(sKey);
+                            Globals.ThisAddIn.m_MatesMated.Add(sMateKey);
+                        }
+                        else
+                        {
+                            //add normally
+                            ovPrimaryWire = ovShape;
+                            ovSecondaryWire = AddOtherWire(ovShape, "Secondary");
+                        }
+                        oPrimaryWireRecord = AddWireShapeInfo(ovPrimaryWire, ovSecondaryWire);
+                        //need to add the wirepairid to the otherwire...
+                        ovShape.Application.EventsEnabled = 0;
+                        ovSecondaryWire.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(oPrimaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"]);
+                        ovShape.Application.EventsEnabled = -1;
+                        oSecondaryWireRecord = BuildWireShapeInfo(ovSecondaryWire, oPrimaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"], true);
+
+                        lstWires.Add(oPrimaryWireRecord.ruRecords[0].sId);
+                        lstWires.Add(oSecondaryWireRecord.ruRecords[0].sId);
+
+                    }
+                    else
+                    {
+                        if (Globals.ThisAddIn.m_MatesInSelection != null)
+                        {
+                            ovSecondaryWire = ovShape;
+                            ovPrimaryWire = Globals.ThisAddIn.m_MatesInSelection[sKey].ovMateShape;
+                            string sMateKey = ovPrimaryWire.ID + "|" + ovPrimaryWire.ContainingPage.Name;
+                            Globals.ThisAddIn.m_MatesMated.Add(sKey);
+                            Globals.ThisAddIn.m_MatesMated.Add(sMateKey);
+                        }
+                        else
+                        {
+                            //add normally...
+
+                            //the user copied a secondary wire we should create a priamry wire...
+                            //ovShape is a secondary wire
+                            ovSecondaryWire = ovShape;
+                            ovPrimaryWire = AddOtherWire(ovSecondaryWire, "Primary");
+                        }
+                        oSecondaryWireRecord = AddWireShapeInfo(ovSecondaryWire, ovSecondaryWire);
+                        //need to add the wirepairid to the otherwire...
+                        ovShape.Application.EventsEnabled = 0;
+                        ovPrimaryWire.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(oSecondaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"]);
+                        ovShape.Application.EventsEnabled = -1;
+                        oPrimaryWireRecord = BuildWireShapeInfo(ovPrimaryWire, oSecondaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"], true);
+
+                        lstWires.Add(oPrimaryWireRecord.ruRecords[0].sId);
+                        lstWires.Add(oSecondaryWireRecord.ruRecords[0].sId);
+
+                    }
+
+
+                    //this builds the information and then runs the sql to add the wire shape to the wire_shapes_table
+
+                    //MultipleRecordUpdates oPrimaryWireRecord = AddWireShapeInfo(ovPrimaryWire, ovSecondaryWire);
+                    //MultipleRecordUpdates oSecondaryWireRecord = BuildWireShapeInfo(ovSecondaryWire, oPrimaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"]);
+                    //check if the record already exists (i think this event is firing twice possibly)
+                    bool bDoesRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oPrimaryWireRecord.ruRecords[0].sId);
+
+                    if (!bDoesRecordExist)
+                    {
+                        string sFileID = ovShape.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                        string sWirePrefix = "";
+                        string sRGBColor = "";
+
+                        //need to add the next.. WirePrefix and the wire color to the db 
+                        string sNextWireNumber = FileUtilities.GetColumnInfoInFilesTableFromDatabase("NextWireNumber", sFileID);
+                        //string sNextColor = FileUtilities.GetColumnInfoInFilesTableFromDatabase("NextWireColor", sFileID);
+                        //update the wire with sNextWireNumber...
+                        ovShape.Application.EventsEnabled = 0;
+                        sWirePrefix = "W-" + sNextWireNumber;
+                        ovPrimaryWire.Cells["Prop.WireLabel"].Formula = VisioUtilities.Application.FormatStringForVisio(sWirePrefix);
+                        ovSecondaryWire.Cells["Prop.WireLabel"].Formula = VisioUtilities.Application.FormatStringForVisio(sWirePrefix);
+                        ovShape.Application.EventsEnabled = -1;
+
+                        sRGBColor = GetAndUpdateNextWireColor(sFileID);
+                        //set the color to the wires we dropped...
+                        ovShape.Application.EventsEnabled = 0;
+                        ovPrimaryWire.Cells["User.WireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sRGBColor);
+                        ovSecondaryWire.Cells["User.WireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sRGBColor);
+                        ovShape.Application.EventsEnabled = -1;
+
+
+                        //need to update the nextwirenumber and nextwirecolor in the file table for this file...
+                        IncreaseNextWireNumber(sFileID);
+
+                        oPrimaryWireRecord.ruRecords[0].odictColumnValues["WireLabel"] = sWirePrefix;
+                        oSecondaryWireRecord.ruRecords[0].odictColumnValues["WireLabel"] = sWirePrefix;
+                        oPrimaryWireRecord.ruRecords[0].odictColumnValues["Color"] = sRGBColor;
+                        AddWireToDatabase(oPrimaryWireRecord, oSecondaryWireRecord);
+                        ////now we want to add the wire pairs grid location to the correct wire (primary should point to secondary, secondary should point to primary..)
+                        AddWireGridLocation(oPrimaryWireRecord, oSecondaryWireRecord, ovPrimaryWire, ovSecondaryWire);
+
+                    }
                 }
-                else
-                {
-                    //the user copied a secondary wire we should create a priamry wire...
-                    //ovShape is a secondary wire
-                    ovSecondaryWire = ovShape;
-                    ovPrimaryWire = AddOtherWire(ovSecondaryWire, "Primary");
-                    oSecondaryWireRecord = AddWireShapeInfo(ovSecondaryWire, ovSecondaryWire);
-                    //need to add the wirepairid to the otherwire...
-                    ovShape.Application.EventsEnabled = 0;
-                    ovPrimaryWire.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(oSecondaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"]);
-                    ovShape.Application.EventsEnabled = -1;
-                    oPrimaryWireRecord = BuildWireShapeInfo(ovPrimaryWire, oSecondaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"]);
-
-                    lstWires.Add(oPrimaryWireRecord.ruRecords[0].sId);
-                    lstWires.Add(oSecondaryWireRecord.ruRecords[0].sId);
-                }
-
-
-                //this builds the information and then runs the sql to add the wire shape to the wire_shapes_table
-
-                //MultipleRecordUpdates oPrimaryWireRecord = AddWireShapeInfo(ovPrimaryWire, ovSecondaryWire);
-                //MultipleRecordUpdates oSecondaryWireRecord = BuildWireShapeInfo(ovSecondaryWire, oPrimaryWireRecord.ruRecords[0].odictColumnValues["WirePairID"]);
-                //check if the record already exists (i think this event is firing twice possibly)
-                bool bDoesRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oPrimaryWireRecord.ruRecords[0].sId);
-
-                if (!bDoesRecordExist)
-                {
-                    string sFileID = ovShape.Document.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-                    string sWirePrefix = "";
-                    string sRGBColor = "";
-
-                    //need to add the next.. WirePrefix and the wire color to the db 
-                    string sNextWireNumber = FileUtilities.GetColumnInfoInFilesTableFromDatabase("NextWireNumber", sFileID);
-                    //string sNextColor = FileUtilities.GetColumnInfoInFilesTableFromDatabase("NextWireColor", sFileID);
-                    //update the wire with sNextWireNumber...
-                    ovShape.Application.EventsEnabled = 0;
-                    sWirePrefix = "W-" + sNextWireNumber;
-                    ovPrimaryWire.Cells["Prop.WireLabel"].Formula = VisioUtilities.Application.FormatStringForVisio(sWirePrefix);
-                    ovSecondaryWire.Cells["Prop.WireLabel"].Formula = VisioUtilities.Application.FormatStringForVisio(sWirePrefix);
-                    ovShape.Application.EventsEnabled = -1;
-
-                    sRGBColor = GetAndUpdateNextWireColor(sFileID);
-                    //set the color to the wires we dropped...
-                    ovShape.Application.EventsEnabled = 0;
-                    ovPrimaryWire.Cells["User.WireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sRGBColor);
-                    ovSecondaryWire.Cells["User.WireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sRGBColor);
-                    ovShape.Application.EventsEnabled = -1;
-
-
-                    //need to update the nextwirenumber and nextwirecolor in the file table for this file...
-                    IncreaseNextWireNumber(sFileID);
-
-                    oPrimaryWireRecord.ruRecords[0].odictColumnValues["WireLabel"] = sWirePrefix;
-                    oSecondaryWireRecord.ruRecords[0].odictColumnValues["WireLabel"] = sWirePrefix;
-                    oPrimaryWireRecord.ruRecords[0].odictColumnValues["Color"] = sRGBColor;
-                    AddWireToDatabase(oPrimaryWireRecord, oSecondaryWireRecord);
-                    ////now we want to add the wire pairs grid location to the correct wire (primary should point to secondary, secondary should point to primary..)
-                    AddWireGridLocation(oPrimaryWireRecord, oSecondaryWireRecord, ovPrimaryWire, ovSecondaryWire);
-
-                }
-
 
             }
             catch (Exception ex)
@@ -245,7 +295,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                     }
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in MatchWireFeatures " + ex.Message, "VisAssist");
             }
@@ -284,7 +334,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 ovShapeToUpdate.Cells["Prop.NumberOfConductors"].ResultIU = iNumberOfConductors;
                 ovShapeToUpdate.Cells["Prop.WireLabel"].Formula = VisioUtilities.Application.FormatStringForVisio(sWireLabel);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show("Error in UpdateMatesFeatures " + ex.Message, "VisAssist");
             }
@@ -506,6 +556,9 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 oDictFileValues.Add("WirePairID", sWirePairID);
                 //add the ConnectionID
                 oDictFileValues.Add("ConnectionID", "");
+                string sWireName = ovMainWire.ID.ToString();
+                //need to get the 
+                oDictFileValues.Add("WireName", sWireName);
 
                 oDictFileValues.Add("WireRole", sWireRole);
 
@@ -588,64 +641,79 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
             return oDictFileValues;
         }
-        internal static MultipleRecordUpdates BuildWireShapeInfo(Visio.Shape ovMainWire, string sWirePairID)
+        internal static MultipleRecordUpdates BuildWireShapeInfo(Visio.Shape ovMainWire, string sWirePairID, bool bAddNewShapeID)
         {
             //this builds the wire info based on the values in the shape itself
             //this is more of an update or gather not an add...
             try
             {
-
-
-                Visio.Document ovDoc = ovMainWire.ContainingPage.Document;
-                string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-                //string sPageID = ovMainWire.Cells["User.PageID"].get_ResultStr(0);
-                string sPageID = ""; //i think i always want to get it fromt he page...
-                if (sPageID == "")
+                bool bIsValidShape = VisioUtilities.Application.IsShapeValid(ovMainWire);
+                if (bIsValidShape)
                 {
-                    //get the pageID from the page
-                    sPageID = ovMainWire.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+
+
+
+
+                    Visio.Document ovDoc = ovMainWire.ContainingPage.Document;
+                    string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                    string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                    //string sPageID = ovMainWire.Cells["User.PageID"].get_ResultStr(0);
+                    string sPageID = ""; //i think i always want to get it fromt he page...
+                    if (sPageID == "")
+                    {
+                        //get the pageID from the page
+                        sPageID = ovMainWire.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    }
+
+                    string sWireRole = ovMainWire.Cells["User.WireRole"].get_ResultStr(0);
+
+                    Dictionary<string, string> oDictFileValues = GatherWireInformation(ovMainWire, sPageID, sWirePairID);
+
+
+                    string sID = "";
+                    if (ovMainWire.CellExists["User.ShapeID", 0] == -1)
+                    {
+                        sID = ovMainWire.Cells["User.ShapeID"].get_ResultStr(0);
+
+                        if (bAddNewShapeID)
+                        {
+                            sID = ShapesUtilities.GenerateShapeID(sProjectID, sFileID, sPageID, ovMainWire.Name, DateTime.Now);
+                            //add this to the shape itself 
+                            //may need to check we are not undoing/redoing...
+                            ovMainWire.Application.EventsEnabled = 0;
+                            ovMainWire.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sID);
+                            ovMainWire.Application.EventsEnabled = -1;
+                        }
+                    }
+
+                    if (sWirePairID == "")
+                    {
+                        //we didn't pass in the sWirePairID which means this exists in the db and this build is about updating something or deleting soemthing
+                        //get the WirePairID from the db for this sID
+                        sWirePairID = GetColumnInfoInWireShapesTableFromDatabase("WirePairID", sID);
+
+
+                    }
+                    //make this undoable..
+                    //int iUndoScope = ovMainWire.Application.BeginUndoScope("Update PairID");
+                    //ovMainWire.Application.EventsEnabled = 0;
+                    //ovMainWire.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(sWirePairID);
+                    //ovMainWire.Application.EndUndoScope(iUndoScope, false);
+                    //ovMainWire.Application.EventsEnabled = -1;
+
+                    oDictFileValues["WirePairID"] = sWirePairID;
+
+
+
+
+
+                    RecordUpdate ruFileRecord = new RecordUpdate();
+                    ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTablePK;
+                    ruFileRecord.sId = sID;
+                    ruFileRecord.odictColumnValues = oDictFileValues;
+
+                    return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
                 }
-
-                string sWireRole = ovMainWire.Cells["User.WireRole"].get_ResultStr(0);
-
-                Dictionary<string, string> oDictFileValues = GatherWireInformation(ovMainWire, sPageID, sWirePairID);
-
-
-                string sID = "";
-                if (ovMainWire.CellExists["User.ShapeID", 0] == -1)
-                {
-                    sID = ovMainWire.Cells["User.ShapeID"].get_ResultStr(0);
-
-                }
-
-                if (sWirePairID == "")
-                {
-                    //we didn't pass in the sWirePairID which means this exists in the db and this build is about updating something or deleting soemthing
-                    //get the WirePairID from the db for this sID
-                    sWirePairID = GetColumnInfoInWireShapesTableFromDatabase("WirePairID", sID);
-
-
-                }
-                //make this undoable..
-                //int iUndoScope = ovMainWire.Application.BeginUndoScope("Update PairID");
-                //ovMainWire.Application.EventsEnabled = 0;
-                //ovMainWire.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(sWirePairID);
-                //ovMainWire.Application.EndUndoScope(iUndoScope, false);
-                //ovMainWire.Application.EventsEnabled = -1;
-
-                oDictFileValues["WirePairID"] = sWirePairID;
-
-
-
-
-
-                RecordUpdate ruFileRecord = new RecordUpdate();
-                ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTablePK;
-                ruFileRecord.sId = sID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
-
-                return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
             }
             catch (Exception ex)
             {
@@ -1083,15 +1151,15 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                                 {
                                     case "P":
                                         {
-                                            mruPrimaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairID);
-                                            mruSecondaryRecord = BuildWireShapeInfo(ovShapeToCheck, sNewWirePairID);
+                                            mruPrimaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairID, false);
+                                            mruSecondaryRecord = BuildWireShapeInfo(ovShapeToCheck, sNewWirePairID, false);
 
                                             break;
                                         }
                                     case "S":
                                         {
-                                            mruSecondaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairID);
-                                            mruPrimaryRecord = BuildWireShapeInfo(ovShapeToCheck, sNewWirePairID);
+                                            mruSecondaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairID, false);
+                                            mruPrimaryRecord = BuildWireShapeInfo(ovShapeToCheck, sNewWirePairID, false);
 
                                             break;
                                         }
@@ -1179,13 +1247,13 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                             MultipleRecordUpdates mruSecondaryRecord = new MultipleRecordUpdates();
                             if (bShapeIsPrimary)
                             {
-                                mruPrimaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairId);
-                                mruSecondaryRecord = BuildWireShapeInfo(ovOtherWire, sNewWirePairId);
+                                mruPrimaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairId, false);
+                                mruSecondaryRecord = BuildWireShapeInfo(ovOtherWire, sNewWirePairId, false);
                             }
                             else
                             {
-                                mruPrimaryRecord = BuildWireShapeInfo(ovOtherWire, sNewWirePairId);
-                                mruSecondaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairId);
+                                mruPrimaryRecord = BuildWireShapeInfo(ovOtherWire, sNewWirePairId, false);
+                                mruSecondaryRecord = BuildWireShapeInfo(ovShape, sNewWirePairId, false);
                             }
                             AddWireToDatabase(mruPrimaryRecord, mruSecondaryRecord);
                             switch (sWireRole)
@@ -1348,5 +1416,121 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
         }
 
+        internal static void JumpToMate(Shape ovShape)
+        {
+            //we are given a visio wire shape and we need to determine what/where is the mate wire and then navigate to that shape...
+            string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+            string sWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
+            string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
+            string sMateID = "";
+            switch (sWireRole)
+            {
+                case "P":
+                    {
+                        //the wire the use clicked on is the primary
+                        sMateID = GetColumnInfoInWirePairsTableFromDatabase("SecondaryWireID", sWirePairID);
+                        break;
+                    }
+                case "S":
+                    {
+                        //the wire the user clicked on is the secondary
+                        sMateID = GetColumnInfoInWirePairsTableFromDatabase("PrimaryWireID", sWirePairID);
+                        break;
+                    }
+            }
+
+
+            //ok now we have the mates ID lets get the page id
+            string sMatePageID = GetColumnInfoInWireShapesTableFromDatabase("PageID", sMateID);
+            //use the index to get the page in the document and then double check the page id...
+            //get the page index
+            string sIndex = PageUtilities.GetColumnInfoInPagesTableFromDatabase("PageIndex", sMatePageID);
+            int iIndex = Convert.ToInt32(sIndex);
+            //get the visio page from the index instead of looping thorugh the pages
+            Visio.Page ovPage = ovShape.Document.Pages[iIndex];
+            //foreach (Visio.Page ovPage in ovShape.Document.Pages)
+            // {
+            // if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+            // {
+            // if (ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0) == sMatePageID)
+            {
+                //this is the page the mate lives on
+                foreach (Visio.Shape ovMateShape in ovPage.Shapes)
+                {
+                    if (ovMateShape.CellExists["User.ShapeID", 0] == -1)
+                    {
+                        if (ovMateShape.Cells["User.ShapeID"].get_ResultStr(0) == sMateID)
+                        {
+                            //this is the mate shape navigate the user here...
+                            VisioUtilities.Application.NavigateTo(Globals.ThisAddIn.Application.ActiveWindow, ovMateShape);
+                            Globals.ThisAddIn.Application.ActiveWindow.CenterViewOnShape(ovMateShape, Visio.VisCenterViewFlags.visCenterViewDefault);
+                        }
+                    }
+                }
+                // }
+                // }
+                
+            }
+        }
+
+        internal static string IsMateInSelection(Selection ovSelection, Shape ovShape, out Visio.Shape ovMateShape)
+        {
+            //check if the ovShape mate is in the selection and if it is return the key ( string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;)
+            string sKey = "";
+            ovMateShape = null;
+            try
+            {
+                string sWireRole = "";
+                if (ovShape.CellExists["User.ShapeID", 0] == -1)
+                {
+                    if (ovShape.CellExists["User.WirePairID", 0] == -1)
+                    {
+
+
+                        string sWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
+                        sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
+                        string sMateID = "";
+                        switch (sWireRole)
+                        {
+                            case "P":
+                                {
+                                    //ovShape is the primary
+                                    sMateID = GetColumnInfoInWirePairsTableFromDatabase("SecondaryWireID", sWirePairID);
+
+                                    break;
+                                }
+                            case "S":
+                                {
+                                    //ovShape is the secondary
+                                    sMateID = GetColumnInfoInWirePairsTableFromDatabase("PrimaryWireID", sWirePairID);
+                                    break;
+                                }
+                        }
+
+                        //now we have the mates id check each shape in the selection for this id
+                        foreach (Visio.Shape ovShapeToCheck in ovSelection)
+                        {
+                            if (ovShapeToCheck.CellExists["User.ShapeID", 0] == -1)
+                            {
+                                if (ovShapeToCheck.Cells["User.ShapeID"].get_ResultStr(0) == sMateID)
+                                {
+                                    //the mate is in the selection add it to m_pendingshapeids so we don't drop another wire pair for this..
+                                    sKey = ovShapeToCheck.ID + "|" + ovShapeToCheck.ContainingPage.Name;
+                                    ovMateShape = ovShapeToCheck;
+                                    //Globals.ThisAddIn.m_pendingShapeIds.Add(sKey);
+                                }
+                            }
+                        }
+                    }
+
+                }
+                return sKey;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in IsMateInSelection " + ex.Message, "VisAssist");
+            }
+            return sKey;
+        }
     }
 }

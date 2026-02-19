@@ -57,6 +57,13 @@
           <button id="btnSecondStep"
            label="Drop 50 Pages and Move Secondary Wires"
            onAction="btnSecondStep_Click"/>
+
+          <button id="btnSmallTestCaseFirst"
+            label="Drop 10 Pages and 50 Wires"
+            onAction="btnSmallTestCaseFirst_Click"/>
+          <button id="btnSmallTestCaseSecond"
+           label="Drop 5 Pages and Move Secondary Wires"
+           onAction="btnSmallTestCaseSecond_Click"/>
          
         </group>
         <group id="grpUtilities" label="Utilities">
