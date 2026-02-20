@@ -1106,6 +1106,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                     ovDoc.Application.Undo();
 
+                    //also need to recognize that if they do a redo this would be a cut...
                    
                     //Visio.Window ovWin = ovDoc.Application.ActiveWindow;
 
