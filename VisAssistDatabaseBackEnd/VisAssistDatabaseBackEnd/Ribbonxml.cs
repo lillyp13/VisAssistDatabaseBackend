@@ -2,6 +2,7 @@
 using Microsoft.Office.Tools.Ribbon;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -39,9 +40,10 @@ namespace VisAssistDatabaseBackEnd
     public class Ribbonxml : Office.IRibbonExtensibility
     {
         private Office.IRibbonUI ribbon;
+        public static Ribbonxml Instance { get; private set; }
         public Ribbonxml()
         {
-            
+            Instance = this;
         }
 
         public void Ribbon_Load(Office.IRibbonUI ribbonUI)
@@ -591,14 +593,13 @@ namespace VisAssistDatabaseBackEnd
         public void btnMoveShapes_Click(Office.IRibbonControl control)
         {
             //move selection of shapes
-            int iUndoScope = Globals.ThisAddIn.Application.BeginUndoScope("Move Shapes");
+            
             string sAction = "MoveShapes";
             PagesForm oNewForm = new PagesForm();
             oNewForm.Display(sAction);
             oNewForm.Show();
 
 
-            Globals.ThisAddIn.Application.EndUndoScope(iUndoScope, true);
         }
         #endregion
     }

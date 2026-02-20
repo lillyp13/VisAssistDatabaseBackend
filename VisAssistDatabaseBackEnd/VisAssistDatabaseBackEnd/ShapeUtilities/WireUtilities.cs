@@ -129,11 +129,13 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
 
                         //BEFORE WE BLINDLY DROP A NEW WIRE FOR THIS SHAPE CHECK IF IT IS IN OUR SELECTION TO BE DROPPED...
-                        if (Globals.ThisAddIn.m_MatesInSelection.Count > 0)
+                        if (Globals.ThisAddIn.m_MatesInSelection.ContainsKey(sKey))
                         {
                             //check if the mate for this shape is in the selection (therefore we dont' need to drop another wire)
 
                             //get the mate shape ..
+                            //check if the mate exists in our m_MatesInSelection 
+                            
                             ovPrimaryWire = ovShape;
                             ovSecondaryWire = Globals.ThisAddIn.m_MatesInSelection[sKey].ovMateShape;
 
@@ -160,7 +162,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                     }
                     else
                     {
-                        if (Globals.ThisAddIn.m_MatesInSelection.Count > 0)
+                        if (Globals.ThisAddIn.m_MatesInSelection.ContainsKey(sKey))
                         {
                             ovSecondaryWire = ovShape;
                             ovPrimaryWire = Globals.ThisAddIn.m_MatesInSelection[sKey].ovMateShape;
@@ -237,7 +239,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error in AddWireToDatabase " + ex.Message, "VisAssist");
+                MessageBox.Show("Error in AddWire " + ex.Message, "VisAssist");
             }
             finally
             {

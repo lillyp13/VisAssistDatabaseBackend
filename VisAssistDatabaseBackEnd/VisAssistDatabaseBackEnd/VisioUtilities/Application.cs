@@ -12,6 +12,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using System.Xml.Linq;
 using System.Configuration;
+using VisAssistDatabaseBackEnd.Forms;
 
 namespace VisAssistDatabaseBackEnd.VisioUtilities
 {
@@ -928,17 +929,18 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         Visio.Shape ovShape1 = lstShapes[ithShape];
                         Visio.Shape ovShape2 = lstShapes[ithShape + 1];
 
-                        MultipleRecordUpdates mruShape1 = WireUtilities.BuildWireShapeInfo(ovShape1, "", false);
-                        MultipleRecordUpdates mruShape2 = WireUtilities.BuildWireShapeInfo(ovShape2, "", false);
+                        string sWirePairID = ovShape1.Cells["User.WirePairID"].get_ResultStr(0);
+                        MultipleRecordUpdates mruShape1 = WireUtilities.BuildWireShapeInfo(ovShape1, sWirePairID, false);
+                        MultipleRecordUpdates mruShape2 = WireUtilities.BuildWireShapeInfo(ovShape2, sWirePairID, false);
                         string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
                         string sFileID = ovDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
                         string sPageID = mruShape1.ruRecords[0].odictColumnValues["PageID"];
 
 
 
-                        string sWirePairID = WireUtilities.GenerateWirePairID(sProjectID, sFileID, sPageID, ovShape1.Name, ovShape2.Name, DateTime.Now);
-                        mruShape1.ruRecords[0].odictColumnValues["WirePairID"] = sWirePairID;
-                        mruShape2.ruRecords[0].odictColumnValues["WirePairID"] = sWirePairID;
+                        //string sWirePairID = WireUtilities.GenerateWirePairID(sProjectID, sFileID, sPageID, ovShape1.Name, ovShape2.Name, DateTime.Now);
+                        //mruShape1.ruRecords[0].odictColumnValues["WirePairID"] = sWirePairID;
+                        //mruShape2.ruRecords[0].odictColumnValues["WirePairID"] = sWirePairID;
 
                         //determine which shape is the primary or secondary..
                         string sWireRole = mruShape1.ruRecords[0].odictColumnValues["WireRole"];
@@ -1016,16 +1018,16 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     // bool bRedo = DatabaseUtilities.CheckShapeExistenceInVisioForRedoing(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovDocument);
                     //check the amount of wires in the table (if we have an uneven amount we want to redo..)
                     string sFileID = ovDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-                   List<string> lstWiresInDB = DatabaseUtilities.GetTableRecordCountForSpecificFile(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, sFileID);
+                    List<string> lstWiresInDB = DatabaseUtilities.GetTableRecordCountForSpecificFile(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, sFileID);
                     int iNumberOfRecords = lstWiresInDB.Count;
                     //get all the shapeids fromt he inumberofRecords... and check 
                     int iWiresInDoc = 0;
                     List<string> lstWiresInVisio = new List<string>();
-                    foreach(Visio.Page ovPage in ovDocument.Pages)
+                    foreach (Visio.Page ovPage in ovDocument.Pages)
                     {
                         if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                         {
-                            foreach(Visio.Shape ovShape in ovPage.Shapes)
+                            foreach (Visio.Shape ovShape in ovPage.Shapes)
                             {
                                 if (ovShape.CellExists["User.ShapeID", 0] == -1)
                                 {
@@ -1038,60 +1040,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             }
                         }
                     }
-                    //bool bRedo = false;
-                    //int iDifference = Math.Abs(iNumberOfRecords - iWiresInDoc);
-                    //if(iDifference % 2 == 0)
-                    //{
-                    //    //the difference is even
-                    //    //we need to check to see if wires in doc are all paired...if 
-                    //    //we want to see if the lstWiresInVisio and the lstWiresInDb 
-
-                    //    //need to make sure that the lstWiresInVisio while even number there needs to be 2 of the same id...
-                    //    var wireCounts = lstWiresInVisio.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
-
-                    //    // Check if every wire ID appears exactly twice
-                    //    bool allPairsValid = wireCounts.Values.All(count => count == 2);
-
-                    //    if (allPairsValid)
-                    //    {
-                    //        //if there are pairs in lstWiresInDB that are not in lstWiresInVisio we will want to said bRedo to be true
-                    //        bool missingInVisio = lstWiresInDB.Any(dbWireID => !lstWiresInVisio.Contains(dbWireID));
-                    //        if(missingInVisio)
-                    //        {
-                    //            bRedo = true;
-                    //        }
-                    //    }
-                    //    else
-                    //    {
-                    //        bRedo = true;
-                    //    }
-                    //}
-                    //else
-                    //{
-                    //    //the difference is odd we need to do a redo...
-                    //    bRedo = true;
-                    //}
-                    
                    
-                    //if (bRedo)
-                    //{
-
-                    //    if(Globals.ThisAddIn.m_sLastUndoScope == "Cut and Paste Action")
-                    //    {
-                    //        Globals.ThisAddIn.Application.Undo();
-                    //        Globals.ThisAddIn.m_sLastUndoScope = "Undoing Cut and Paste Action";
-                    //    }
-                    //    else
-                    //    {
-                    //        if(Globals.ThisAddIn.m_sLastUndoScope == "Undoing Cut and Paste Action")
-                    //        {
-                    //            Globals.ThisAddIn.Application.Redo();
-                    //            Globals.ThisAddIn.m_sLastUndoScope = "Cut and Paste Action";
-                    //        }
-                            
-                    //    }
-                        
-                    //}
 
 
                     //will need to sync db with visio file
@@ -1100,11 +1049,11 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     //DatabaseUtilities.SyncDBWithFile(ovDoc, sVisAssistFolderPath);
                     //get a list of wires in the doc
                     List<string> lstWiresInDoc = new List<string>();
-                    foreach(Visio.Page ovPage in ovDoc.Pages)
+                    foreach (Visio.Page ovPage in ovDoc.Pages)
                     {
                         if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                         {
-                            foreach(Visio.Shape ovShape in ovPage.Shapes)
+                            foreach (Visio.Shape ovShape in ovPage.Shapes)
                             {
                                 if (ovShape.CellExists["User.ShapeID", 0] == -1)
                                 {
@@ -1116,17 +1065,18 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             }
                         }
                     }
-                    DatabaseUtilities.CheckShapeExistenceInVisioForUndo(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovDocument, ref lstWiresInDoc);
+                    DatabaseUtilities.SyncDBWithFile(ovDoc, sVisAssistFolderPath);
+                    
                 }
 
-                if(oThisDelayedEvent.sOperationType == "UndoCut")
+                if (oThisDelayedEvent.sOperationType == "UndoCut")
                 {
                     Visio.Document ovDoc = oThisDelayedEvent.ovDocument;
 
                     ovDoc.Application.Undo();
 
                     //also need to recognize that if they do a redo this would be a cut...
-                   
+
                     //Visio.Window ovWin = ovDoc.Application.ActiveWindow;
 
                     //Visio.Page ovCurrentPage = ovDoc.Application.ActivePage;
@@ -1139,7 +1089,17 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                     Globals.ThisAddIn.m_bSuppressEvents = false;
                 }
-                
+
+
+                if(oThisDelayedEvent.sOperationType == "MoveShapes")
+                {
+
+                    string sAction = "MoveShapes";
+                    PagesForm oNewForm = new PagesForm();
+                    oNewForm.Display(sAction);
+                    oNewForm.Show();
+                }
+
 
 
 
@@ -1156,6 +1116,253 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
         }
 
+        static public bool GetVisioObjectsFromAddonString(
+           string eventInfoFromVisio,
+           Visio.Application visioApplication,
+           out Visio.Document visioDocument,
+           out Visio.Page visioPage,
+           out Visio.Shape visioShape,
+           out string appArgValue,
+           out string actionArgValue,
+           out string sPartNumber,
+           out string sManufacturer,
+           out string[] additionalArgs)
+        {
+            if (visioApplication == null)
+            {
+                throw new ArgumentNullException("visioApplication");
+            }
+
+            // initialize the out parameters
+            visioDocument = null;
+            visioPage = null;
+            visioShape = null;
+            appArgValue = null;
+            actionArgValue = null;
+            additionalArgs = null;
+            sPartNumber = "";
+
+            // call the basic version first to get the visio object
+            GetObjectsFromAddonString(
+                eventInfoFromVisio,
+                visioApplication,
+                out visioDocument,
+                out visioPage,
+                out visioShape,
+                out sPartNumber,
+                out sManufacturer);
+
+            // split the info
+            if (eventInfoFromVisio.StartsWith("/"))
+            {
+                eventInfoFromVisio = eventInfoFromVisio.Substring(1);
+            }
+            additionalArgs = eventInfoFromVisio.Split('/');
+
+            // put the leading / back into the arguments.  This is mainly for compatibility
+            // purposes since we have existing code that expects it.
+            for (int arrayIndex = 0; arrayIndex < additionalArgs.Length; arrayIndex++)
+            {
+                additionalArgs.SetValue("/" + additionalArgs.GetValue(arrayIndex).ToString().Trim(), arrayIndex);
+            }
+
+            // find the argument values
+            foreach (string arg in additionalArgs)
+            {
+                if (arg.StartsWith("/app="))
+                {
+                    // application arg found
+                    appArgValue = arg.Replace("/app=", string.Empty);
+                }
+                if (arg.StartsWith("/partNumber="))
+                {
+                    // action arg found
+                    sPartNumber = arg.Replace("/partNumber=", string.Empty);
+                }
+
+                if (arg.StartsWith("/mfg="))
+                {
+                    // action arg found
+                    sManufacturer = arg.Replace("/mfg=", string.Empty);
+                }
+
+                if (arg.StartsWith("/action="))
+                {
+                    // action arg found
+                    actionArgValue = arg.Replace("/action=", string.Empty);
+                }
+            }
+
+            // default return
+            return true;
+        }
+
+        static public bool GetObjectsFromAddonString(
+            string eventInfoFromVisio,
+            Visio.Application visioApplication,
+            out Visio.Document visioDocument,
+            out Visio.Page visioPage,
+            out Visio.Shape visioShape,
+            out string sPartNumber,
+            out string sManufacturer)
+        {
+            if (visioApplication == null)
+            {
+                throw new ArgumentNullException("visioApplication");
+            }
+
+            // intialize the out parameters values
+            visioDocument = null;
+            visioPage = null;
+            visioShape = null;
+            sPartNumber = "";
+            sManufacturer = "";
+
+
+            // initialize locals
+            string docArgValue = null;
+            string pageArgValue = null;
+            string shapeArgValue = null;
+            string shapeUArgValue = null;
+
+            if (eventInfoFromVisio.Length == 0)
+            {
+                // return failure
+                return false;
+            }
+
+            // init return value
+            bool retVal = false;
+
+            try
+            {
+                // split the info
+                if (eventInfoFromVisio.StartsWith("/"))
+                {
+                    eventInfoFromVisio = eventInfoFromVisio.Substring(1);
+                }
+                string[] cmdLineArguments = eventInfoFromVisio.Split('/');
+
+                // put the leading / back into the arguments.  This is mainly for compatibility
+                // purposes since we have existing code that expects it.
+                for (int arrayIndex = 0; arrayIndex < cmdLineArguments.Length; arrayIndex++)
+                {
+                    cmdLineArguments.SetValue("/" + cmdLineArguments.GetValue(arrayIndex).ToString().Trim(), arrayIndex);
+                }
+
+                // find the argument values
+                if (cmdLineArguments != null &&
+                    cmdLineArguments.GetLength(0) > 0)
+                {
+                    // we have at least one argument, see what they are
+                    foreach (string arg in cmdLineArguments)
+                    {
+                        if (arg.StartsWith("/doc="))
+                        {
+                            // doc arg found
+                            docArgValue = arg.Replace("/doc=", string.Empty);
+                        }
+                        if (arg.StartsWith("/page="))
+                        {
+                            // page arg found
+                            pageArgValue = arg.Replace("/page=", string.Empty);
+                        }
+                        if (arg.StartsWith("/shapeu"))
+                        {
+                            // shapeu arg found
+                            shapeUArgValue = arg.Replace("/shapeu=", string.Empty);
+                        }
+                        if (arg.StartsWith("/shape="))
+                        {
+                            // shape arg found
+                            shapeArgValue = arg.Replace("/shape=", string.Empty);
+                        }
+
+                        if (arg.StartsWith("/partNumber="))
+                        {
+                            // shape arg found
+                            shapeArgValue = arg.Replace("/partNumber=", string.Empty);
+                            sPartNumber = shapeArgValue;
+                        }
+
+                        if (arg.StartsWith("/mfg="))
+                        {
+                            // shape arg found
+                            shapeArgValue = arg.Replace("/mfg=", string.Empty);
+                            sManufacturer = shapeArgValue;
+                        }
+
+                    }
+                }
+
+                // if shapeU arg is found then it becomes the shapeArgValue so that the appropriate shape is found
+                if (shapeUArgValue != null &&
+                    shapeUArgValue.Length > 0)
+                {
+                    shapeArgValue = shapeUArgValue;
+                }
+
+                // get the objects based on the arguments
+                if (docArgValue != null &&
+                    docArgValue.Length > 0 &&
+                    visioApplication.Documents.Count > 0)
+                {
+                    // this is an index value
+                    double doubleValue;
+                    bool isNumber = double.TryParse(
+                        docArgValue,
+                        System.Globalization.NumberStyles.Any,
+                        null,
+                        out doubleValue);
+
+                    if (isNumber)
+                    {
+                        int docIndex = Int32.Parse(docArgValue, System.Globalization.CultureInfo.InvariantCulture);
+                        visioDocument = visioApplication.Documents[docIndex];
+                    }
+                }
+
+                if (pageArgValue != null &&
+                    pageArgValue.Length > 0 &&
+                    visioDocument != null &&
+                    visioDocument.Pages.Count > 0)
+                {
+                    // this is an index value
+                    double doubleValue;
+                    bool isNumber = double.TryParse(
+                        docArgValue,
+                        System.Globalization.NumberStyles.Any,
+                        null,
+                        out doubleValue);
+
+                    if (isNumber)
+                    {
+                        int pageIndex = Int32.Parse(pageArgValue, System.Globalization.CultureInfo.InvariantCulture);
+                        visioPage = visioDocument.Pages[pageIndex];
+                    }
+                }
+
+                if (shapeArgValue != null &&
+                    shapeArgValue.Length > 0 &&
+                    visioPage != null &&
+                    visioPage.Shapes.Count > 0)
+                {
+                    visioShape = visioPage.Shapes.get_ItemU(shapeArgValue);
+                }
+
+                // set success
+                retVal = true;
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                // here we will ignore any exceptions because what most likely is that cause is we are asking for
+                // a visio object that no longer exists
+                retVal = false;
+            }
+
+            // default return
+            return retVal;
+        }
 
 
         internal static void OnVisioIsIdle(Visio.Application subject)
@@ -1350,7 +1557,67 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             }
         }
 
+        internal static void PerformAction(string[] additionalArgs, object subject)
+        {
+            if (additionalArgs == null || additionalArgs.Length == 0)
+            {
+                // handle empty array case
+                Console.WriteLine("No arguments provided.");
+                return;
+            }
+
+            // Get the last string
+            string sLastArg = additionalArgs[additionalArgs.Length - 1];
+
+            sLastArg = ExtractAfterEquals(sLastArg);
+
+            switch (sLastArg)
+            {
+                case "JumpToMate":
+                    {
+                        Visio.Application ovApplication = (Visio.Application)subject;
+                        Visio.Selection ovSelction = ovApplication.ActiveWindow.Selection;
+                        Visio.Shape ovShape = ovSelction[1];
+                        if (ovShape.CellExists["User.Class", 0] == -1)
+                        {
+                            if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                            {
+                                WireUtilities.JumpToMate(ovShape);
+                            }
+                        }
+
+                        break;
+                    }
+                case "MoveShapes":
+                    {
+                        //move selection of shapes
+
+                        string sAction = "MoveShapes";
+                        PagesForm oNewForm = new PagesForm();
+                        oNewForm.Display(sAction);
+                        oNewForm.Show();
+                        break;
+                    }
+
+            }
+
+            // continue with your logic...
+        }
+
+        internal static string ExtractAfterEquals(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
+
+            int index = input.IndexOf('=');
+            if (index < 0 || index == input.Length - 1)
+                return string.Empty; // '=' not found or nothing after '='
+
+            return input.Substring(index + 1);
+        }
     }
+
+
 
 
     public struct MateSelection
