@@ -943,6 +943,64 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 MessageBox.Show("Error in SecondStepInStressTest " + ex.Message, "VisAssist");
             }
         }
+
+        internal static void CutAndPasteShapes(PagesForm pagesForm)
+        {
+            string sPageNameToMoveTo = "";
+            foreach (DataGridViewRow dgvRow in pagesForm.dgvPages.SelectedRows)
+            {
+                if (!dgvRow.IsNewRow)
+                {
+                    sPageNameToMoveTo = dgvRow.Cells["PageName"].Value?.ToString();
+
+                }
+            }
+
+            //ok now paste what we have in our clipboard on the visio page sPageNameToMoveTo
+            Visio.Application ovApp = Globals.ThisAddIn.Application;
+            Visio.Document ovDocument = ovApp.ActiveDocument;
+            //get the current page so we can return to it...
+            Visio.Page ovCurrentPage = ovApp.ActivePage;
+
+            foreach (Visio.Page ovPage in ovDocument.Pages)
+            {
+                if (ovPage.Name == sPageNameToMoveTo)
+                {
+                    string sNewPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                    //this is the page we want to paste what is in our clipboard...
+                    int iUndoScope = ovApp.BeginUndoScope("Cut and Paste Action");
+                    Globals.ThisAddIn.m_sLastUndoScope = "Cut and Paste Action";
+                    //before we paste we need to make the cut of the current selection...
+                    Visio.Selection ovSelection = ovApp.ActiveWindow.Selection;
+                    ovApp.EventsEnabled = 0;
+                    ovSelection.Cut();
+                    ovPage.Paste();
+                    ovApp.EventsEnabled = -1;
+                    //need to update in db...
+                    //get the selection we just pasted..
+                    ovApp.ActiveWindow.Page = ovPage;
+                    ovSelection = ovApp.ActiveWindow.Selection;
+                    foreach (Visio.Shape ovShape in ovSelection)
+                    {
+                        if (ovShape.CellExists["User.Class", 0] == -1)
+                        {
+                            if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                            {
+                                WireUtilities.UpdateWireInDatabase(ovShape);
+                            }
+                        }
+                        
+                    }
+
+                    ovApp.ActiveWindow.Page = ovCurrentPage;
+
+
+                    ovApp.EndUndoScope(iUndoScope, true);
+
+
+                }
+            }
+        }
     }
 
 }

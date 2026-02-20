@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
+using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using Office = Microsoft.Office.Core;
 using Visio = Microsoft.Office.Interop.Visio;
@@ -585,6 +586,19 @@ namespace VisAssistDatabaseBackEnd
             PageUtilities.FirstStepInStressTest(10, 5);
             Globals.ThisAddIn.Application.EndUndoScope(iUndoScope, true);
             Globals.ThisAddIn.m_sLastUndoScope = "Stress Test";
+        }
+
+        public void btnMoveShapes_Click(Office.IRibbonControl control)
+        {
+            //move selection of shapes
+            int iUndoScope = Globals.ThisAddIn.Application.BeginUndoScope("Move Shapes");
+            string sAction = "MoveShapes";
+            PagesForm oNewForm = new PagesForm();
+            oNewForm.Display(sAction);
+            oNewForm.Show();
+
+
+            Globals.ThisAddIn.Application.EndUndoScope(iUndoScope, true);
         }
         #endregion
     }

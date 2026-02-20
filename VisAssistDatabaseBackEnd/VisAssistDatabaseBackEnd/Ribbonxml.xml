@@ -64,6 +64,10 @@
           <button id="btnSmallTestCaseSecond"
            label="Drop 5 Pages and Move Secondary Wires"
            onAction="btnSmallTestCaseSecond_Click"/>
+
+          <button id="btnMoveShapes"
+          label="Move Shapes"
+          onAction="btnMoveShapes_Click"/>
          
         </group>
         <group id="grpUtilities" label="Utilities">

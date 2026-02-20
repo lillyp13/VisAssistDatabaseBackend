@@ -1038,60 +1038,60 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             }
                         }
                     }
-                    bool bRedo = false;
-                    int iDifference = Math.Abs(iNumberOfRecords - iWiresInDoc);
-                    if(iDifference % 2 == 0)
-                    {
-                        //the difference is even
-                        //we need to check to see if wires in doc are all paired...if 
-                        //we want to see if the lstWiresInVisio and the lstWiresInDb 
+                    //bool bRedo = false;
+                    //int iDifference = Math.Abs(iNumberOfRecords - iWiresInDoc);
+                    //if(iDifference % 2 == 0)
+                    //{
+                    //    //the difference is even
+                    //    //we need to check to see if wires in doc are all paired...if 
+                    //    //we want to see if the lstWiresInVisio and the lstWiresInDb 
 
-                        //need to make sure that the lstWiresInVisio while even number there needs to be 2 of the same id...
-                        var wireCounts = lstWiresInVisio.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
+                    //    //need to make sure that the lstWiresInVisio while even number there needs to be 2 of the same id...
+                    //    var wireCounts = lstWiresInVisio.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
 
-                        // Check if every wire ID appears exactly twice
-                        bool allPairsValid = wireCounts.Values.All(count => count == 2);
+                    //    // Check if every wire ID appears exactly twice
+                    //    bool allPairsValid = wireCounts.Values.All(count => count == 2);
 
-                        if (allPairsValid)
-                        {
-                            //if there are pairs in lstWiresInDB that are not in lstWiresInVisio we will want to said bRedo to be true
-                            bool missingInVisio = lstWiresInDB.Any(dbWireID => !lstWiresInVisio.Contains(dbWireID));
-                            if(missingInVisio)
-                            {
-                                bRedo = true;
-                            }
-                        }
-                        else
-                        {
-                            bRedo = true;
-                        }
-                    }
-                    else
-                    {
-                        //the difference is odd we need to do a redo...
-                        bRedo = true;
-                    }
+                    //    if (allPairsValid)
+                    //    {
+                    //        //if there are pairs in lstWiresInDB that are not in lstWiresInVisio we will want to said bRedo to be true
+                    //        bool missingInVisio = lstWiresInDB.Any(dbWireID => !lstWiresInVisio.Contains(dbWireID));
+                    //        if(missingInVisio)
+                    //        {
+                    //            bRedo = true;
+                    //        }
+                    //    }
+                    //    else
+                    //    {
+                    //        bRedo = true;
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    //the difference is odd we need to do a redo...
+                    //    bRedo = true;
+                    //}
                     
                    
-                    if (bRedo)
-                    {
+                    //if (bRedo)
+                    //{
 
-                        if(Globals.ThisAddIn.m_sLastUndoScope == "Cut and Paste Action")
-                        {
-                            Globals.ThisAddIn.Application.Undo();
-                            Globals.ThisAddIn.m_sLastUndoScope = "Undoing Cut and Paste Action";
-                        }
-                        else
-                        {
-                            if(Globals.ThisAddIn.m_sLastUndoScope == "Undoing Cut and Paste Action")
-                            {
-                                Globals.ThisAddIn.Application.Redo();
-                                Globals.ThisAddIn.m_sLastUndoScope = "Cut and Paste Action";
-                            }
+                    //    if(Globals.ThisAddIn.m_sLastUndoScope == "Cut and Paste Action")
+                    //    {
+                    //        Globals.ThisAddIn.Application.Undo();
+                    //        Globals.ThisAddIn.m_sLastUndoScope = "Undoing Cut and Paste Action";
+                    //    }
+                    //    else
+                    //    {
+                    //        if(Globals.ThisAddIn.m_sLastUndoScope == "Undoing Cut and Paste Action")
+                    //        {
+                    //            Globals.ThisAddIn.Application.Redo();
+                    //            Globals.ThisAddIn.m_sLastUndoScope = "Cut and Paste Action";
+                    //        }
                             
-                        }
+                    //    }
                         
-                    }
+                    //}
 
 
                     //will need to sync db with visio file
@@ -1099,6 +1099,27 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
                     DatabaseUtilities.SyncDBWithFile(ovDoc, sVisAssistFolderPath);
                 }
+
+                if(oThisDelayedEvent.sOperationType == "UndoCut")
+                {
+                    Visio.Document ovDoc = oThisDelayedEvent.ovDocument;
+
+                    ovDoc.Application.Undo();
+
+                   
+                    //Visio.Window ovWin = ovDoc.Application.ActiveWindow;
+
+                    //Visio.Page ovCurrentPage = ovDoc.Application.ActivePage;
+                    ////select everything that is in our delayedevent list of shapes
+                    //foreach(string sID in oThisDelayedEvent.lstShapes)
+                    //{
+                    //    Visio.Shape ovShape = ovCurrentPage.Shapes[sID];
+                    //    ovWin.Select(ovShape, (short)Visio.VisSelectArgs.visSelect);
+                    //}
+
+                    Globals.ThisAddIn.m_bSuppressEvents = false;
+                }
+                
 
 
 

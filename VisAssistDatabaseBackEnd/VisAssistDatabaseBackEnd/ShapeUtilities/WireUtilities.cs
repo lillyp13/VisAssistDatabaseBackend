@@ -78,8 +78,9 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             try
             {
                 string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
+                string sWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
                 //get the WirePairID for ovShape
-                string sWirePairID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("WirePairID", sShapeID);
+                //string sWirePairID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("WirePairID", sShapeID);
                 //this gets' called when the user moves a shape...
                 MultipleRecordUpdates oWireInfo = BuildWireShapeInfo(ovShape, sWirePairID, false);
                 DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oWireInfo);
@@ -1504,36 +1505,21 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
 
                         string sWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
-                        sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
-                        string sMateID = "";
-                        switch (sWireRole)
-                        {
-                            case "P":
-                                {
-                                    //ovShape is the primary
-                                    sMateID = GetColumnInfoInWirePairsTableFromDatabase("SecondaryWireID", sWirePairID);
-
-                                    break;
-                                }
-                            case "S":
-                                {
-                                    //ovShape is the secondary
-                                    sMateID = GetColumnInfoInWirePairsTableFromDatabase("PrimaryWireID", sWirePairID);
-                                    break;
-                                }
-                        }
-
+                        
                         //now we have the mates id check each shape in the selection for this id
                         foreach (Visio.Shape ovShapeToCheck in ovSelection)
                         {
-                            if (ovShapeToCheck.CellExists["User.ShapeID", 0] == -1)
+                            if (ovShapeToCheck.Name != ovShape.Name)
                             {
-                                if (ovShapeToCheck.Cells["User.ShapeID"].get_ResultStr(0) == sMateID)
+                                if (ovShapeToCheck.CellExists["User.WirePairID", 0] == -1)
                                 {
-                                    //the mate is in the selection add it to m_pendingshapeids so we don't drop another wire pair for this..
-                                    sKey = ovShapeToCheck.ID + "|" + ovShapeToCheck.ContainingPage.Name;
-                                    ovMateShape = ovShapeToCheck;
-                                    //Globals.ThisAddIn.m_pendingShapeIds.Add(sKey);
+                                    if (ovShapeToCheck.Cells["User.WirePairID"].get_ResultStr(0) == sWirePairID)
+                                    {
+                                        //the mate is in the selection add it to m_pendingshapeids so we don't drop another wire pair for this..
+                                        sKey = ovShapeToCheck.ID + "|" + ovShapeToCheck.ContainingPage.Name;
+                                        ovMateShape = ovShapeToCheck;
+                                        //Globals.ThisAddIn.m_pendingShapeIds.Add(sKey);
+                                    }
                                 }
                             }
                         }

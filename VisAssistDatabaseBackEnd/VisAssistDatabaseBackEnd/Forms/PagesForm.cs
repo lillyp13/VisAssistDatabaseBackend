@@ -58,6 +58,10 @@ namespace VisAssistDatabaseBackEnd.Forms
                 {
                     btnDuplicate.Text = "Move";
                 }
+                if(m_sAction == "MoveShapes")
+                {
+                    btnDuplicate.Text = "Move";
+                }
             }
         }
 
@@ -80,6 +84,14 @@ namespace VisAssistDatabaseBackEnd.Forms
                     //Visio.Application ovApp = Globals.ThisAddIn.Application;
                     //int iUndoScope = ovApp.BeginUndoScope("Cut and Paste Action");
                     //ovApp.EndUndoScope(iUndoScope, true);
+                }
+                else
+                {
+                    if(m_sAction == "MoveShapes")
+                    {
+                        //get the current selection cut it and paste it to the page the user decided
+                        PageUtilities.CutAndPasteShapes(this);
+                    }
                 }
             }
 
