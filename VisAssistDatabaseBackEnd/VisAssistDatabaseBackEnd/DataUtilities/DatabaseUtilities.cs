@@ -1306,6 +1306,54 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return lstShapesToRemove;
         }
 
+        internal static List<string> CheckShapeExistenceInVisioForUndo(string sTableName, Visio.Document ovDocument, ref List<string> lstShapes)
+        {
+            ShapesUtilities.GetShapesInTable(sTableName, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
+
+            List<string> lstShapesToRemove = new List<string>();
+
+            string sPK = GetPrimaryKey(sTableName);
+            foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
+            {
+                string sShapeID = ru.sId;
+                if (lstShapes.Contains(sShapeID))
+                {
+                    //the shape exists in visio and in the db...
+                }
+                else
+                {
+                    //the shape exists in the db and not in visio, we want to delete it from the db
+                    lstShapesToRemove.Add(sShapeID);
+                    //get the pagename from the pageid...
+
+                }
+            }
+            if (lstShapesToRemove.Count > 0)
+            {
+                ////we have records in our pages table that don't actually exist-go delete them from db...
+                ////build a delete sql for each record...
+                //List<RecordUpdate> ruRecords = new List<RecordUpdate>();
+                //foreach (string sShapeID in lstShapesToRemove)
+                //{
+                //    RecordUpdate ru = new RecordUpdate();
+                //    ru.sId = sShapeID;
+                //    ru.sPrimaryKeyColumn = sPK;
+                //    ru.odictColumnValues = null;
+
+                //    ruRecords.Add(ru);
+                //}
+
+                //MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
+                //BuildDeleteSqlForMultipleRecords(sTableName, mruRecordsToDelete);
+
+                //we want to undo the redo...
+                ovDocument.Application.Undo();
+                //return the list of shapes removed using the shape name and page name...
+
+            }
+            return lstShapesToRemove;
+        }
+
         internal static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> lstShapes, ref Dictionary<string, Shape> oDictPrimaryWiresNotInDB, ref Dictionary<string, Visio.Shape> oDictSecondaryWiresNotInDB)
         {
             bool bDoesRecordExist = DoesRecordExist(sTableName, sShapeID);

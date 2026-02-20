@@ -99,6 +99,16 @@ namespace VisAssistDatabaseBackEnd
                 m_VisioEvents.Add(pageAddedEvent);
 
 
+                //querycancelselectiondelete
+                short eventCode = (short)Visio.VisEventCodes.visEvtCodeQueryCancelSelDel;
+
+                Visio.Event deleteEvent = ovDocument.EventList.AddAdvise(
+                    eventCode,
+                    m_appSink,
+                    "",
+                    ""
+                );
+
                 //// Shape Added
                 m_VisioEvents.Add(docEventList.AddAdvise(
                      (short)((short)visEvtAdd + (short)Visio.VisEventCodes.visEvtShape),
@@ -810,7 +820,7 @@ namespace VisAssistDatabaseBackEnd
                                                 //ovDocument.Application.Undo();
                                                 List<string> selectedShapeIDs = new List<string>();
                                                 string sShapeKey = "";
-                                              
+
 
                                                 foreach (Visio.Shape shape in m_ovSelection)
                                                 {
@@ -870,147 +880,161 @@ namespace VisAssistDatabaseBackEnd
                                     //    }
 
                                     //}
+                                   
 
-                                    bool bAlreadyQueued = Globals.ThisAddIn.m_delayedEvents.Any(e => e.ovDocument == ovDocument && e.sOperationType == "CheckShapeExistenceAfterUndoDelete");
-                                    if (!bAlreadyQueued)
-                                    {
-                                        DelayedEvent oDelayedEvent = new DelayedEvent();
-                                        oDelayedEvent.ovDocument = ovDocument;
-                                        oDelayedEvent.sOperationType = "CheckShapeExistenceAfterUndoDelete";
-                                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                        bool bAlreadyQueued = Globals.ThisAddIn.m_delayedEvents.Any(e => e.ovDocument == ovDocument && e.sOperationType == "CheckShapeExistenceAfterUndoDelete");
+                                        if (!bAlreadyQueued)
+                                        {
+                                            DelayedEvent oDelayedEvent = new DelayedEvent();
+                                            oDelayedEvent.ovDocument = ovDocument;
+                                            oDelayedEvent.sOperationType = "CheckShapeExistenceAfterUndoDelete";
+                                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                        }
+
+
+
+                                        //if (!m_MatesDeleted.Contains(sKey))
+                                        //{
+                                        //    //if we haven't already processed the shape and its mate...
+                                        //    if (m_sLastUndoScope != "")
+                                        //    {
+                                        //        //make sure this is not one of our stress tests
+                                        //        if (m_sLastUndoScope != "Stress Test")
+                                        //        {
+
+
+                                        //            //we are doing an undo
+                                        //            //this is part of an undo/redo event...
+                                        //            List<string> lstShapesRemoved = VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeletedRedoing(ovDocument, sClass);
+
+
+
+                                        //            bool bUndoEvent = false;
+                                        //            //check if we should add this event by looking at the db and seeing if we have any wires in visio with no mate in visio 
+                                        //            if (lstShapesRemoved.Count > 0)
+                                        //            {
+                                        //                //we removed wires from the db
+                                        //                foreach (string sShapeIDToCheck in lstShapesRemoved)
+                                        //                {
+                                        //                    //we removed a wire...
+                                        //                    bUndoEvent = WireUtilities.CheckForWireMate(sShapeIDToCheck);
+                                        //                    if (bUndoEvent)
+                                        //                    {
+                                        //                        bool bUndoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Undo");
+                                        //                        if (!bUndoAlreadyScheduled)
+                                        //                        {
+                                        //                            //add delayed event to undo the cut...
+                                        //                            DelayedEvent oDelayedEvent = new DelayedEvent();
+                                        //                            oDelayedEvent.sOperationType = "Undo";
+                                        //                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                        //                        }
+
+                                        //                    }
+                                        //                }
+
+                                        //            }
+                                        //            else
+                                        //            {
+                                        //                //we didn't remove any wires from the db (doing an undo/redo of a cut/move)
+
+                                        //                bUndoEvent = WireUtilities.CheckForWireMate(sShapeID);
+                                        //                if (bUndoEvent)
+                                        //                {
+                                        //                    bool bUndoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Undo");
+                                        //                    if (!bUndoAlreadyScheduled)
+                                        //                    {
+                                        //                        //add delayed event to undo the cut...
+                                        //                        DelayedEvent oDelayedEvent = new DelayedEvent();
+                                        //                        oDelayedEvent.sOperationType = "Undo";
+                                        //                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                        //                    }
+                                        //                }
+                                        //            }
+
+                                        //        }
+                                        //        //  m_sLastUndoScope = "";
+                                        //    }
+                                        //    else
+                                        //    {
+                                        //        //we are doing a redo
+
+
+                                        //        List<string> lstShapesRemoved = VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeletedRedoing(ovDocument, sClass);
+
+
+                                        //        bool bUndoEvent = false;
+                                        //        //check if we should add this event by looking at the db and seeing if we have any wires in visio with no mate in visio 
+                                        //        if (lstShapesRemoved.Count > 0)
+                                        //        {
+                                        //            //we removed wires from the db
+                                        //            foreach (string sShapeIDToCheck in lstShapesRemoved)
+                                        //            {
+                                        //                //we removed a wire...
+                                        //                bUndoEvent = WireUtilities.CheckForWireMate(sShapeIDToCheck);
+                                        //                if (bUndoEvent)
+                                        //                {
+
+                                        //                    bool bUndoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Redo");
+                                        //                    if (!bUndoAlreadyScheduled)
+                                        //                    {
+                                        //                        //add delayed event to undo the cut...
+                                        //                        DelayedEvent oDelayedEvent = new DelayedEvent();
+                                        //                        oDelayedEvent.sOperationType = "Redo";
+                                        //                        oDelayedEvent.ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
+                                        //                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                        //                    }
+
+                                        //                }
+                                        //            }
+
+                                        //        }
+                                        //        else
+                                        //        {
+                                        //            //we didn't remove any wires from the db (doing an undo/redo of a cut/move)
+
+                                        //            bUndoEvent = WireUtilities.CheckForWireMate(sShapeID);
+                                        //            if (bUndoEvent)
+                                        //            {
+                                        //                bool bRedoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Redo");
+                                        //                if (!bRedoAlreadyScheduled)
+                                        //                {
+                                        //                    //add delayed event to undo the cut...
+                                        //                    DelayedEvent oDelayedEvent = new DelayedEvent();
+                                        //                    oDelayedEvent.sOperationType = "Redo";
+                                        //                    oDelayedEvent.ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
+                                        //                    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                                        //                }
+                                        //            }
+                                        //        }
+
+                                        //        m_sLastUndoScope = "Cut and Past Action";
+
+                                        //    }
+
+                                        //}
+
+
                                     }
 
-
-
-                                    //if (!m_MatesDeleted.Contains(sKey))
-                                    //{
-                                    //    //if we haven't already processed the shape and its mate...
-                                    //    if (m_sLastUndoScope != "")
-                                    //    {
-                                    //        //make sure this is not one of our stress tests
-                                    //        if (m_sLastUndoScope != "Stress Test")
-                                    //        {
-
-
-                                    //            //we are doing an undo
-                                    //            //this is part of an undo/redo event...
-                                    //            List<string> lstShapesRemoved = VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeletedRedoing(ovDocument, sClass);
-
-
-
-                                    //            bool bUndoEvent = false;
-                                    //            //check if we should add this event by looking at the db and seeing if we have any wires in visio with no mate in visio 
-                                    //            if (lstShapesRemoved.Count > 0)
-                                    //            {
-                                    //                //we removed wires from the db
-                                    //                foreach (string sShapeIDToCheck in lstShapesRemoved)
-                                    //                {
-                                    //                    //we removed a wire...
-                                    //                    bUndoEvent = WireUtilities.CheckForWireMate(sShapeIDToCheck);
-                                    //                    if (bUndoEvent)
-                                    //                    {
-                                    //                        bool bUndoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Undo");
-                                    //                        if (!bUndoAlreadyScheduled)
-                                    //                        {
-                                    //                            //add delayed event to undo the cut...
-                                    //                            DelayedEvent oDelayedEvent = new DelayedEvent();
-                                    //                            oDelayedEvent.sOperationType = "Undo";
-                                    //                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                                    //                        }
-
-                                    //                    }
-                                    //                }
-
-                                    //            }
-                                    //            else
-                                    //            {
-                                    //                //we didn't remove any wires from the db (doing an undo/redo of a cut/move)
-
-                                    //                bUndoEvent = WireUtilities.CheckForWireMate(sShapeID);
-                                    //                if (bUndoEvent)
-                                    //                {
-                                    //                    bool bUndoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Undo");
-                                    //                    if (!bUndoAlreadyScheduled)
-                                    //                    {
-                                    //                        //add delayed event to undo the cut...
-                                    //                        DelayedEvent oDelayedEvent = new DelayedEvent();
-                                    //                        oDelayedEvent.sOperationType = "Undo";
-                                    //                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                                    //                    }
-                                    //                }
-                                    //            }
-
-                                    //        }
-                                    //        //  m_sLastUndoScope = "";
-                                    //    }
-                                    //    else
-                                    //    {
-                                    //        //we are doing a redo
-
-
-                                    //        List<string> lstShapesRemoved = VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeDeletedRedoing(ovDocument, sClass);
-
-
-                                    //        bool bUndoEvent = false;
-                                    //        //check if we should add this event by looking at the db and seeing if we have any wires in visio with no mate in visio 
-                                    //        if (lstShapesRemoved.Count > 0)
-                                    //        {
-                                    //            //we removed wires from the db
-                                    //            foreach (string sShapeIDToCheck in lstShapesRemoved)
-                                    //            {
-                                    //                //we removed a wire...
-                                    //                bUndoEvent = WireUtilities.CheckForWireMate(sShapeIDToCheck);
-                                    //                if (bUndoEvent)
-                                    //                {
-
-                                    //                    bool bUndoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Redo");
-                                    //                    if (!bUndoAlreadyScheduled)
-                                    //                    {
-                                    //                        //add delayed event to undo the cut...
-                                    //                        DelayedEvent oDelayedEvent = new DelayedEvent();
-                                    //                        oDelayedEvent.sOperationType = "Redo";
-                                    //                        oDelayedEvent.ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
-                                    //                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                                    //                    }
-
-                                    //                }
-                                    //            }
-
-                                    //        }
-                                    //        else
-                                    //        {
-                                    //            //we didn't remove any wires from the db (doing an undo/redo of a cut/move)
-
-                                    //            bUndoEvent = WireUtilities.CheckForWireMate(sShapeID);
-                                    //            if (bUndoEvent)
-                                    //            {
-                                    //                bool bRedoAlreadyScheduled = Globals.ThisAddIn.m_delayedEvents.Any(ev => ev.sOperationType == "Redo");
-                                    //                if (!bRedoAlreadyScheduled)
-                                    //                {
-                                    //                    //add delayed event to undo the cut...
-                                    //                    DelayedEvent oDelayedEvent = new DelayedEvent();
-                                    //                    oDelayedEvent.sOperationType = "Redo";
-                                    //                    oDelayedEvent.ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
-                                    //                    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                                    //                }
-                                    //            }
-                                    //        }
-
-                                    //        m_sLastUndoScope = "Cut and Past Action";
-
-                                    //    }
-
-                                    //}
-
-
+                                    m_pendingShapeIds.Add(sKey);
                                 }
-
-                                m_pendingShapeIds.Add(sKey);
-                            }
+                            
                         }
+                        break;
+                    }
+
+
+
+                //querycancelseldel
+                case ((short)Visio.VisEventCodes.visEvtCodeQueryCancelSelDel):
+                    {
+                        //check if want to cancel this delete...
 
                         break;
                     }
+
+
+
 
                 //PageDeleted
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtPage):
@@ -1243,13 +1267,13 @@ namespace VisAssistDatabaseBackEnd
 
                         break;
                     }
-                case (short)Visio.VisEventCodes.visEvtCodeQueryCancelSelDel:
-                    {
-                        // Visio.Selection ovSelection = (Visio.Selection)subject;
-                        // VisioApplication_SelectionDeleted(ovSelection);
+                //case (short)Visio.VisEventCodes.visEvtCodeQueryCancelSelDel:
+                //    {
+                //        // Visio.Selection ovSelection = (Visio.Selection)subject;
+                //        // VisioApplication_SelectionDeleted(ovSelection);
 
-                        break;
-                    }
+                //        break;
+                //    }
                 case (short)Visio.VisEventCodes.visEvtCodeDocOpen:
                     {
                         var doc = subject as Visio.Document;

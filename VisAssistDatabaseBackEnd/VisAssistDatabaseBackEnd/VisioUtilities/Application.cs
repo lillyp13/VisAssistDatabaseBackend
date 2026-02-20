@@ -1097,7 +1097,26 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     //will need to sync db with visio file
                     Visio.Document ovDoc = oThisDelayedEvent.ovDocument;
                     string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                    DatabaseUtilities.SyncDBWithFile(ovDoc, sVisAssistFolderPath);
+                    //DatabaseUtilities.SyncDBWithFile(ovDoc, sVisAssistFolderPath);
+                    //get a list of wires in the doc
+                    List<string> lstWiresInDoc = new List<string>();
+                    foreach(Visio.Page ovPage in ovDoc.Pages)
+                    {
+                        if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                        {
+                            foreach(Visio.Shape ovShape in ovPage.Shapes)
+                            {
+                                if (ovShape.CellExists["User.ShapeID", 0] == -1)
+                                {
+                                    if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                                    {
+                                        lstWiresInDB.Add(ovShape.Cells["User.ShapeID"].get_ResultStr(0));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    DatabaseUtilities.CheckShapeExistenceInVisioForUndo(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovDocument, ref lstWiresInDoc);
                 }
 
                 if(oThisDelayedEvent.sOperationType == "UndoCut")
@@ -1147,6 +1166,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             Globals.ThisAddIn.m_ovSelection = null;
             Globals.ThisAddIn.m_MatesMated.Clear();
             Globals.ThisAddIn.m_MatesDeleted.Clear();
+            Globals.ThisAddIn.m_lstWireIDs.Clear();
             int iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
 
             if (iNumberOfDelayedEvents > 0)
