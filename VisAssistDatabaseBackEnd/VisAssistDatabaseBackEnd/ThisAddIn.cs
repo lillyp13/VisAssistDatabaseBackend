@@ -702,39 +702,48 @@ namespace VisAssistDatabaseBackEnd
                             //check if the current scop eis 1023 and if it is stop this because we are doing a delete shape not cut.. (may want to just check if the scope is 1020 i think that is a cut...
                             if (Application.CurrentScope != 1023)
                             {
+                                
 
 
 
                                 Visio.Selection ovSelection = (Visio.Selection)subject;
 
-
-                                if (ovSelection == null || ovSelection.Count == 0)
-                                    return false; // nothing selected, allow delete
-
-                                // Loop through selected shapes
-                                for (short i = 1; i <= ovSelection.Count; i++)
+                                //only do this if it is not a visassist project..
+                                //i thought this wouldn't get called because sinks shouldn't be set up for a non visassist doc but i think if a doc is open i sink or soemthing like that...
+                                //maybe add precautions here to stop it from happening if this is a non visassist doc
+                                Visio.Document ovDoc = ovSelection.Application.ActiveDocument;
+                                if (ovDoc.DocumentSheet.CellExists["User.ProjectID", 0] == -1)
                                 {
-                                    Visio.Shape ovShape = ovSelection[i];
+                                    //for now i am going to do this, but i think i want to check the manifest file...
 
-                                    // Check if shape has User.Class
-                                    if (ovShape.CellExists["User.Class", 0] == -1)
+                                    if (ovSelection == null || ovSelection.Count == 0)
+                                        return false; // nothing selected, allow delete
+
+                                    // Loop through selected shapes
+                                    for (short i = 1; i <= ovSelection.Count; i++)
                                     {
-                                        string userClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                                        Visio.Shape ovShape = ovSelection[i];
 
-                                        if (userClass == "SmartWire")
+                                        // Check if shape has User.Class
+                                        if (ovShape.CellExists["User.Class", 0] == -1)
                                         {
-                                            // Found a wire → cancel deletion
-                                            //System.Windows.Forms.MessageBox.Show(
-                                            //    "Please use VisAssist Move Shapes"
-                                            //);
+                                            string userClass = ovShape.Cells["User.Class"].get_ResultStr(0);
 
-                                            DelayedEvent oDelayedEvent = new DelayedEvent();
-                                            oDelayedEvent.ovDocument = ovSelection.Document;
-                                            oDelayedEvent.ovSelection = ovSelection;
-                                            oDelayedEvent.sOperationType = "MoveShapes";
-                                            m_delayedEvents.Add(oDelayedEvent);
+                                            if (userClass == "SmartWire")
+                                            {
+                                                // Found a wire → cancel deletion
+                                                //System.Windows.Forms.MessageBox.Show(
+                                                //    "Please use VisAssist Move Shapes"
+                                                //);
 
-                                            return true; // CANCEL DELETE
+                                                DelayedEvent oDelayedEvent = new DelayedEvent();
+                                                oDelayedEvent.ovDocument = ovSelection.Document;
+                                                oDelayedEvent.ovSelection = ovSelection;
+                                                oDelayedEvent.sOperationType = "MoveShapes";
+                                                m_delayedEvents.Add(oDelayedEvent);
+
+                                                return true; // CANCEL DELETE
+                                            }
                                         }
                                     }
                                 }
