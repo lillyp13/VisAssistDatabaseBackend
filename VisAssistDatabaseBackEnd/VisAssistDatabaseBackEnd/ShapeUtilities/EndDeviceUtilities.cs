@@ -54,11 +54,19 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
         }
 
-        internal static void DeleteEndDeviceFromDatabase(Visio.Shape ovShape)
+        internal static void DeleteEndDeviceFromDatabase(string sShapeID)
         {
             try
             {
-                MultipleRecordUpdates oEndDeviceRecord = BuildWiringEndDeviceInfo(ovShape);
+
+                MultipleRecordUpdates oEndDeviceRecord = new MultipleRecordUpdates();
+                oEndDeviceRecord.ruRecords = new List<RecordUpdate>();
+                RecordUpdate ru = new RecordUpdate();
+                ru.sId = sShapeID;
+                ru.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.WiringEndDevice.sWiringEndDeviceTablePK;
+                oEndDeviceRecord.ruRecords.Add(ru);
+
+                //before deleting it in the DB we should also delete the secondary wire off of the page (or the primary-whatever is the opposite..)
                 DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.WiringEndDevice.sWiringEndDeviceTable, oEndDeviceRecord);
             }
             catch (Exception ex)

@@ -56,13 +56,18 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
 
         }
-        internal static void DeleteWireFromDatabaseUsingShape(Visio.Shape ovShape)
+        internal static void DeleteWireFromDatabase(string sShapeID)
         {
             try
             {
 
 
-                MultipleRecordUpdates oWireRecord = BuildWireShapeInfo(ovShape, "", false);
+                MultipleRecordUpdates oWireRecord = new MultipleRecordUpdates();
+                oWireRecord.ruRecords = new List<RecordUpdate>();
+                RecordUpdate ru = new RecordUpdate();
+                ru.sId = sShapeID;
+                ru.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.WirePairsTable.sWirePairsTablePK;
+                oWireRecord.ruRecords.Add(ru);
 
                 //before deleting it in the DB we should also delete the secondary wire off of the page (or the primary-whatever is the opposite..)
                 DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oWireRecord);
@@ -1537,26 +1542,6 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             return sKey;
         }
 
-        internal static void DeleteWireFromDatabase(string sShapeID)
-        {
-            try
-            {
-
-
-                MultipleRecordUpdates oWireRecord = new MultipleRecordUpdates();
-                oWireRecord.ruRecords = new List<RecordUpdate>();
-                RecordUpdate ru = new RecordUpdate();
-                ru.sId = sShapeID;
-                ru.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.WirePairsTable.sWirePairsTablePK;
-                oWireRecord.ruRecords.Add(ru);
-
-                //before deleting it in the DB we should also delete the secondary wire off of the page (or the primary-whatever is the opposite..)
-                DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oWireRecord);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in DeleteWireFromDatabase " + ex.Message, "VisAssist");
-            }
-        }
+       
     }
 }

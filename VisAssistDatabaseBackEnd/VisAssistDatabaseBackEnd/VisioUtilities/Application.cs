@@ -426,173 +426,10 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             }
         }
 
-        internal static List<string> OnShapeDeletedRedoing(Visio.Shape ovShape, Selection ovSelection)
-        {
-            Visio.Document ovDoc = ovShape.Document;
-            List<string> lstShapesRemoved = new List<string>();
-
-            try
-            {
-
-                if (ovShape.CellExists["User.Class", 0] == -1)
-                {
-                    //this is one of our shapes...
-                    string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovShape.ContainingPage.Document);
-                    DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
-                    string sProjectID = ovShape.ContainingPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-
-
-
-                    string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                    switch (sClass)
-                    {
-                        case "NewWire":
-                        case "SmartWire":
-                            {
-                                if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                                {
-                                    List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
-                                    //need to clean up the db based on the shapes on this page left...
-
-                                    lstShapesRemoved = DatabaseUtilities.CheckShapeExistenceInVisioOnDeletion(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovShape.Document, ref lstShapes);
-                                }
-                                else
-                                {
-                                    //we also need to go and delete th secondary wire (wherever it lives...)
-                                    //gather the seconary information before deleting it from the db..
-                                    string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
-                                    string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
-                                    string sMateID = "";
-                                    string sPageID;
-                                    string sWirePairID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("WirePairID", sShapeID);
-
-                                    switch (sWireRole)
-                                    {
-                                        case "P":
-                                            {
-
-                                                sMateID = WireUtilities.GetColumnInfoInWirePairsTableFromDatabase("SecondaryWireID", sWirePairID);
-                                                break;
-                                            }
-                                        case "S":
-                                            {
-                                                sMateID = WireUtilities.GetColumnInfoInWirePairsTableFromDatabase("PrimaryWireID", sWirePairID);
-                                                break;
-                                            }
-                                    }
-
-                                    //get the page id the wire mate lives on..
-                                    sPageID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("PageID", sMateID);
-
-                                    WireUtilities.DeleteWireFromDatabaseUsingShape(ovShape);
-
-                                    bool bDeleteMateShape = true;
-                                    //delete the secondary in visio if the user doesn't have it in the selection...
-                                    foreach (Visio.Page ovPage in ovDoc.Pages)
-                                    {
-                                        if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
-                                        {
-                                            string sPageIDToCheck = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                                            if (sPageIDToCheck == sPageID)
-                                            {
-                                                //this is the page the mate lives on
-                                                foreach (Visio.Shape ovShapeToCheck in ovPage.Shapes)
-                                                {
-                                                    if (ovShapeToCheck.CellExists["User.ShapeID", 0] == -1)
-                                                    {
-                                                        string sShapeIDToCheck = ovShapeToCheck.Cells["User.ShapeID"].get_ResultStr(0);
-                                                        if (sShapeIDToCheck == sMateID)
-                                                        {
-
-                                                            //before deleting check if this wire is in our ovSelection..
-                                                            int iSelectedShapes = ovSelection.Count;
-                                                            for (int ithShape = 1; ithShape <= iSelectedShapes; ithShape++)
-                                                            {
-                                                                Visio.Shape ovShapeInSelection = ovSelection[ithShape];
-                                                                if (ovShapeInSelection.CellExists["User.ShapeID", 0] == -1)
-                                                                {
-                                                                    string sShapeIDToPossiblyDelete = ovShapeInSelection.Cells["User.ShapeID"].get_ResultStr(0);
-                                                                    if (sShapeIDToPossiblyDelete == sMateID)
-                                                                    {
-                                                                        //it is already going to be deleted because the user chose to delete it..
-                                                                        bDeleteMateShape = false;
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            if (bDeleteMateShape)
-                                                            {
-                                                                //turn off events and then delete the shape..
-                                                                ovDoc.Application.EventsEnabled = 0;
-                                                                ovShapeToCheck.Delete();
-                                                                ovDoc.Application.EventsEnabled = -1;
-                                                            }
-
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                }
-
-
-                                break;
-                            }
-                        case "TerminalBlock":
-                            {
-                                if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                                {
-                                    List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
-                                    //need to clean up the db based on the shapes on this page left...
-                                    DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape.Document, ref lstShapes);
-
-                                }
-                                else
-                                {
-                                    TerminalBlockUtilities.DeleteTerminalBlockFromDatabase(ovShape);
-                                }
-
-                                break;
-                            }
-                        case "ADC End Device":
-                            {
-                                if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                                {
-                                    List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
-
-                                    //need to clean up the db based on the shapes on this page left...
-                                    DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape.Document, ref lstShapes);
-
-                                }
-                                else
-                                {
-                                    EndDeviceUtilities.DeleteEndDeviceFromDatabase(ovShape);
-                                }
-
-                                break;
-                            }
-                    }
-
-
-                }
-
-                return lstShapesRemoved;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in OnShapeDeleted " + ex.Message, "VisAssist");
-                return lstShapesRemoved;
-            }
-            finally
-            {
-                ovDoc.Application.EventsEnabled = -1;
-            }
-        }
+       
         internal static List<string> OnShapeDeleted(string sShapeID, string sWireRole, Visio.Document ovDocument, string sClass)
         {
-
+            //when we are in this method we know we are not doing an undo or redo..
             List<string> lstShapesRemoved = new List<string>();
             try
             {
@@ -651,6 +488,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                                     //WireUtilities.DeleteWireFromDatabaseUsingShape(ovShape);
                                     WireUtilities.DeleteWireFromDatabase(sShapeID);
 
+                                    //check if the mates is in the selection already scheduled to be deleted...
                                     bool bDeleteMateShape = true;
                                     if (!Globals.ThisAddIn.m_lstWireIDs.Contains(sMateID))
                                     {
@@ -674,56 +512,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                                 }
 
-                                //check if the mates is in the selection already scheduled to be deleted...
-
-                                //delete the secondary in visio if the user doesn't have it in the selection...
-                                //foreach (Visio.Page ovPage in ovDocument.Pages)
-                                //{
-                                //    if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
-                                //    {
-                                //        string sPageIDToCheck = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                                //        if (sPageIDToCheck == sPageID)
-                                //        {
-                                //            //this is the page the mate lives on
-                                //            foreach (Visio.Shape ovShapeToCheck in ovPage.Shapes)
-                                //            {
-                                //                if (ovShapeToCheck.CellExists["User.ShapeID", 0] == -1)
-                                //                {
-                                //                    string sShapeIDToCheck = ovShapeToCheck.Cells["User.ShapeID"].get_ResultStr(0);
-                                //                    if (sShapeIDToCheck == sMateID)
-                                //                    {
-
-                                //                        //before deleting check if this wire is in our ovSelection..
-                                //                        int iSelectedShapes = ovSelection.Count;
-                                //                        for (int ithShape = 1; ithShape <= iSelectedShapes; ithShape++)
-                                //                        {
-                                //                            Visio.Shape ovShapeInSelection = ovSelection[ithShape];
-                                //                            if (ovShapeInSelection.CellExists["User.ShapeID", 0] == -1)
-                                //                            {
-                                //                                string sShapeIDToPossiblyDelete = ovShapeInSelection.Cells["User.ShapeID"].get_ResultStr(0);
-                                //                                if (sShapeIDToPossiblyDelete == sMateID)
-                                //                                {
-                                //                                    //it is already going to be deleted because the user chose to delete it..
-                                //                                    bDeleteMateShape = false;
-                                //                                }
-                                //                            }
-                                //                        }
-
-                                //                        if (bDeleteMateShape)
-                                //                        {
-                                //                            //turn off events and then delete the shape..
-                                //                            ovDoc.Application.EventsEnabled = 0;
-                                //                            ovShapeToCheck.Delete();
-                                //                            ovDoc.Application.EventsEnabled = -1;
-                                //                        }
-
-                                //                    }
-                                //                }
-                                //            }
-                                //        }
-                                //    }
-                                //}
-
+                              
                             }
 
 
@@ -731,34 +520,17 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         }
                     case "TerminalBlock":
                         {
-                            //if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                            //{
-                            //    List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
-                            //    //need to clean up the db based on the shapes on this page left...
-                            //    DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape.Document, ref lstShapes);
-
-                            //}
-                            //else
-                            //{
-                            // TerminalBlockUtilities.DeleteTerminalBlockFromDatabase(ovShape);
-                            // }
+                            
+                             TerminalBlockUtilities.DeleteTerminalBlockFromDatabase(sShapeID);
+                            
 
                             break;
                         }
                     case "ADC End Device":
                         {
-                            //if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                            //{
-                            //    List<string> lstShapes = ShapesUtilities.PopulateShapesInDocument(ovShape.ContainingPage.Document, sClass);
-
-                            //    //need to clean up the db based on the shapes on this page left...
-                            //    DatabaseUtilities.CheckShapeExistenceInVisio(DatabaseUtilities.SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape.Document, ref lstShapes);
-
-                            //}
-                            //else
-                            //{
-                            // EndDeviceUtilities.DeleteEndDeviceFromDatabase(ovShape);
-                            //}
+                            
+                             EndDeviceUtilities.DeleteEndDeviceFromDatabase(sShapeID);
+                            
 
                             break;
                         }
@@ -988,29 +760,31 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID);
                 }
 
-                if (oThisDelayedEvent.sOperationType == "Undo")
-                {
-                    Globals.ThisAddIn.Application.Undo();
-                    Globals.ThisAddIn.m_sLastUndoScope = "";
-                }
-                if (oThisDelayedEvent.sOperationType == "Redo")
-                {
-                    Globals.ThisAddIn.Application.Redo();
-                    Visio.Document ovDocument = oThisDelayedEvent.ovDocument;
-                    //check to see if the all the shapes in the db exist in the visio file and if they don't this is because we are redoing a cut and paste and need to subscribe to redo twice otherwise redoing once is fine...
-                    bool bRedoTwice = DatabaseUtilities.CheckShapeExistenceInVisioForRedoing(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovDocument);
-                    if (bRedoTwice)
-                    {
-                        Globals.ThisAddIn.Application.Redo();
-                    }
 
-                    Globals.ThisAddIn.m_sLastUndoScope = "Cut and Paste Action";
+                //THESE SHOULD NEVER BE ADDED....
+                //if (oThisDelayedEvent.sOperationType == "Undo")
+                //{
+                //    Globals.ThisAddIn.Application.Undo();
+                //    Globals.ThisAddIn.m_sLastUndoScope = "";
+                //}
+                //if (oThisDelayedEvent.sOperationType == "Redo")
+                //{
+                //    Globals.ThisAddIn.Application.Redo();
+                //    Visio.Document ovDocument = oThisDelayedEvent.ovDocument;
+                //    //check to see if the all the shapes in the db exist in the visio file and if they don't this is because we are redoing a cut and paste and need to subscribe to redo twice otherwise redoing once is fine...
+                //    bool bRedoTwice = DatabaseUtilities.CheckShapeExistenceInVisioForRedoing(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovDocument);
+                //    if (bRedoTwice)
+                //    {
+                //        Globals.ThisAddIn.Application.Redo();
+                //    }
 
-                    //will need to sync db with visio file
-                    Visio.Document ovDoc = oThisDelayedEvent.ovDocument;
-                    string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                    DatabaseUtilities.SyncDBWithFile(ovDoc, sVisAssistFolderPath);
-                }
+                //    Globals.ThisAddIn.m_sLastUndoScope = "Cut and Paste Action";
+
+                //    //will need to sync db with visio file
+                //    Visio.Document ovDoc = oThisDelayedEvent.ovDocument;
+                //    string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                //    DatabaseUtilities.SyncDBWithFile(ovDoc, sVisAssistFolderPath);
+                //}
 
                 if (oThisDelayedEvent.sOperationType == "CheckShapeExistenceAfterUndoDelete")
                 {
@@ -1115,7 +889,104 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             }
 
         }
+        internal static void OnVisioIsIdle(Visio.Application subject)
+        {
+            Globals.ThisAddIn.m_pendingShapeIds.Clear();
+            Globals.ThisAddIn.m_pendingPageIds.Clear();
+            Globals.ThisAddIn.m_MatesInSelection.Clear();
+            Globals.ThisAddIn.m_ovSelection = null;
+            Globals.ThisAddIn.m_MatesMated.Clear();
+            Globals.ThisAddIn.m_MatesDeleted.Clear();
+            Globals.ThisAddIn.m_lstWireIDs.Clear();
+            int iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
 
+            if (iNumberOfDelayedEvents > 0)
+            {
+
+
+                try
+                {
+
+
+                    for (int ithEvent = iNumberOfDelayedEvents; ithEvent > 0; ithEvent--)
+                    {
+                        DelayedEvent thisDelayedEvent = Globals.ThisAddIn.m_delayedEvents[ithEvent - 1];
+
+                        //make sure we process CheckShapeExistence last...
+                        if (thisDelayedEvent.sOperationType != "CheckShapeExistence")
+                        {
+                            ProcessThisDelayedEvent(thisDelayedEvent);
+                            Globals.ThisAddIn.m_delayedEvents.Remove(thisDelayedEvent);
+                        }
+
+                    }
+                    iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
+                    //now process the CheckShapeExistence delayed evetn
+                    for (int ithEvent = iNumberOfDelayedEvents; ithEvent > 0; ithEvent--)
+                    {
+                        DelayedEvent thisDelayedEvent = Globals.ThisAddIn.m_delayedEvents[ithEvent - 1];
+                        ProcessThisDelayedEvent(thisDelayedEvent);
+                        Globals.ThisAddIn.m_delayedEvents.Remove(thisDelayedEvent);
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error in OnVisioIsIdle " + ex.Message, "VisAssist");
+                }
+            }
+        }
+        internal static void PerformAction(string[] additionalArgs, object subject)
+        {
+            if (additionalArgs == null || additionalArgs.Length == 0)
+            {
+                // handle empty array case
+                Console.WriteLine("No arguments provided.");
+                return;
+            }
+
+            // Get the last string
+            string sLastArg = additionalArgs[additionalArgs.Length - 1];
+
+            sLastArg = ExtractAfterEquals(sLastArg);
+
+            switch (sLastArg)
+            {
+                case "JumpToMate":
+                    {
+                        Visio.Application ovApplication = (Visio.Application)subject;
+                        Visio.Selection ovSelction = ovApplication.ActiveWindow.Selection;
+                        Visio.Shape ovShape = ovSelction[1];
+                        if (ovShape.CellExists["User.Class", 0] == -1)
+                        {
+                            if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                            {
+                                WireUtilities.JumpToMate(ovShape);
+                            }
+                        }
+
+                        break;
+                    }
+                case "MoveShapes":
+                    {
+                        //move selection of shapes
+
+                        string sAction = "MoveShapes";
+                        PagesForm oNewForm = new PagesForm();
+                        oNewForm.Display(sAction);
+                        oNewForm.Show();
+                        break;
+                    }
+
+            }
+
+            // continue with your logic...
+        }
+
+
+
+
+        //HELPER METHODS
         static public bool GetVisioObjectsFromAddonString(
            string eventInfoFromVisio,
            Visio.Application visioApplication,
@@ -1365,53 +1236,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         }
 
 
-        internal static void OnVisioIsIdle(Visio.Application subject)
-        {
-            Globals.ThisAddIn.m_pendingShapeIds.Clear();
-            Globals.ThisAddIn.m_pendingPageIds.Clear();
-            Globals.ThisAddIn.m_MatesInSelection.Clear();
-            Globals.ThisAddIn.m_ovSelection = null;
-            Globals.ThisAddIn.m_MatesMated.Clear();
-            Globals.ThisAddIn.m_MatesDeleted.Clear();
-            Globals.ThisAddIn.m_lstWireIDs.Clear();
-            int iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
-
-            if (iNumberOfDelayedEvents > 0)
-            {
-
-
-                try
-                {
-
-
-                    for (int ithEvent = iNumberOfDelayedEvents; ithEvent > 0; ithEvent--)
-                    {
-                        DelayedEvent thisDelayedEvent = Globals.ThisAddIn.m_delayedEvents[ithEvent - 1];
-
-                        //make sure we process CheckShapeExistence last...
-                        if (thisDelayedEvent.sOperationType != "CheckShapeExistence")
-                        {
-                            ProcessThisDelayedEvent(thisDelayedEvent);
-                            Globals.ThisAddIn.m_delayedEvents.Remove(thisDelayedEvent);
-                        }
-
-                    }
-                    iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
-                    //now process the CheckShapeExistence delayed evetn
-                    for (int ithEvent = iNumberOfDelayedEvents; ithEvent > 0; ithEvent--)
-                    {
-                        DelayedEvent thisDelayedEvent = Globals.ThisAddIn.m_delayedEvents[ithEvent - 1];
-                        ProcessThisDelayedEvent(thisDelayedEvent);
-                        Globals.ThisAddIn.m_delayedEvents.Remove(thisDelayedEvent);
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error in OnVisioIsIdle " + ex.Message, "VisAssist");
-                }
-            }
-        }
+     
 
 
         static public void NavigateTo(
@@ -1557,52 +1382,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             }
         }
 
-        internal static void PerformAction(string[] additionalArgs, object subject)
-        {
-            if (additionalArgs == null || additionalArgs.Length == 0)
-            {
-                // handle empty array case
-                Console.WriteLine("No arguments provided.");
-                return;
-            }
-
-            // Get the last string
-            string sLastArg = additionalArgs[additionalArgs.Length - 1];
-
-            sLastArg = ExtractAfterEquals(sLastArg);
-
-            switch (sLastArg)
-            {
-                case "JumpToMate":
-                    {
-                        Visio.Application ovApplication = (Visio.Application)subject;
-                        Visio.Selection ovSelction = ovApplication.ActiveWindow.Selection;
-                        Visio.Shape ovShape = ovSelction[1];
-                        if (ovShape.CellExists["User.Class", 0] == -1)
-                        {
-                            if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
-                            {
-                                WireUtilities.JumpToMate(ovShape);
-                            }
-                        }
-
-                        break;
-                    }
-                case "MoveShapes":
-                    {
-                        //move selection of shapes
-
-                        string sAction = "MoveShapes";
-                        PagesForm oNewForm = new PagesForm();
-                        oNewForm.Display(sAction);
-                        oNewForm.Show();
-                        break;
-                    }
-
-            }
-
-            // continue with your logic...
-        }
+       
 
         internal static string ExtractAfterEquals(string input)
         {

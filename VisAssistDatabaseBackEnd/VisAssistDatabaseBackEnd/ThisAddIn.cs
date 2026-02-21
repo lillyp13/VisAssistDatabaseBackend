@@ -83,27 +83,21 @@ namespace VisAssistDatabaseBackEnd
             try
             {
                 Visio.MenuSet ovThisMenuSet = visioUIObject.MenuSets[10];
-                
 
+                //this adds to all shapes...
                 Microsoft.Office.Interop.Visio.MenuItem ovThisMenuItem = (Microsoft.Office.Interop.Visio.MenuItem)ovThisMenuSet.Menus[0].MenuItems.AddAt(0);
                 ovThisMenuItem.Caption = "VisAssist Cut Shapes";
                 ovThisMenuItem.ActionText = "VisAssist Cut Shapes";
                 ovThisMenuItem.AddOnName = "QueueMarkerEvent";
                 ovThisMenuItem.AddOnArgs = "/action=MoveShapes";
-                                          //"/app=VisAssist /action=move_these_shapes";
+                //"/app=VisAssist /action=move_these_shapes";
                 ovThisMenuItem.FaceID = 125;
-               
-                //Microsoft.Office.Interop.Visio.MenuItem ovThisNewMenuItem = (Microsoft.Office.Interop.Visio.MenuItem)ovThisMenuSet.Menus[0].MenuItems.AddAt(0);
-                //ovThisNewMenuItem.Caption = "Copy Shapes";
-                //ovThisNewMenuItem.ActionText = "VisAssist Copy Shapes";
-                //ovThisNewMenuItem.AddOnName = "QueueMarkerEvent";
-                //ovThisNewMenuItem.AddOnArgs = "/app=VisAssist /action=copy_these_shapes";
-                //ovThisNewMenuItem.FaceID = 225;
+
 
             }
             catch (Exception ex)
             {
-                
+
             }
         }
 
@@ -115,7 +109,7 @@ namespace VisAssistDatabaseBackEnd
                 Visio.UIObject visioAppMenusUI = Application.BuiltInMenus;
 
                 CustomizeAccelSet(visioAppMenusUI, Visio.VisUIObjSets.visUIObjSetDrawing);
-                
+
                 CustomizeDrawingMenu(visioAppMenusUI, Visio.VisUIObjSets.visUIObjSetDrawing);
                 Application.SetCustomMenus(visioAppMenusUI);
                 // Ensure a single sink instance
@@ -130,7 +124,7 @@ namespace VisAssistDatabaseBackEnd
 
                 // ---- Document-level events ----
 
-              
+
 
                 short pageAddedEventCode = unchecked((short)((short)Visio.VisEventCodes.visEvtAdd | (short)Visio.VisEventCodes.visEvtPage));
 
@@ -375,7 +369,7 @@ namespace VisAssistDatabaseBackEnd
                string.Empty,
                string.Empty));
 
-            
+
 
 
         }
@@ -405,30 +399,6 @@ namespace VisAssistDatabaseBackEnd
     object subject,
     object moreInformation)
         {
-            //var code = (Visio.VisEventCodes)eventCode;
-
-            //if ((code & Visio.VisEventCodes.visEvtMarker) != 0)
-            //{
-            //    // Marker hit
-            //    return true;
-            //}
-
-            //if (code == Visio.VisEventCodes.visEvtCodeDocOpen)
-            //{
-            //    var doc = subject as Visio.Document;
-            //    if (doc != null)
-            //    {
-            //        // visio is already open and we are now going to opne a doucment...
-            //        VisAssistDatabaseBackEnd.DataUtilities.VisioHelper.OnDocumentOpenedCreated(doc, false);
-            //    }
-            //    // Document opened
-            //    return true;
-            //}
-
-            //return true;
-
-
-            //parse moreInformation here to see if this is MoveShapes...
 
 
             bool bCancelEvent = false;
@@ -500,7 +470,7 @@ namespace VisAssistDatabaseBackEnd
                                                         oMateSelection.sWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
                                                         m_MatesInSelection.Add(sKey, oMateSelection);
                                                     }
-                                                  
+
 
                                                     VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, m_ovSelection, ref oDictWiresComingFromRedo);
                                                     if (oDictWiresComingFromRedo.Count > 0)
@@ -521,6 +491,8 @@ namespace VisAssistDatabaseBackEnd
                                             }
                                             else
                                             {
+
+                                                //i think this is still live code, i beleive it gets called when we paste?
                                                 if (ovShape.CellExists["User.Class", 0] == -1)
                                                 {
                                                     string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
@@ -640,40 +612,43 @@ namespace VisAssistDatabaseBackEnd
                                                 }
                                             }
 
-                                            if (m_bAskWhereToCutTo)
-                                            {
-                                                //int iUndoScope = ovSelection.Application.BeginUndoScope("Cut Shape");
-                                                //ShapesUtilities.CutShapes(ovSelection);
-                                                //ovSelection.Application.EndUndoScope(iUndoScope, true);
 
 
-                                                //make the user use our move shapes.
-                                                //ovDocument.Application.Undo();
-                                                List<string> selectedShapeIDs = new List<string>();
-                                                string sShapeKey = "";
+                                            //THIS SHOULD ALL BE DEAD CODE NOW....
+                                            //if (m_bAskWhereToCutTo)
+                                            //{
+                                            //    //int iUndoScope = ovSelection.Application.BeginUndoScope("Cut Shape");
+                                            //    //ShapesUtilities.CutShapes(ovSelection);
+                                            //    //ovSelection.Application.EndUndoScope(iUndoScope, true);
 
 
-                                                foreach (Visio.Shape shape in m_ovSelection)
-                                                {
-                                                    sShapeKey = shape.ID.ToString();
-                                                    selectedShapeIDs.Add(sShapeKey); // Store Shape.ID (NOT ShapeID cell)
-                                                }
+                                            //    //make the user use our move shapes.
+                                            //    //ovDocument.Application.Undo();
+                                            //    List<string> selectedShapeIDs = new List<string>();
+                                            //    string sShapeKey = "";
 
 
-                                                MessageBox.Show("Please use our Move Shapes Ribbon button", "VisAssist");
-                                                bool bAlreadyQueued = Globals.ThisAddIn.m_delayedEvents.Any(e => e.ovDocument == ovDocument && e.sOperationType == "UndoCut");
-                                                if (!bAlreadyQueued)
-                                                {
-                                                    DelayedEvent oDelayeEvent = new DelayedEvent();
-                                                    oDelayeEvent.sOperationType = "UndoCut";
-                                                    oDelayeEvent.ovDocument = ovDocument;
-                                                    oDelayeEvent.lstShapes = selectedShapeIDs;
-                                                    Globals.ThisAddIn.m_delayedEvents.Add(oDelayeEvent);
-                                                }
-                                                m_bSuppressEvents = true;
-                                                break;
+                                            //    foreach (Visio.Shape shape in m_ovSelection)
+                                            //    {
+                                            //        sShapeKey = shape.ID.ToString();
+                                            //        selectedShapeIDs.Add(sShapeKey); // Store Shape.ID (NOT ShapeID cell)
+                                            //    }
 
-                                            }
+
+                                            //    MessageBox.Show("Please use our Move Shapes Ribbon button", "VisAssist");
+                                            //    bool bAlreadyQueued = Globals.ThisAddIn.m_delayedEvents.Any(e => e.ovDocument == ovDocument && e.sOperationType == "UndoCut");
+                                            //    if (!bAlreadyQueued)
+                                            //    {
+                                            //        DelayedEvent oDelayeEvent = new DelayedEvent();
+                                            //        oDelayeEvent.sOperationType = "UndoCut";
+                                            //        oDelayeEvent.ovDocument = ovDocument;
+                                            //        oDelayeEvent.lstShapes = selectedShapeIDs;
+                                            //        Globals.ThisAddIn.m_delayedEvents.Add(oDelayeEvent);
+                                            //    }
+                                            //    m_bSuppressEvents = true;
+                                            //    break;
+
+                                            //}
 
                                         }
                                         else
@@ -696,23 +671,23 @@ namespace VisAssistDatabaseBackEnd
 
                                 else
                                 {
-
-                                        bool bAlreadyQueued = Globals.ThisAddIn.m_delayedEvents.Any(e => e.ovDocument == ovDocument && e.sOperationType == "CheckShapeExistenceAfterUndoDelete");
-                                        if (!bAlreadyQueued)
-                                        {
-                                            DelayedEvent oDelayedEvent = new DelayedEvent();
-                                            oDelayedEvent.ovDocument = ovDocument;
-                                            oDelayedEvent.sOperationType = "CheckShapeExistenceAfterUndoDelete";
-                                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-                                        }
-
-
-
+                                    //we are undoing or redoing...
+                                    bool bAlreadyQueued = Globals.ThisAddIn.m_delayedEvents.Any(e => e.ovDocument == ovDocument && e.sOperationType == "CheckShapeExistenceAfterUndoDelete");
+                                    if (!bAlreadyQueued)
+                                    {
+                                        DelayedEvent oDelayedEvent = new DelayedEvent();
+                                        oDelayedEvent.ovDocument = ovDocument;
+                                        oDelayedEvent.sOperationType = "CheckShapeExistenceAfterUndoDelete";
+                                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
                                     }
 
-                                    m_pendingShapeIds.Add(sKey);
+
+
                                 }
-                            
+
+                                m_pendingShapeIds.Add(sKey);
+                            }
+
                         }
                         break;
                     }
@@ -724,28 +699,27 @@ namespace VisAssistDatabaseBackEnd
                     {
                         try
                         {
-                            //check if the current scop eis 1023 and if it is stop this because we are doing a delete shape not cut..
+                            //check if the current scop eis 1023 and if it is stop this because we are doing a delete shape not cut.. (may want to just check if the scope is 1020 i think that is a cut...
                             if (Application.CurrentScope != 1023)
                             {
 
 
 
-                                Visio.Selection selection = (Visio.Selection)subject;
+                                Visio.Selection ovSelection = (Visio.Selection)subject;
 
 
-                                if (selection == null || selection.Count == 0)
+                                if (ovSelection == null || ovSelection.Count == 0)
                                     return false; // nothing selected, allow delete
 
                                 // Loop through selected shapes
-                                for (short i = 1; i <= selection.Count; i++)
+                                for (short i = 1; i <= ovSelection.Count; i++)
                                 {
-                                    Visio.Shape shape = selection[i];
+                                    Visio.Shape ovShape = ovSelection[i];
 
                                     // Check if shape has User.Class
-                                    if (shape.CellExists["User.Class", 0] == -1)
+                                    if (ovShape.CellExists["User.Class", 0] == -1)
                                     {
-                                        string userClass = shape
-                                            .Cells["User.Class"].get_ResultStr(0);
+                                        string userClass = ovShape.Cells["User.Class"].get_ResultStr(0);
 
                                         if (userClass == "SmartWire")
                                         {
@@ -755,8 +729,8 @@ namespace VisAssistDatabaseBackEnd
                                             //);
 
                                             DelayedEvent oDelayedEvent = new DelayedEvent();
-                                            oDelayedEvent.ovDocument = selection.Document;
-                                            oDelayedEvent.ovSelection = selection;
+                                            oDelayedEvent.ovDocument = ovSelection.Document;
+                                            oDelayedEvent.ovSelection = ovSelection;
                                             oDelayedEvent.sOperationType = "MoveShapes";
                                             m_delayedEvents.Add(oDelayedEvent);
 
@@ -765,8 +739,8 @@ namespace VisAssistDatabaseBackEnd
                                     }
                                 }
                             }
-                                return false; // allow delete
-                            
+                            return false; // allow delete
+
                         }
                         catch
                         {
@@ -828,7 +802,9 @@ namespace VisAssistDatabaseBackEnd
                                     //we are duplicating a page...
                                     Dictionary<string, Visio.Page> oDictPagesToDuplicate = new Dictionary<string, Visio.Page>();
                                     oDictPagesToDuplicate.Add(ovPage.Name, ovPage);
+                                    int iUndoScope = ovPage.Application.BeginUndoScope("Duplicate");
                                     VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDuplicated(oDictPagesToDuplicate);
+                                    ovPage.Application.EndUndoScope(iUndoScope, true);
                                 }
                                 else
                                 {
@@ -1018,14 +994,14 @@ namespace VisAssistDatabaseBackEnd
 
                             VisioUtilities.Application.PerformAction(additionalArgs, subject);
 
-                            
+
                         }
 
 
-                       
+
                         break;
                     }
-                
+
                 case (short)Visio.VisEventCodes.visEvtCodeDocOpen:
                     {
                         var doc = subject as Visio.Document;
@@ -1038,12 +1014,6 @@ namespace VisAssistDatabaseBackEnd
                         break;
                     }
 
-                //we don't do anything on ondocumentcreated
-                //case (short)Visio.VisEventCodes.visEvtCodeDocCreate:
-                //    {
-                //        OnDocumentCreated((Visio.Document)subject);
-                //        break;
-                //    }
 
                 default:
                     {
@@ -1110,7 +1080,7 @@ namespace VisAssistDatabaseBackEnd
             Visio.UIObject visioUIObject,
             Visio.VisUIObjSets uiObjSet)
         {
-            
+
 
             if (visioUIObject == null)
             {
@@ -1265,12 +1235,12 @@ namespace VisAssistDatabaseBackEnd
                     //}
                 }
 
-              
+
 
             }
             catch (Exception ex)
             {
-               
+
             }
         }
 

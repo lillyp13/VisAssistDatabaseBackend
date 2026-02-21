@@ -73,12 +73,19 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 MessageBox.Show("Error in UpdateTerminalBlockInDatabase " + ex.Message, "VisAssist");
             }
         }
-        internal static void DeleteTerminalBlockFromDatabase(Visio.Shape ovShape)
+        internal static void DeleteTerminalBlockFromDatabase(string sShapeID)
         {
             try
             {
 
-                MultipleRecordUpdates oTerminalBlockRecord = BuildTerminalBlockInfo(ovShape);
+                MultipleRecordUpdates oTerminalBlockRecord = new MultipleRecordUpdates();
+                oTerminalBlockRecord.ruRecords = new List<RecordUpdate>();
+                RecordUpdate ru = new RecordUpdate();
+                ru.sId = sShapeID;
+                ru.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
+                oTerminalBlockRecord.ruRecords.Add(ru);
+
+                //before deleting it in the DB we should also delete the secondary wire off of the page (or the primary-whatever is the opposite..)
                 DatabaseUtilities.BuildDeleteSqlForMultipleRecords(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, oTerminalBlockRecord);
             }
             catch (Exception ex)
