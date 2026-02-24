@@ -13,6 +13,7 @@ using VisAssistDatabaseBackEnd.ShapeUtilities;
 using System.Xml.Linq;
 using System.Configuration;
 using VisAssistDatabaseBackEnd.Forms;
+using Microsoft.Office.Core;
 
 namespace VisAssistDatabaseBackEnd.VisioUtilities
 {
@@ -48,10 +49,10 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         {
                             //need to add the page to the database...
                             PageUtilities.AddPageToDatabase(ovVisioPage, sProjectID, "Visio");
-                            List<Visio.Page> oListPages = new List<Visio.Page>();
-                            oListPages.Add(ovVisioPage);
+                            List<string> oListPages = new List<string>();
+                            oListPages.Add(ovVisioPage.Name);
                             //will need to also add all the shapes on the page back to the db...check if this gets called when copying a file...
-                            ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID);
+                            ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID, ovVisioPage.Document);
                         }
                         else
                         {
@@ -73,9 +74,9 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             if (existingEvent != null)
                             {
                                 // Only add page if not already in list
-                                if (!existingEvent.oListPages.Contains(ovVisioPage))
+                                if (!existingEvent.oListPages.Contains(ovVisioPage.Name))
                                 {
-                                    existingEvent.oListPages.Add(ovVisioPage);
+                                    existingEvent.oListPages.Add(ovVisioPage.Name);
                                 }
 
                             }
@@ -86,9 +87,9 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                                 oDelayedEvent.sOperationType = "AddShapesToDatabase";
                                 if (oDelayedEvent.oListPages == null)
                                 {
-                                    oDelayedEvent.oListPages = new List<Visio.Page>();
+                                    oDelayedEvent.oListPages = new List<string>();
                                 }
-                                oDelayedEvent.oListPages.Add(ovVisioPage);
+                                oDelayedEvent.oListPages.Add(ovVisioPage.Name);
 
                                 Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
                             }
@@ -109,7 +110,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         {
             try
             {
-                Dictionary<string, Visio.Shape> oDictWires = new Dictionary<string, Shape>();
+                Dictionary<string, Visio.Shape> oDictWires = new Dictionary<string, Visio.Shape>();
                 string sProjectID = "";
                 string sFileID = "";
                 string sNewPageID = "";
@@ -332,7 +333,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
 
         //SHAPE LEVEL EVENTS
-        internal static void OnShapeAdded(Visio.Shape ovShape, Visio.Selection ovSelection, ref Dictionary<string, Shape> oDictWiresComingFromRedo)
+        internal static void OnShapeAdded(Visio.Shape ovShape, Visio.Selection ovSelection, ref Dictionary<string, Visio.Shape> oDictWiresComingFromRedo)
         {
             try
             {
@@ -362,7 +363,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                                     if (bDoesRecordExist)
                                     {
                                         //this is from undoing a ctrl x...that is why it still lives in the db
-                                        WireUtilities.UpdateWireInDatabase(ovShape);
+                                        WireUtilities.UpdateWireInDatabase(ovShape, false);
                                     }
                                     else
                                     {
@@ -577,7 +578,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             }
                         case "SmartWire":
                             {
-                                WireUtilities.UpdateWireInDatabase(ovShape);
+                                WireUtilities.UpdateWireInDatabase(ovShape, false);
                                 break;
                             }
                         case "ADC End Device":
@@ -597,7 +598,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             //the pinx or piny was not the cell that changed so it was not a movement but an update in the shapes cell...
 
         }
-        internal static void TextChanged(Shape ovShape)
+        internal static void TextChanged(Visio.Shape ovShape)
         {
             try
             {
@@ -623,10 +624,10 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 MessageBox.Show("Error in TextChanged " + ex.Message, "VisAssist");
             }
         }
-        internal static void OnWireShapeCut(Shape ovShape)
+        internal static void OnWireShapeCut(Visio.Shape ovShape)
         {
             //we notice the user cut and paste a wire..we need to update in db where this wire exists as well as its grid location in the mates wire...
-            WireUtilities.UpdateWireInDatabase(ovShape);
+            WireUtilities.UpdateWireInDatabase(ovShape, false);
         }
 
         //DOCUMENT LEVEL EVENTS
@@ -651,7 +652,14 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     string sPageID = oThisDelayedEvent.sPageID;
 
                     // Visio.Cell pageCell = ovPage.PageSheet.CellsU["User.PageID"];
-
+                    try
+                    {
+                        string sPageName = ovPage.Name;
+                    }
+                    catch
+                    {
+                        return;
+                    }
                     string sCurrentPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
                     //update the sPageID in the db to be sCurrentPageID
                     //update the entry record in pages_table where sPageID and update the pageID to sCurrentPageID
@@ -685,21 +693,42 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                     Dictionary<string, Visio.Shape> oDictShapes = oThisDelayedEvent.oDictOfShapes;
                     List<Visio.Shape> lstShapes = oDictShapes.Values.ToList();
                     Visio.Document ovDocument = oThisDelayedEvent.ovDocument;
+                    Dictionary<string, List<Visio.Shape>> oDictWirePairs = new Dictionary<string, List<Visio.Shape>>();
+                    foreach (Visio.Shape shape in lstShapes)
+                    {
+                        try
+                        {
+                            string sWirePairID = shape.CellsU["User.WirePairID"].ResultStr[Visio.VisUnitCodes.visUnitsString];
+
+                            if (!oDictWirePairs.ContainsKey(sWirePairID))
+                            {
+                                oDictWirePairs[sWirePairID] = new List<Visio.Shape>();
+                            }
+
+                            oDictWirePairs[sWirePairID].Add(shape);
+                        }
+                        catch
+                        {
+                            Console.WriteLine($"Shape {shape.NameID} does not have User.WirePairID.");
+                        }
+                    }
 
 
 
                     // Loop through in steps of 2
-                    for (int ithShape = 0; ithShape < lstShapes.Count; ithShape += 2)
+                    foreach (KeyValuePair<string, List<Visio.Shape>> kvp in oDictWirePairs)
                     {
-                        // Make sure we don't go out of bounds if the count is odd
-                        if (ithShape + 1 >= lstShapes.Count)
+                        string pairId = kvp.Key;
+                        List<Visio.Shape> shapes = kvp.Value;
+
+                        if (shapes.Count != 2)
                         {
-                            Console.WriteLine($"Warning: Shape at index {ithShape} has no pair.");
-                            break;
+                            Console.WriteLine($"Warning: WirePairID '{pairId}' has {shapes.Count} shapes (expected 2).");
+                            continue;
                         }
 
-                        Visio.Shape ovShape1 = lstShapes[ithShape];
-                        Visio.Shape ovShape2 = lstShapes[ithShape + 1];
+                        Visio.Shape ovShape1 = shapes[0];
+                        Visio.Shape ovShape2 = shapes[1];
 
                         string sWirePairID = ovShape1.Cells["User.WirePairID"].get_ResultStr(0);
                         MultipleRecordUpdates mruShape1 = WireUtilities.BuildWireShapeInfo(ovShape1, sWirePairID, false);
@@ -755,9 +784,9 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 {
                     Visio.Document ovDocument = oThisDelayedEvent.ovDocument;
                     string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                    List<Visio.Page> oListPages = oThisDelayedEvent.oListPages;
+                    List<string> oListPages = oThisDelayedEvent.oListPages;
 
-                    ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID);
+                    ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID, ovDocument);
                 }
 
 
@@ -845,6 +874,8 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                 if (oThisDelayedEvent.sOperationType == "UndoCut")
                 {
+
+                    //I think this is dead code...
                     Visio.Document ovDoc = oThisDelayedEvent.ovDocument;
 
                     ovDoc.Application.Undo();
@@ -896,8 +927,8 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
             Globals.ThisAddIn.m_MatesInSelection.Clear();
             Globals.ThisAddIn.m_ovSelection = null;
             Globals.ThisAddIn.m_MatesMated.Clear();
-            Globals.ThisAddIn.m_MatesDeleted.Clear();
             Globals.ThisAddIn.m_lstWireIDs.Clear();
+            Globals.ThisAddIn.m_lstPagesinProcessofDeleting.Clear();
             int iNumberOfDelayedEvents = Globals.ThisAddIn.m_delayedEvents.Count;
 
             if (iNumberOfDelayedEvents > 0)
@@ -1394,6 +1425,38 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                 return string.Empty; // '=' not found or nothing after '='
 
             return input.Substring(index + 1);
+        }
+
+        internal static void OnBeforeDocumentSave(Visio.Document ovDoc)
+        {
+            try
+            {
+
+
+                //before the doc is saved check to see if the document has the user cells for the next wire number and the next wire color
+                //add the cells if needed and populate them with the values from the db..
+                if (ovDoc.DocumentSheet.CellExists["User.NextWireColor", 0] == 0)
+                {
+                    //Adding these two together so if I have one I have the other...
+                    ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "NextWireColor", 0);
+                    ovDoc.DocumentSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "NextWireNumber", 0);
+                }
+
+                string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                //now populate those cells based on the db..
+                DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+                string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                string sNextWireColor = FileUtilities.GetColumnInfoInFilesTableFromDatabase("NextWireColor", sFileID);
+                string sNextWireNumber = FileUtilities.GetColumnInfoInFilesTableFromDatabase("NextWireNumber", sFileID);
+
+                ovDoc.DocumentSheet.Cells["User.NextWireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sNextWireColor);
+                ovDoc.DocumentSheet.Cells["User.NextWireNumber"].Formula = VisioUtilities.Application.FormatStringForVisio(sNextWireNumber);
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in OnBeforeDocumentSave " + ex.Message, "VisAssist");
+            }
+
         }
     }
 

@@ -1090,20 +1090,29 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void SyncDBWithFile(Visio.Document ovDocument, string sVisAssistFolderPath)
         {
-            Globals.ThisAddIn.m_SyncedDB = true;
-            //make sure the db is pointing towards correct location 
-            DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
-
-            CheckPageExistence(ovDocument, sVisAssistFolderPath);
-
-            CheckShapeExistence(ovDocument, sVisAssistFolderPath);
+            try
+            {
 
 
-            //add a delayd event to turn off m_SyncedDb
-            DelayedEvent oDelayedEvent = new DelayedEvent();
-            oDelayedEvent.ovDocument = ovDocument;
-            oDelayedEvent.sOperationType = "TurnOffSyncDBBool";
-            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                Globals.ThisAddIn.m_SyncedDB = true;
+                //make sure the db is pointing towards correct location 
+                DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+
+                CheckPageExistence(ovDocument, sVisAssistFolderPath);
+
+                CheckShapeExistence(ovDocument, sVisAssistFolderPath);
+
+
+                //add a delayd event to turn off m_SyncedDb
+                DelayedEvent oDelayedEvent = new DelayedEvent();
+                oDelayedEvent.ovDocument = ovDocument;
+                oDelayedEvent.sOperationType = "TurnOffSyncDBBool";
+                Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in SyncDBWithFile " + ex.Message, "VisAssist");
+            }
 
         }
 
@@ -1261,48 +1270,56 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static List<string> CheckShapeExistenceInVisio(string sTableName, Visio.Document ovDocument, ref List<string> lstShapes)
         {
-            ShapesUtilities.GetShapesInTable(sTableName, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
-
             List<string> lstShapesToRemove = new List<string>();
-
-            string sPK = GetPrimaryKey(sTableName);
-            foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
+            try
             {
-                string sShapeID = ru.sId;
-                if (lstShapes.Contains(sShapeID))
+
+                ShapesUtilities.GetShapesInTable(sTableName, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
+
+                string sPK = GetPrimaryKey(sTableName);
+                foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
                 {
-                    //the shape exists in visio and in the db...
+                    string sShapeID = ru.sId;
+                    if (lstShapes.Contains(sShapeID))
+                    {
+                        //the shape exists in visio and in the db...
+                    }
+                    else
+                    {
+                        //the shape exists in the db and not in visio, we want to delete it from the db
+                        lstShapesToRemove.Add(sShapeID);
+                        //get the pagename from the pageid...
+
+                    }
                 }
-                else
+                if (lstShapesToRemove.Count > 0)
                 {
-                    //the shape exists in the db and not in visio, we want to delete it from the db
-                    lstShapesToRemove.Add(sShapeID);
-                    //get the pagename from the pageid...
+                    //we have records in our pages table that don't actually exist-go delete them from db...
+                    //build a delete sql for each record...
+                    List<RecordUpdate> ruRecords = new List<RecordUpdate>();
+                    foreach (string sShapeID in lstShapesToRemove)
+                    {
+                        RecordUpdate ru = new RecordUpdate();
+                        ru.sId = sShapeID;
+                        ru.sPrimaryKeyColumn = sPK;
+                        ru.odictColumnValues = null;
+
+                        ruRecords.Add(ru);
+                    }
+
+                    MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
+                    BuildDeleteSqlForMultipleRecords(sTableName, mruRecordsToDelete);
+
+
+                    //return the list of shapes removed using the shape name and page name...
 
                 }
             }
-            if (lstShapesToRemove.Count > 0)
+            catch(Exception ex)
             {
-                //we have records in our pages table that don't actually exist-go delete them from db...
-                //build a delete sql for each record...
-                List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                foreach (string sShapeID in lstShapesToRemove)
-                {
-                    RecordUpdate ru = new RecordUpdate();
-                    ru.sId = sShapeID;
-                    ru.sPrimaryKeyColumn = sPK;
-                    ru.odictColumnValues = null;
-
-                    ruRecords.Add(ru);
-                }
-
-                MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
-                BuildDeleteSqlForMultipleRecords(sTableName, mruRecordsToDelete);
-
-
-                //return the list of shapes removed using the shape name and page name...
-
+                MessageBox.Show("Error in CheckShapeExistenceInVisio " + ex.Message, "VisAssist");
             }
+
             return lstShapesToRemove;
         }
 
@@ -1310,99 +1327,107 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> lstShapes, ref Dictionary<string, Shape> oDictPrimaryWiresNotInDB, ref Dictionary<string, Visio.Shape> oDictSecondaryWiresNotInDB)
         {
-            bool bDoesRecordExist = DoesRecordExist(sTableName, sShapeID);
-            string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-            bool bDontAddTolstShapes = false;
-
-            if (!bDoesRecordExist)
-            {
-                //the record doesn't exist for this visio shape-freak accident...
-                switch (sClass)
-                {
-                    case "TerminalBlock":
-                        {
-                            bDontAddTolstShapes = false;
-                            TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
-                            break;
-                        }
-                    case "ADC End Device": //this class has changed to End Device...
-                        {
-                            bDontAddTolstShapes = false;
-                            EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
-                            break;
-                        }
-                    case "SmartWire":
-                        {
-                            //we have a wire that is not in our database, which means we are missing the primary and secondary wire...
-                            //gather a list of all the secondarya and primaries, we will be deleting the secondaries and producing new ones and adding them to the db...
-                            string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
-                            bDontAddTolstShapes = true;
-                            switch (sWireRole)
-                            {
-                                case "P":
-                                    {
-                                        oDictPrimaryWiresNotInDB.Add(sShapeID, ovShape);
-                                        break;
-                                    }
-                                case "S":
-                                    {
-                                        oDictSecondaryWiresNotInDB.Add(sShapeID, ovShape);
-                                        ////delete the secondary wire..
-                                        //ovShape.Application.EventsEnabled = 0;
-                                        //ovShape.Delete();
-                                        //ovShape.Application.EventsEnabled = -1;
-
-                                        break;
-                                    }
-                            }
-                            break;
-                        }
-                }
-
-            }
-            else
+            try
             {
 
-                //the record exists, but we want to make sure that the information in the visio shape matches the db...
-                MultipleRecordUpdates mruBaseFileRecord = new MultipleRecordUpdates();
-                switch (sClass)
+
+                bool bDoesRecordExist = DoesRecordExist(sTableName, sShapeID);
+                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                bool bDontAddTolstShapes = false;
+
+                if (!bDoesRecordExist)
                 {
-                    case "TerminalBlock":
-                        {
-                            mruBaseFileRecord = TerminalBlockUtilities.BuildTerminalBlockInfo(ovShape);
-                            break;
-                        }
-                    case "ADC End Device":
-                        {
-                            mruBaseFileRecord = EndDeviceUtilities.BuildWiringEndDeviceInfo(ovShape);
-                            break;
-                        }
-                    case "SmartWire":
-                        {
-                            mruBaseFileRecord = WireUtilities.BuildWireShapeInfo(ovShape, "", false);
-
-                            break;
-                        }
-                }
-
-
-                //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
-                MultipleRecordUpdates mruDBRecord = GetRecordInformation(sTableName, sShapeID);
-                if (mruDBRecord.ruRecords != null)
-                {
-                    MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
-                    if (mruRecordToUpdate.ruRecords.Count > 0)
+                    //the record doesn't exist for this visio shape-freak accident...
+                    switch (sClass)
                     {
-                        BuildUpdateSqlForMultipleRecords(sTableName, mruBaseFileRecord);
+                        case "TerminalBlock":
+                            {
+                                bDontAddTolstShapes = false;
+                                TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
+                                break;
+                            }
+                        case "ADC End Device": //this class has changed to End Device...
+                            {
+                                bDontAddTolstShapes = false;
+                                EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
+                                break;
+                            }
+                        case "SmartWire":
+                            {
+                                //we have a wire that is not in our database, which means we are missing the primary and secondary wire...
+                                //gather a list of all the secondarya and primaries, we will be deleting the secondaries and producing new ones and adding them to the db...
+                                string sWireRole = ovShape.Cells["User.WireRole"].get_ResultStr(0);
+                                bDontAddTolstShapes = true;
+                                switch (sWireRole)
+                                {
+                                    case "P":
+                                        {
+                                            oDictPrimaryWiresNotInDB.Add(sShapeID, ovShape);
+                                            break;
+                                        }
+                                    case "S":
+                                        {
+                                            oDictSecondaryWiresNotInDB.Add(sShapeID, ovShape);
+                                            ////delete the secondary wire..
+                                            //ovShape.Application.EventsEnabled = 0;
+                                            //ovShape.Delete();
+                                            //ovShape.Application.EventsEnabled = -1;
+
+                                            break;
+                                        }
+                                }
+                                break;
+                            }
+                    }
+
+                }
+                else
+                {
+
+                    //the record exists, but we want to make sure that the information in the visio shape matches the db...
+                    MultipleRecordUpdates mruBaseFileRecord = new MultipleRecordUpdates();
+                    switch (sClass)
+                    {
+                        case "TerminalBlock":
+                            {
+                                mruBaseFileRecord = TerminalBlockUtilities.BuildTerminalBlockInfo(ovShape);
+                                break;
+                            }
+                        case "ADC End Device":
+                            {
+                                mruBaseFileRecord = EndDeviceUtilities.BuildWiringEndDeviceInfo(ovShape);
+                                break;
+                            }
+                        case "SmartWire":
+                            {
+                                mruBaseFileRecord = WireUtilities.BuildWireShapeInfo(ovShape, "", false);
+
+                                break;
+                            }
+                    }
+
+
+                    //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
+                    MultipleRecordUpdates mruDBRecord = GetRecordInformation(sTableName, sShapeID);
+                    if (mruDBRecord.ruRecords != null)
+                    {
+                        MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
+                        if (mruRecordToUpdate.ruRecords.Count > 0)
+                        {
+                            BuildUpdateSqlForMultipleRecords(sTableName, mruBaseFileRecord);
+                        }
                     }
                 }
-            }
 
-            if (!bDontAddTolstShapes)
+                if (!bDontAddTolstShapes)
+                {
+                    lstShapes.Add(sShapeID);
+                }
+            }
+            catch(Exception ex)
             {
-                lstShapes.Add(sShapeID);
+                MessageBox.Show("Error in CheckShapeExistenceInDB " + ex.Message, "VisAssist");
             }
-
         }
 
         internal static void CheckPageExistence(Visio.Document ovDocument, string sVisAssistFolderPath)
@@ -1444,69 +1469,87 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static void CheckPageExistenceInVisio(Document ovDocument, ref List<string> lstPages)
         {
-            //This checks to see if we need to delete any records from the DB
-            //now check if any records exist in db that don't in lstPages then delete them from the db...
-            PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
-            List<string> lstPagesToRemove = new List<string>();
-            foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
+            try
             {
-                string sPageID = ru.sId;
-                if (lstPages.Contains(sPageID))
+
+
+                //This checks to see if we need to delete any records from the DB
+                //now check if any records exist in db that don't in lstPages then delete them from the db...
+                PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
+                List<string> lstPagesToRemove = new List<string>();
+                foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
                 {
-                    //the page exists in visio and in the db...
+                    string sPageID = ru.sId;
+                    if (lstPages.Contains(sPageID))
+                    {
+                        //the page exists in visio and in the db...
+                    }
+                    else
+                    {
+                        //the page exists in the db and not in visio, we want to delete it from the db
+                        lstPagesToRemove.Add(sPageID);
+                    }
                 }
-                else
+
+                if (lstPagesToRemove.Count > 0)
                 {
-                    //the page exists in the db and not in visio, we want to delete it from the db
-                    lstPagesToRemove.Add(sPageID);
+                    //we have records in our pages table that don't actually exist-go delete them from db...
+                    //build a delete sql for each record...
+                    List<RecordUpdate> ruRecords = new List<RecordUpdate>();
+                    foreach (string sPageID in lstPagesToRemove)
+                    {
+                        RecordUpdate ru = new RecordUpdate();
+                        ru.sId = sPageID;
+                        ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
+                        ru.odictColumnValues = null;
+
+                        ruRecords.Add(ru);
+                    }
+
+                    MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
+                    BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
                 }
             }
-
-            if (lstPagesToRemove.Count > 0)
+            catch(Exception ex)
             {
-                //we have records in our pages table that don't actually exist-go delete them from db...
-                //build a delete sql for each record...
-                List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                foreach (string sPageID in lstPagesToRemove)
-                {
-                    RecordUpdate ru = new RecordUpdate();
-                    ru.sId = sPageID;
-                    ru.sPrimaryKeyColumn = SqlTables.PagesTable.sPagesTablePK;
-                    ru.odictColumnValues = null;
-
-                    ruRecords.Add(ru);
-                }
-
-                MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
-                BuildDeleteSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruRecordsToDelete);
+                MessageBox.Show("Error in CheckPagegExistenceInVisio " + ex.Message, "VisAssist");
             }
         }
 
         internal static void CheckPageExistenceInDB(Visio.Page ovPage, string sProjectID, string sPageID)
         {
-            //check if that record exists in the db
-            bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
-            if (!bDoesRecordExist)
+            try
             {
-                //this is a freak accident add the record to the db...
-                PageUtilities.AddPageToDatabase(ovPage, sProjectID, "Visio");
 
-            }
-            else
-            {
-                //the record exists, we want to make sure that the information in the db matches the information in the visio file
-                MultipleRecordUpdates mruBaseFileRecord = PageUtilities.BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
-                //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
-                MultipleRecordUpdates mruDBRecord = GetRecordInformation(SqlTables.PagesTable.sPagesTable, sPageID);
-                if (mruDBRecord.ruRecords != null)
+
+                //check if that record exists in the db
+                bool bDoesRecordExist = DoesRecordExist(DatabaseUtilities.SqlTables.PagesTable.sPagesTable, sPageID);
+                if (!bDoesRecordExist)
                 {
-                    MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
-                    if (mruRecordToUpdate.ruRecords.Count > 0)
-                    {
-                        BuildUpdateSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruBaseFileRecord);
-                    }
-                }
+                    //this is a freak accident add the record to the db...
+                    PageUtilities.AddPageToDatabase(ovPage, sProjectID, "Visio");
 
+                }
+                else
+                {
+                    //the record exists, we want to make sure that the information in the db matches the information in the visio file
+                    MultipleRecordUpdates mruBaseFileRecord = PageUtilities.BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
+                    //get the records information in a multioplerecordupdate and then compare that to mruBaseFile...
+                    MultipleRecordUpdates mruDBRecord = GetRecordInformation(SqlTables.PagesTable.sPagesTable, sPageID);
+                    if (mruDBRecord.ruRecords != null)
+                    {
+                        MultipleRecordUpdates mruRecordToUpdate = CompareDataForMultipleRecords(mruBaseFileRecord, mruDBRecord);
+                        if (mruRecordToUpdate.ruRecords.Count > 0)
+                        {
+                            BuildUpdateSqlForMultipleRecords(SqlTables.PagesTable.sPagesTable, mruBaseFileRecord);
+                        }
+                    }
+
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in CheckPageExistenceInDB " + ex.Message, "VisAssist");
             }
 
         }
@@ -1542,103 +1585,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
-        internal static List<string> CheckShapeExistenceInVisioOnDeletion(string sTableName, Document ovDocument, ref List<string> lstShapes)
-        {
-            ShapesUtilities.GetShapesInTable(sTableName, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
+       
 
-            List<string> lstShapesToRemove = new List<string>();
-
-            string sPK = GetPrimaryKey(sTableName);
-            foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
-            {
-                string sShapeID = ru.sId;
-                if (lstShapes.Contains(sShapeID))
-                {
-                    //the shape exists in visio and in the db...
-                }
-                else
-                {
-                    //the shape exists in the db and not in visio, we want to delete it from the db
-                    lstShapesToRemove.Add(sShapeID);
-                    //get the pagename from the pageid...
-                    string sPageID = ru.odictColumnValues["PageID"];
-                    string sPageName = PageUtilities.GetColumnInfoInPagesTableFromDatabase("PageName", sPageID);
-                    string sKey = ru.odictColumnValues["WireName"] + "|" + sPageName;
-                    Globals.ThisAddIn.m_MatesDeleted.Add(sKey);
-                }
-            }
-            if (lstShapesToRemove.Count > 0)
-            {
-                //we have records in our pages table that don't actually exist-go delete them from db...
-                //build a delete sql for each record...
-                List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                foreach (string sShapeID in lstShapesToRemove)
-                {
-                    RecordUpdate ru = new RecordUpdate();
-                    ru.sId = sShapeID;
-                    ru.sPrimaryKeyColumn = sPK;
-                    ru.odictColumnValues = null;
-
-                    ruRecords.Add(ru);
-                }
-
-                MultipleRecordUpdates mruRecordsToDelete = new MultipleRecordUpdates(ruRecords);
-                BuildDeleteSqlForMultipleRecords(sTableName, mruRecordsToDelete);
-
-
-                //return the list of shapes removed using the shape name and page name...
-
-            }
-            return lstShapesToRemove;
-
-        }
-
-        internal static bool CheckShapeExistenceInVisioForRedoing(string sTableName, Visio.Document ovDocument)
-        {
-            ShapesUtilities.GetShapesInTable(sTableName, ovDocument); //this populates ShapeUtilites.m_mruRecordsBase  --not sure if i should create a new recordbase for each table/shapes (terminal blocks, wires..)
-
-            bool bRedoTwice = false;
-            List<string> lstWires = new List<string>();
-            string sPK = GetPrimaryKey(sTableName);
-
-            //populate all the wirs that exist in the database 
-            foreach (Visio.Page ovPage in ovDocument.Pages)
-            {
-                if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
-                {
-                    foreach (Visio.Shape ovShape in ovPage.Shapes)
-                    {
-                        if (ovShape.CellExists["User.ShapeID", 0] == -1)
-                        {
-                            if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
-                            {
-                                lstWires.Add(ovShape.Cells["User.ShapeID"].get_ResultStr(0));
-                            }
-                        }
-                    }
-                }
-            }
-            foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
-            {
-                string sShapeID = ru.sId;
-                if (lstWires.Contains(sShapeID))
-                {
-                    //the shape exists in visio and in the db...
-                }
-                else
-                {
-                    //the shape exists in the db and not in visio, we want to delete it from the db
-                    bRedoTwice = true;
-                    break;
-                    
-
-                }
-            }
-
-            return bRedoTwice;
-
-
-        }
     }
 
 

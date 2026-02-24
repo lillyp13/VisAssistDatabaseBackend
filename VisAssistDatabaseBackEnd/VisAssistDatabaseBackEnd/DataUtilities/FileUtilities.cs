@@ -917,9 +917,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
                 ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = VisioUtilities.Application.FormatStringForVisio(sProjectID);
 
+
+                Dictionary<string, string> oDictWirePairIDs = new Dictionary<string, string>();
                 foreach (Visio.Page ovPage in ovDoc.Pages)
                 {
-                    UpdatePageAndShapeIDs(ovPage, sProjectID, sNewFileID);
+                    UpdatePageAndShapeIDs(ovPage, sProjectID, sNewFileID, ref oDictWirePairIDs);
                 }
 
 
@@ -934,7 +936,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void UpdatePageAndShapeIDs(Visio.Page ovPage, string sProjectID, string sNewFileID)
+        internal static void UpdatePageAndShapeIDs(Visio.Page ovPage, string sProjectID, string sNewFileID, ref  Dictionary<string, string> oDictWirePairIDs)
         {
             //Page Level
             try
@@ -956,6 +958,26 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         string sNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sNewFileID, sNewPageID, ovShape.Name, DateTime.Now);
 
                         ovShape.Cells["User.ShapeID"].FormulaForceU = VisioUtilities.Application.FormatStringForVisio(sNewShapeID);
+
+                        //i also need to update the WirePairID...and then update it for its mate too...
+                        string sCurrentWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
+                        string sNewWirePairID = "";
+                        //check to see if we have already update the wirepairid for this mate/pair...
+                        if(oDictWirePairIDs.ContainsKey(sCurrentWirePairID))
+                        {
+                            sNewWirePairID = oDictWirePairIDs[sCurrentWirePairID];
+
+                        }
+                        else
+                        {
+                            //we haven't update this mate/pair yet
+                            sNewWirePairID = WireUtilities.GenerateNewWirePairID(sProjectID, sNewFileID, sNewPageID, sNewShapeID, DateTime.Now);
+                            oDictWirePairIDs.Add(sCurrentWirePairID, sNewWirePairID);
+                        }
+                        
+                        ovShape.Cells["User.WirePairID"].FormulaForceU = VisioUtilities.Application.FormatStringForVisio(sNewWirePairID);
+
+
                     }
                 }
             }

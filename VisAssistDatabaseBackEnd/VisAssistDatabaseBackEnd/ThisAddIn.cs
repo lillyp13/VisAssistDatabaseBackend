@@ -36,7 +36,6 @@ namespace VisAssistDatabaseBackEnd
         public List<string> m_pendingPageIds = new List<string>();
         public Dictionary<string, MateSelection> m_MatesInSelection = new Dictionary<string, MateSelection>();
         public List<string> m_MatesMated = new List<string>();
-        public List<string> m_MatesDeleted = new List<string>();
         public bool m_bIsPageDuplicating = false;
         public bool m_SyncedDB = false;
         public bool m_bAskWhereToCutTo = true;
@@ -44,6 +43,7 @@ namespace VisAssistDatabaseBackEnd
         public string m_sLastUndoScope = "";
         public List<string> m_lstWireIDs = new List<string>();
         public List<string> m_lstWirePairIDs = new List<string>();
+        public List<string> m_lstPagesinProcessofDeleting = new List<string>();
         public bool m_bSuppressEvents = false;
         //public bool m_bIsCuttingShape = false;
         public bool m_bIsCuttingShape { get; set; }
@@ -270,15 +270,20 @@ namespace VisAssistDatabaseBackEnd
                 //    string.Empty,
                 //    string.Empty));
 
-                //// Document Deleted (Before Close)
-                //m_appEvents.Add(docEventList.AddAdvise(
+                // before document close
+                //m_VisioEvents.Add(docEventList.AddAdvise(
                 //     (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtDoc),
                 //    m_appSink,
                 //    string.Empty,
                 //    string.Empty));
 
 
-
+                //before document save
+                m_VisioEvents.Add(docEventList.AddAdvise(
+                     (short)((short)Visio.VisEventCodes.visEvtCodeBefDocSave),
+                    m_appSink,
+                    string.Empty,
+                    string.Empty));
 
                 // Page Deleted
                 m_VisioEvents.Add(docEventList.AddAdvise(
@@ -374,18 +379,6 @@ namespace VisAssistDatabaseBackEnd
 
         }
 
-        private void Application_BeforeCommand(int CommandID, out bool CancelDefault)
-        {
-            CancelDefault = false;
-
-            // Block Cut
-            const int CutCommandID = 1283;
-            if (CommandID == CutCommandID)
-            {
-                CancelDefault = true;
-                System.Windows.Forms.MessageBox.Show("Cut is disabled!");
-            }
-        }
 
 
 
@@ -413,115 +406,116 @@ namespace VisAssistDatabaseBackEnd
                     {
                         if (!m_bSuppressEvents)
                         {
-
-
-                            Visio.Shape ovShape = (Visio.Shape)subject;
-                            if (ovShape != null)
+                            if (!m_bIsPageDuplicating)
                             {
-                                if (ovShape.ID != 0)
+                                Visio.Shape ovShape = (Visio.Shape)subject;
+                                if (ovShape != null)
                                 {
-                                    //if the shape id is 0 that means we deleted it...
-                                    string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
-                                    Visio.Document ovDocument = ovShape.Document;
-                                    string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                                    string sFileID = ovDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-                                    string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-
-                                    if (m_ovSelection == null)
+                                    if (ovShape.ID != 0)
                                     {
-                                        m_ovSelection = Application.ActiveWindow.Selection;
-                                    }
+                                        //if the shape id is 0 that means we deleted it...
+                                        string sKey = ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                                        Visio.Document ovDocument = ovShape.Document;
+                                        string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
+                                        string sFileID = ovDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                                        string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
-
-
-                                    if (!m_pendingShapeIds.Contains(sKey))
-                                    {
-                                        //check if we ahve already done the action of mating the shape
-                                        if (!m_MatesMated.Contains(sKey))
+                                        if (m_ovSelection == null)
                                         {
-
-
-                                            //check to see if the mate was in our selection (we need to delete it becuasae we have alrady dropped a new mate for the shape..)
-                                            if (m_MatesInSelection.ContainsKey(sKey))
-                                            {
-                                                //we need to update their ids...
-                                                MateSelection oMateSelection = m_MatesInSelection[sKey];
-                                                ovShape.Application.EventsEnabled = 0;
-                                                string sOtherNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sFileID, sPageID, ovShape.Name, DateTime.Now);
-                                                ovShape.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sOtherNewShapeID);
-                                                ovShape.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(oMateSelection.sWirePairID);
-                                                ovShape.Application.EventsEnabled = -1;
-                                                break;
-                                            }
-                                            //we only care if we are cutting a wire shape...
-
-                                            if (!m_bIsCuttingShape)
-                                            {
-                                                if (!m_bIsPageDuplicating)
-                                                {
-                                                    //check to see if mate is in this selection and therefore should add to m_pendingShapeIds because we dont' want to drop another shape for it...
-                                                    Visio.Shape ovMateShape = null;
-                                                    string sMateKey = WireUtilities.IsMateInSelection(m_ovSelection, ovShape, out ovMateShape);
-                                                    if (sMateKey != "")
-                                                    {
-                                                        //the mate is in the selection add it to m_pendingshapeids so we don't add another wire for it
-                                                        MateSelection oMateSelection = new MateSelection();
-                                                        oMateSelection.ovMateShape = ovMateShape;
-                                                        oMateSelection.sWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
-                                                        m_MatesInSelection.Add(sKey, oMateSelection);
-                                                    }
-
-
-                                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, m_ovSelection, ref oDictWiresComingFromRedo);
-                                                    if (oDictWiresComingFromRedo.Count > 0)
-                                                    {
-                                                        //will need a delayed event to add these wires back to the db
-                                                        bool bDelayedEventAlreadyExists = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "AddWiresToDB");
-                                                        if (!bDelayedEventAlreadyExists)
-                                                        {
-                                                            DelayedEvent oNewDelayedEvent = new DelayedEvent();
-                                                            oNewDelayedEvent.sOperationType = "AddWiresToDB";
-                                                            oNewDelayedEvent.ovDocument = ovShape.Document;
-                                                            oNewDelayedEvent.oDictOfShapes = oDictWiresComingFromRedo;
-                                                            Globals.ThisAddIn.m_delayedEvents.Add(oNewDelayedEvent);
-                                                        }
-
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-
-                                                //i think this is still live code, i beleive it gets called when we paste?
-                                                if (ovShape.CellExists["User.Class", 0] == -1)
-                                                {
-                                                    string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                                                    if (sClass == "SmartWire")
-                                                    {
-                                                        //add a delayed event that will switch the duplicate bool to be false..
-                                                        DelayedEvent oDelayedEvent = new DelayedEvent();
-                                                        oDelayedEvent.ovDocument = ovShape.Document;
-                                                        oDelayedEvent.sOperationType = "TurnOfCutShapesBool";
-                                                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-
-                                                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnWireShapeCut(ovShape);
-
-                                                    }
-                                                    else
-                                                    {
-                                                        //we are cutting/pasting a non wire shape, add it normally..
-
-                                                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, m_ovSelection, ref oDictWiresComingFromRedo);
-
-                                                    }
-                                                }
-
-
-                                            }
+                                            m_ovSelection = Application.ActiveWindow.Selection;
                                         }
 
 
-                                        m_pendingShapeIds.Add(sKey);
+
+                                        if (!m_pendingShapeIds.Contains(sKey))
+                                        {
+                                            //check if we ahve already done the action of mating the shape
+                                            if (!m_MatesMated.Contains(sKey))
+                                            {
+
+
+                                                //check to see if the mate was in our selection (we need to delete it becuasae we have alrady dropped a new mate for the shape..)
+                                                if (m_MatesInSelection.ContainsKey(sKey))
+                                                {
+                                                    //we need to update their ids...
+                                                    MateSelection oMateSelection = m_MatesInSelection[sKey];
+                                                    ovShape.Application.EventsEnabled = 0;
+                                                    string sOtherNewShapeID = ShapesUtilities.GenerateShapeID(sProjectID, sFileID, sPageID, ovShape.Name, DateTime.Now);
+                                                    ovShape.Cells["User.ShapeID"].Formula = VisioUtilities.Application.FormatStringForVisio(sOtherNewShapeID);
+                                                    ovShape.Cells["User.WirePairID"].Formula = VisioUtilities.Application.FormatStringForVisio(oMateSelection.sWirePairID);
+                                                    ovShape.Application.EventsEnabled = -1;
+                                                    break;
+                                                }
+                                                //we only care if we are cutting a wire shape...
+
+                                                if (!m_bIsCuttingShape)
+                                                {
+                                                    if (!m_bIsPageDuplicating)
+                                                    {
+                                                        //check to see if mate is in this selection and therefore should add to m_pendingShapeIds because we dont' want to drop another shape for it...
+                                                        Visio.Shape ovMateShape = null;
+                                                        string sMateKey = WireUtilities.IsMateInSelection(m_ovSelection, ovShape, out ovMateShape);
+                                                        if (sMateKey != "")
+                                                        {
+                                                            //the mate is in the selection add it to m_pendingshapeids so we don't add another wire for it
+                                                            MateSelection oMateSelection = new MateSelection();
+                                                            oMateSelection.ovMateShape = ovMateShape;
+                                                            oMateSelection.sWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
+                                                            m_MatesInSelection.Add(sKey, oMateSelection);
+                                                        }
+
+
+                                                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, m_ovSelection, ref oDictWiresComingFromRedo);
+                                                        if (oDictWiresComingFromRedo.Count > 0)
+                                                        {
+                                                            //will need a delayed event to add these wires back to the db
+                                                            bool bDelayedEventAlreadyExists = Globals.ThisAddIn.m_delayedEvents.Any(e => e.sOperationType == "AddWiresToDB");
+                                                            if (!bDelayedEventAlreadyExists)
+                                                            {
+                                                                DelayedEvent oNewDelayedEvent = new DelayedEvent();
+                                                                oNewDelayedEvent.sOperationType = "AddWiresToDB";
+                                                                oNewDelayedEvent.ovDocument = ovShape.Document;
+                                                                oNewDelayedEvent.oDictOfShapes = oDictWiresComingFromRedo;
+                                                                Globals.ThisAddIn.m_delayedEvents.Add(oNewDelayedEvent);
+                                                            }
+
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+
+                                                    //i think this is still live code, i beleive it gets called when we paste?
+                                                    if (ovShape.CellExists["User.Class", 0] == -1)
+                                                    {
+                                                        string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                                                        if (sClass == "SmartWire")
+                                                        {
+                                                            //add a delayed event that will switch the duplicate bool to be false..
+                                                            DelayedEvent oDelayedEvent = new DelayedEvent();
+                                                            oDelayedEvent.ovDocument = ovShape.Document;
+                                                            oDelayedEvent.sOperationType = "TurnOfCutShapesBool";
+                                                            Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
+                                                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnWireShapeCut(ovShape);
+
+                                                        }
+                                                        else
+                                                        {
+                                                            //we are cutting/pasting a non wire shape, add it normally..
+
+                                                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnShapeAdded(ovShape, m_ovSelection, ref oDictWiresComingFromRedo);
+
+                                                        }
+                                                    }
+
+
+                                                }
+                                            }
+
+
+                                            m_pendingShapeIds.Add(sKey);
+                                        }
                                     }
                                 }
                             }
@@ -702,7 +696,7 @@ namespace VisAssistDatabaseBackEnd
                             //check if the current scop eis 1023 and if it is stop this because we are doing a delete shape not cut.. (may want to just check if the scope is 1020 i think that is a cut...
                             if (Application.CurrentScope != 1023)
                             {
-                                
+
 
 
 
@@ -770,6 +764,13 @@ namespace VisAssistDatabaseBackEnd
                         else
                         {
                             Visio.Page ovPage = ((Visio.Page)subject);
+                            string sPageToDeleteFromUndo = ovPage.Name;
+                            if(!m_lstPagesinProcessofDeleting.Contains(sPageToDeleteFromUndo))
+                            {
+                                m_lstPagesinProcessofDeleting.Add(sPageToDeleteFromUndo);
+                            }
+                            
+
                             Visio.Document ovDocument = ovPage.Document;
                             //this should be a delayed event because i want it to happen after visio gets rid of the pages in the undo...
                             DelayedEvent oDelayedEvent = new DelayedEvent();
@@ -787,60 +788,163 @@ namespace VisAssistDatabaseBackEnd
                     {
                         Visio.Page ovPage = (Visio.Page)subject;
 
-                        string sKey = ovPage.ID + "|" + ovPage.Name;
-                        if (!m_pendingPageIds.Contains(sKey))
+                        try
                         {
-                            //if the page has shapes on it already this is a duplicate..
-                            if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                            string sPageName = ovPage.Name;
+                            if(m_lstPagesinProcessofDeleting.Contains(sPageName))
                             {
-                                m_bIsPageDuplicating = true; //we are duplicating a page...
+                                //this page is actually in the process of getting deleted from an undo/redo
+                                break;
+                            }
+                        }
+                        catch
+                        {
+                            //page doesn't actually exist...
+                            break;
+                        }
 
 
-                            }
-                            else
+                        Visio.Application ovApp = ovPage.Application;
+                        //if the current scope is 2383 this is duplicate...
+                        if (Application.CurrentScope != 2383)
+                        {
+
+
+
+                            string sKey = ovPage.ID + "|" + ovPage.Name;
+                            if (!m_pendingPageIds.Contains(sKey))
                             {
-                                //we aren't duplicating a page
-                                m_bIsPageDuplicating = false;
-                            }
-                            //if this is a duplicate then we are going to set the pagesheets formula first...
-                            // ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio("LillY");
-                            if (m_bIsPageDuplicating)
-                            {
-                                if (!Application.IsUndoingOrRedoing)
+                                //if the page has shapes on it already this is a duplicate..
+                                if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                                 {
-                                    //we are duplicating a page...
-                                    Dictionary<string, Visio.Page> oDictPagesToDuplicate = new Dictionary<string, Visio.Page>();
-                                    oDictPagesToDuplicate.Add(ovPage.Name, ovPage);
-                                    int iUndoScope = ovPage.Application.BeginUndoScope("Duplicate");
-                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDuplicated(oDictPagesToDuplicate);
-                                    ovPage.Application.EndUndoScope(iUndoScope, true);
+                                    m_bIsPageDuplicating = true; //we are duplicating a page...
+
+
                                 }
                                 else
                                 {
-                                    //we are doing a redo/undo..
-                                    //need to update the pageids...
-
-                                    VisioUtilities.Application.OnPageAdded(ovPage);
-                                    //this could be a redo of pagduplicated...
-                                    //add a delayed event that will switch the duplicate bool to be false..
-                                    DelayedEvent oDelayedEvent = new DelayedEvent();
-                                    oDelayedEvent.ovDocument = ovPage.Document;
-                                    oDelayedEvent.sOperationType = "TurnOffDuplicateBool";
-                                    Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
-
-
+                                    //we aren't duplicating a page
+                                    m_bIsPageDuplicating = false;
                                 }
+                                //if this is a duplicate then we are going to set the pagesheets formula first...
+                                // ovPage.PageSheet.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio("LillY");
+                                if (m_bIsPageDuplicating)
+                                {
+
+                                    //THIS SHOULD BE DEAD CODE BECAUSE WE CHECK IF WE ARE DUPLICATING A PAGE EARLIER (THE CODE)...
+                                    if (!Application.IsUndoingOrRedoing)
+                                    {
+                                        //we are duplicating a page...
+                                        Dictionary<string, Visio.Page> oDictPagesToDuplicate = new Dictionary<string, Visio.Page>();
+                                        oDictPagesToDuplicate.Add(ovPage.Name, ovPage);
+                                        //int iUndoScope = ovPage.Application.BeginUndoScope("Duplicate");
+                                        VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDuplicated(oDictPagesToDuplicate);
+                                        //ovPage.Application.EndUndoScope(iUndoScope, true);
+                                    }
+                                    else
+                                    {
+                                        //we are doing a redo/undo..
+                                        //need to update the pageids...
+
+                                        VisioUtilities.Application.OnPageAdded(ovPage);
+                                        //this could be a redo of pagduplicated...
+                                        //add a delayed event that will switch the duplicate bool to be false..
+                                        DelayedEvent oDelayedEvent = new DelayedEvent();
+                                        oDelayedEvent.ovDocument = ovPage.Document;
+                                        oDelayedEvent.sOperationType = "TurnOffDuplicateBool";
+                                        Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+
+
+                                    }
+                                }
+                                else
+                                {
+                                    //we are just adding a page
+                                    VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(ovPage);
+                                }
+
+                                m_pendingPageIds.Add(sKey);
+
+                            }
+
+                       }
+                        else
+                        {
+
+                            m_bIsPageDuplicating = true;
+                            //we need to turn off events and delete this page and get the page that the user wants to duplicate....
+                           
+
+                            //need to see if there are wires on the page where their mates live on a different page, if this is true we want to call whatpagestoduplicate otherwise this is just duplicating one page...
+                            Dictionary<string, Visio.Page> oDictPagesToDuplicate = WireUtilities.DoesPageContainWireMates(ovPage);
+                            if(oDictPagesToDuplicate.Count > 0)
+                            {
+                               // int iUndoScope = ovApp.BeginUndoScope("Duplicate Pages");
+                                string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                                //this is the page id that the user wanted to copy...
+                                int iUndoScope = ovApp.BeginUndoScope("Duplicate Pages");
+                                ovPage.Application.EventsEnabled = 0;
+                                ovPage.Delete(1);
+                                ovPage.Application.EventsEnabled = -1;
+
+                                //we want to get the new page to duplicate based on the page id...
+                                //ok now we want to call our duplicate...
+                                Visio.Page ovPageToDuplicate = null;
+                                foreach (Visio.Page ovPossiblePage in ovApp.ActiveDocument.Pages)
+                                {
+                                    if (ovPossiblePage.PageSheet.CellExists["User.PageID", 0] == -1)
+                                    {
+                                        if (ovPossiblePage.PageSheet.Cells["User.PageID"].get_ResultStr(0) == sPageID)
+                                        {
+                                            ovPageToDuplicate = ovPossiblePage;
+                                        }
+                                    }
+                                }
+                                if(!oDictPagesToDuplicate.ContainsKey(ovPageToDuplicate.Name))
+                                {
+                                    oDictPagesToDuplicate.Add(ovPageToDuplicate.Name, ovPageToDuplicate);
+                                }
+                               
+
+                                PageUtilities.DuplicateMultiplePages(oDictPagesToDuplicate);
+                                //PageUtilities.WhatPagesToDuplicate();
+                                ovApp.EndUndoScope(iUndoScope, true);
                             }
                             else
                             {
-                                //we are just adding a page
-                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(ovPage);
+                                int iUndoScope = ovApp.BeginUndoScope("Duplicate Page");
+                                string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+                                //this is the page id that the user wanted to copy...
+                                ovPage.Application.EventsEnabled = 0;
+                                ovPage.Delete(1);
+                                ovPage.Application.EventsEnabled = -1;
+
+                                //we want to get the new page to duplicate based on the page id...
+                                //ok now we want to call our duplicate...
+                                Visio.Page ovPageToDuplicate = null;
+                                foreach (Visio.Page ovPossiblePage in ovApp.ActiveDocument.Pages)
+                                {
+                                    if (ovPossiblePage.PageSheet.CellExists["User.PageID", 0] == -1)
+                                    {
+                                        if (ovPossiblePage.PageSheet.Cells["User.PageID"].get_ResultStr(0) == sPageID)
+                                        {
+                                            ovPageToDuplicate = ovPossiblePage;
+                                        }
+                                    }
+                                }
+                                //turn events off when duplicating the page..
+                                ovApp.Application.EventsEnabled = 0;
+                                Visio.Page ovNewPage = ovPageToDuplicate.Duplicate();
+                                ovApp.Application.EventsEnabled = -1;
+                                Dictionary<string, Visio.Page> oDictPageToDuplicate = new Dictionary<string, Visio.Page>();
+                                oDictPageToDuplicate.Add(ovNewPage.Name, ovNewPage);
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageDuplicated(oDictPageToDuplicate);
+                                ovApp.EndUndoScope(iUndoScope, true);
                             }
+                           
 
-                            m_pendingPageIds.Add(sKey);
-
+                            
                         }
-
 
                         break;
                     }
@@ -927,7 +1031,7 @@ namespace VisAssistDatabaseBackEnd
                 case (short)((short)Visio.VisEventCodes.visEvtDel + (short)Visio.VisEventCodes.visEvtDoc):
                     {
 
-                        // OnBeforeDocumentClosed((Visio.Document)subject);
+                       // VisioUtilities.Application.OnBeforeDocumentClosed((Visio.Document)subject);
 
                         break;
                     }
@@ -955,13 +1059,25 @@ namespace VisAssistDatabaseBackEnd
                         break;
                     }
 
-
+                //before document save
+                case (short)(short)Visio.VisEventCodes.visEvtCodeBefDocSave:
+                    {
+                        VisioUtilities.Application.OnBeforeDocumentSave((Visio.Document)subject);
+                        break;
+                    }
 
                 case (short)(short)Visio.VisEventCodes.visEvtDoc + (short)Visio.VisEventCodes.visEvtMod:
                     {
-                        if (!m_bIsPageDuplicating)
+                        //if the current scop eis 2383 this is a duplicate page...
+                        Visio.Document ovDoc = (Visio.Document)subject;
+                        if (ovDoc.Application.CurrentScope != 2383)
                         {
-                            VisAssistDatabaseBackEnd.VisioUtilities.Application.OnDocumentChanged((Visio.Document)subject);
+
+
+                            if (!m_bIsPageDuplicating)
+                            {
+                                VisAssistDatabaseBackEnd.VisioUtilities.Application.OnDocumentChanged((Visio.Document)subject);
+                            }
                         }
 
                         break;

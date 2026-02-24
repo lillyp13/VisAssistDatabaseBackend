@@ -33,45 +33,51 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
         
       
 
-        internal static void AddShapesToDatabase(List<Visio.Page> oListVisioPages, string sProjectID)
+        internal static void AddShapesToDatabase(List<string> oListVisioPages, string sProjectID, Visio.Document ovDocument)
         {
             try
             {
                 //gets called when we are adding a page that already has shapes on it and need to add the shapes to the db...
                 //this gets called when the user is bringing back a page from an undo event...
                 Dictionary<string, Visio.Shape> oDictWires = new Dictionary<string, Visio.Shape>();
-                foreach (Visio.Page ovPage in oListVisioPages)
+                foreach(Visio.Page ovPage in ovDocument.Pages)
                 {
-                    foreach (Visio.Shape ovShape in ovPage.Shapes)
+                    if(oListVisioPages.Contains(ovPage.Name))
                     {
-                        if (ovShape.CellExists["User.Class", 0] == -1)
+                        foreach (Visio.Shape ovShape in ovPage.Shapes)
                         {
-                            //this is one of our shapes..
-                            string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
-                            switch (sClass)
+                            if (ovShape.CellExists["User.Class", 0] == -1)
                             {
-                                case "TerminalBlock":
-                                    {
-                                        TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
-                                        break;
-                                    }
-                                case "ADC End Device":
-                                    {
-                                        EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
-                                        break;
-                                    }
-                                case "SmartWire":
-                                    {
-                                        //gather a list of the wires to add...
-                                        string sKey = ovShape.Cells["User.WirePairID"].get_ResultStr(0) + "|" + ovShape.ID + "|" + ovShape.ContainingPage.Name;
+                                //this is one of our shapes..
+                                string sClass = ovShape.Cells["User.Class"].get_ResultStr(0);
+                                switch (sClass)
+                                {
+                                    case "TerminalBlock":
+                                        {
+                                            TerminalBlockUtilities.AddTerminalBlockToDatabase(ovShape);
+                                            break;
+                                        }
+                                    case "ADC End Device":
+                                        {
+                                            EndDeviceUtilities.AddWiringEndDeviceToDatabase(ovShape);
+                                            break;
+                                        }
+                                    case "SmartWire":
+                                        {
+                                            //gather a list of the wires to add...
+                                            string sKey = ovShape.Cells["User.WirePairID"].get_ResultStr(0) + "|" + ovShape.ID + "|" + ovShape.ContainingPage.Name;
 
-                                        oDictWires.Add(sKey, ovShape);
-                                        break;
-                                    }
+                                            oDictWires.Add(sKey, ovShape);
+                                            break;
+                                        }
+                                }
                             }
                         }
+
                     }
                 }
+
+                    
 
                 //now we have a full list of wires and we need to pair them based on their wirepairids..
                 //the wire pair id is the the first part of the key in the dictionary (before the first pipe |)
@@ -323,26 +329,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             return $"({iPageIndex}, {sXMarker}{sYMarker})";
         }
 
-        internal static void CutShapes(Selection ovSelection)
-        {
-            string sAction = "Move";
-
-            if(m_PagesForm == null || m_PagesForm.IsDisposed)
-            {
-                PagesForm oNewForm = new PagesForm();
-                oNewForm.Display(sAction);
-                oNewForm.Show();
-                m_PagesForm = oNewForm;
-            }
-            else
-            {
-                m_PagesForm.WindowState = FormWindowState.Normal;
-                m_PagesForm.BringToFront();
-                m_PagesForm.Activate();
-            }
-            
-
-        }
+       
 
        
     }

@@ -12,6 +12,7 @@ using Visio = Microsoft.Office.Interop.Visio;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using System.Runtime.CompilerServices;
 using static VisAssistDatabaseBackEnd.ThisAddIn;
+using VisAssistDatabaseBackEnd.ShapeUtilities;
 
 namespace VisAssistDatabaseBackEnd.VisioUtilities
 {
@@ -386,9 +387,29 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         //we need to check to make sure that the visio file and the db are in sync 
                         DatabaseUtilities.SyncDBWithFile(ovThisVisioDocument, sVisAssistFolderPath);
                     }
-                       
 
-                   
+                    string sFileID = ovThisVisioDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                    //check to see if we need to reset the NextWireColor and NextWireNumber...
+                    DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+                    if (ovThisVisioDocument.DocumentSheet.CellExists["User.NextWireNumber", 0] == -1)
+                    {
+                        //this exists make sure the number matches the number in the db
+                        string sNextWireNumber = ovThisVisioDocument.DocumentSheet.Cells["User.NextWireNumber"].get_ResultStr(0);
+                        string sNextWireColor = ovThisVisioDocument.DocumentSheet.Cells["User.NextWireColor"].get_ResultStr(0);
+                        //update the fileId nextwirenuber...
+                        WireUtilities.SetNextWireNumber(sFileID, sNextWireNumber);
+                        WireUtilities.SetNextWireColor(sFileID, sNextWireColor);
+
+                    }
+                    else
+                    {
+                        //this doesn't exist, so go and reset the nextwirenumber in the database....
+                        WireUtilities.SetNextWireNumber(sFileID, 1.ToString());
+                        WireUtilities.SetNextWireColor(sFileID, DatabaseUtilities.ColorMap["Yellow"]); //the first color...
+                    }
+
+
+
                 }
                 //otherwise this is not a visassist project...
 

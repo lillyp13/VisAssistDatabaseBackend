@@ -23,13 +23,13 @@ namespace VisAssistDatabaseBackEnd.Forms
 
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            if(m_sAction == "Duplicate")
+            if (m_sAction == "Duplicate")
             {
                 this.Close();
             }
             else
             {
-                if(m_sAction == "Move")
+                if (m_sAction == "Move")
                 {
                     //we need to paste the shapes back to where they were...
                     Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
@@ -48,17 +48,14 @@ namespace VisAssistDatabaseBackEnd.Forms
             //add all the page names to the the dgvPages (we will be automatically adding the current page that we are duplicating..)
             PageUtilities.PopulatePagesForm(this);
             m_sAction = sAction;
-            if(m_sAction == "Duplicate")
+            if (m_sAction == "Duplicate")
             {
                 btnDuplicate.Text = "Duplicate";
             }
             else
             {
-                if(m_sAction == "Move")
-                {
-                    btnDuplicate.Text = "Move";
-                }
-                if(m_sAction == "MoveShapes")
+
+                if (m_sAction == "MoveShapes")
                 {
                     btnDuplicate.Text = "Move";
                 }
@@ -68,37 +65,25 @@ namespace VisAssistDatabaseBackEnd.Forms
         private void btnDuplicate_Click(object sender, EventArgs e)
         {
             //check the source if we are moving or duplicating...
-            if(m_sAction == "Duplicate")
+            if (m_sAction == "Duplicate")
             {
                 //select all the pages that the user is going to duplicate....
                 PageUtilities.GatherPagesToDuplicate(this);
             }
             else
             {
-                if(m_sAction == "Move")
+                if (m_sAction == "MoveShapes")
                 {
-                    //we are moving a selection of shapes to a different page...
-                    //get the selected page
-                    PageUtilities.PasteShapesOnPageUserSpecified(this);
-                    //add a custom undo event so we can get the name of it...
-                    //Visio.Application ovApp = Globals.ThisAddIn.Application;
-                    //int iUndoScope = ovApp.BeginUndoScope("Cut and Paste Action");
-                    //ovApp.EndUndoScope(iUndoScope, true);
+                    //get the current selection cut it and paste it to the page the user decided
+                    PageUtilities.CutAndPasteShapes(this);
                 }
-                else
-                {
-                    if(m_sAction == "MoveShapes")
-                    {
-                        //get the current selection cut it and paste it to the page the user decided
-                        PageUtilities.CutAndPasteShapes(this);
-                    }
-                }
+
             }
 
             this.Dispose();
 
             this.Close();
-            
+
         }
     }
 }

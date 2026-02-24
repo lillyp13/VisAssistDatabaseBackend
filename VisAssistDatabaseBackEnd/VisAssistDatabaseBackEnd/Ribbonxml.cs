@@ -590,17 +590,7 @@ namespace VisAssistDatabaseBackEnd
             Globals.ThisAddIn.m_sLastUndoScope = "Stress Test";
         }
 
-        public void btnMoveShapes_Click(Office.IRibbonControl control)
-        {
-            //move selection of shapes
-            
-            string sAction = "MoveShapes";
-            PagesForm oNewForm = new PagesForm();
-            oNewForm.Display(sAction);
-            oNewForm.Show();
-
-
-        }
+      
         #endregion
     }
 }

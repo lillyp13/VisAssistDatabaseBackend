@@ -15,6 +15,7 @@ using System.Xml.Linq;
 using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using VisAssistDatabaseBackEnd.VisioUtilities;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
@@ -692,33 +693,51 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        private static void DuplicateMultiplePages(Dictionary<string, Visio.Page> oDictPages)
+        internal static void DuplicateMultiplePages(Dictionary<string, Visio.Page> oDictPages)
         {
-            //we have a list of the pages we want to duplicate...
-            //for each visio page in the dictioanry call the visio duplicate action
-            //turn events off first 
             Visio.Document ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
-            int iUndoScope = ovDocument.Application.BeginUndoScope("Duplicate Pages");
-            Dictionary<string, Visio.Page> oDictPagesToDuplicate = new Dictionary<string, Page>();
-            ovDocument.Application.EventsEnabled = 0;
-            //// 1️⃣ Find highest numeric page name
-            foreach (Visio.Page ovPage in oDictPages.Values.OrderBy(p => p.Index))
+           // int iUndoScope = ovDocument.Application.BeginUndoScope("Duplicate Pages");
+            try
             {
-                Visio.Page ovNewPage = ovPage.Duplicate();
 
-            //    // Move to end
-                ovNewPage.Index = ovDocument.Pages.Count;
-            //    string sNewName = ovPage.Name + "-Duplicated";
 
-            //    ovNewPage.Name = sNewName;
+                //we have a list of the pages we want to duplicate...
+                //for each visio page in the dictioanry call the visio duplicate action
+                //turn events off first 
 
-                oDictPagesToDuplicate.Add(ovNewPage.Name, ovNewPage);
+
+                Visio.Application ovApp = ovDocument.Application;
+                ////get the active page?
+                Visio.Page ovPage = ovDocument.Application.ActivePage;
+                string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
+             
+
+
+                Dictionary<string, Visio.Page> oDictPagesToDuplicate = new Dictionary<string, Visio.Page>();
+                ovDocument.Application.EventsEnabled = 0;
+                //// 1️⃣ Find highest numeric page name
+                foreach (Visio.Page ovPageToAdd in oDictPages.Values.OrderBy(p => p.Index))
+                {
+                    Visio.Page ovNewPage = ovPageToAdd.Duplicate();
+
+                    //    // Move to end
+                    ovNewPage.Index = ovDocument.Pages.Count;
+                    //    string sNewName = ovPage.Name + "-Duplicated";
+
+                    //    ovNewPage.Name = sNewName;
+
+                    oDictPagesToDuplicate.Add(ovNewPage.Name, ovNewPage);
+                }
+                ovDocument.Application.EventsEnabled = -1;
+
+                VisioUtilities.Application.OnPageDuplicated(oDictPagesToDuplicate);
+
             }
-            ovDocument.Application.EventsEnabled = -1;
-
-            VisioUtilities.Application.OnPageDuplicated(oDictPagesToDuplicate);
-
-            ovDocument.Application.EndUndoScope(iUndoScope, true);
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in DuplicateMultiplePages " + ex.Message, "VisAssist");
+            }
+            //ovDocument.Application.EndUndoScope(iUndoScope, true);
         }
 
 
@@ -767,7 +786,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
 
         
-        internal static void UpdatePageIDInDatabase(string sOldPageID, string sCurrentPageID, Page ovPage)
+        internal static void UpdatePageIDInDatabase(string sOldPageID, string sCurrentPageID, Visio.Page ovPage)
         {
             try
             {
@@ -986,7 +1005,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         {
                             if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
                             {
-                                WireUtilities.UpdateWireInDatabase(ovShape);
+                                //check to see if the mate is in the selection becuase otherwise calling UpdateWireInDatabase and getting UpdateWireGridLocation won't fully update because the shape isn't updated in the database yet...
+                                string sWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
+                                bool bMateInSelection = false;
+                                foreach(Visio.Shape ovMateShape in ovSelection)
+                                {
+                                    if(ovMateShape.Name != ovShape.Name)
+                                    {
+                                        if (ovMateShape.Cells["User.WirePairID"].get_ResultStr(0) == sWirePairID)
+                                        {
+                                            //this is the mate shape 
+                                            bMateInSelection = true;
+                                        }
+                                    }
+                                }
+
+                                WireUtilities.UpdateWireInDatabase(ovShape, bMateInSelection);
                             }
                         }
                         
@@ -999,6 +1033,28 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
                 }
+            }
+        }
+
+        internal static void OtherPagesToDuplicate(Visio.Page ovPageToDuplicate)
+        {
+            //gather all the pages to duplicate (if there is a wire on ovPageToDuplicate and its mate is on a different page add the mates page..)
+            try
+            {
+                foreach(Visio.Shape ovShape in ovPageToDuplicate.Shapes)
+                {
+                    if (ovShape.CellExists["User.Class",0] == -1)
+                    {
+                        if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                        {
+
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Error in OtherpagesToDuplicate " + ex.Message, "VisAssist");
             }
         }
     }
