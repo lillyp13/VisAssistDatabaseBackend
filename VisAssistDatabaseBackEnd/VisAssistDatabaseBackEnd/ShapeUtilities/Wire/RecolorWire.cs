@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using VisAssistDatabaseBackEnd.Forms;
+using VisAssistDatabaseBackEnd.VisioUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
@@ -49,7 +50,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
                 string sRange = reColororRenumberWiresForm.cboRange.Text;
                 string sOrder = reColororRenumberWiresForm.cboDirection.Text;
 
-                Dictionary<string, Visio.Shape> oDictWires = new Dictionary<string, Shape>();
+                Dictionary<string, MateSelection> oDictWires = new Dictionary<string, MateSelection>();
 
 
                 string sColor = reColororRenumberWiresForm.cboColor.Text;
@@ -120,81 +121,112 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
            
         }
 
-        internal static void RecolorWires(Dictionary<string, Visio.Shape> oDictWires, string sOrder, string sColor)
+        internal static void RecolorWires(Dictionary<string, MateSelection> oDictWires, string sOrder, string sColor)
         {
             try
             {
 
 
                 int iUndoScope = Globals.ThisAddIn.Application.BeginUndoScope("Recolor Wires");
-                Dictionary<string, Visio.Shape> oDictWiresProcessed = new Dictionary<string, Shape>();
+                //Dictionary<string, Visio.Shape> oDictWiresProcessed = new Dictionary<string, Shape>();
+                List<string> olstWiresProcessed = new List<string>();
                 Visio.Document ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
                 string sFileID = ovDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-                Dictionary<string, Visio.Shape> oDictSortedShapes = new Dictionary<string, Shape>();
+                //Dictionary<string, Visio.Shape> oDictSortedShapes = new Dictionary<string, Shape>();
+                List<string> lstSortedWireIDs = new List<string>();
                 switch (sOrder)
                 {
                     case "Top-Bottom":
                         {
-                            oDictSortedShapes = oDictWires.OrderByDescending(pair => pair.Value.Cells["PinY"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
-
+                            // oDictSortedShapes = oDictWires.OrderByDescending(pair => pair.Value.Cells["PinY"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
+                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "YLocation", "DESC");
                             break;
                         }
                     case "Bottom-Top":
                         {
-                            oDictSortedShapes = oDictWires.OrderBy(pair => pair.Value.Cells["PinY"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
+                            //oDictSortedShapes = oDictWires.OrderBy(pair => pair.Value.Cells["PinY"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
+                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "YLocation", "ASC");
                             break;
                         }
                     case "Left-Right":
                         {
-                            oDictSortedShapes = oDictWires.OrderBy(pair => pair.Value.Cells["PinX"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
+                            //oDictSortedShapes = oDictWires.OrderBy(pair => pair.Value.Cells["PinX"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
+                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "XLocation", "ASC");
                             break;
                         }
                     case "Right-Left":
                         {
-                            oDictSortedShapes = oDictWires.OrderByDescending(pair => pair.Value.Cells["PinX"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
+                            //oDictSortedShapes = oDictWires.OrderByDescending(pair => pair.Value.Cells["PinX"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
+                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "XLocation", "DESC");
                             break;
                         }
                 }
 
-                foreach (KeyValuePair<string, Visio.Shape> pair in oDictSortedShapes)
+
+
+                foreach (string sShapeID in lstSortedWireIDs)
                 {
-                    Visio.Shape ovShape = pair.Value;
-                    string sKey = ovShape.Name + "|" + ovShape.ContainingPage.Name;
-                    if (!oDictWiresProcessed.ContainsKey(sKey))
+                    
+                    if (!olstWiresProcessed.Contains(sShapeID))
                     {
-                        // Get the RGB formula from the ColorMap
-                        string sRGBFormula = DatabaseUtilities.ColorMap[sColor];
-                        ovShape.Application.EventsEnabled = 0;
-                        ovShape.Cells["User.WireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sRGBFormula);
-                        ovShape.Application.EventsEnabled = -1;
-                       
-                        string sMateID = WireUtilities.GetMateID(ovShape);
+                        //update the wirelabel..
+                        //get the shape to update...
+                        string sPageID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("PageID", sShapeID);
+                        //now get the pageindex from the pages_table
+                        string sPageIndex = PageUtilities.GetColumnInfoInPagesTableFromDatabase("PageIndex", sPageID);
+                        int iPageIndex = Convert.ToInt32(sPageIndex);
+                        Visio.Page ovPage = ovDocument.Pages[iPageIndex];
+                        foreach (Visio.Shape ovShape in ovPage.Shapes)
+                        {
+                            if (ovShape.CellExists["User.Class", 0] == -1 && ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                            {
+                                if (ovShape.Cells["User.ShapeID"].get_ResultStr(0) == sShapeID)
+                                {
+                                    string sRGBFormula = DatabaseUtilities.ColorMap[sColor];
+                                    //this is our shape
+                                    ovShape.Application.EventsEnabled = 0;
+                                    ovShape.Cells["User.WireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sRGBFormula);
+                                    ovShape.Application.EventsEnabled = -1;
 
-                     
+                                    WireUtilities.UpdateWireInDatabase(ovShape, false);
 
-                        //Visio.Shape ovMateShape = FindWireByShapeID(sMateID, ovDocument, sKey);
-                        //get the mate from sortedDict...
-                        Visio.Shape ovMateShape = oDictSortedShapes[sMateID];
-                        ovMateShape.Application.EventsEnabled = 0;
-                        ovMateShape.Cells["User.WireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sRGBFormula);
-                        ovMateShape.Application.EventsEnabled = -1;
-                        //ok now we want to update these wires in the database...
+                                    olstWiresProcessed.Add(sShapeID);
+                                    //now we need to update the mate shape now...
+                                    string sMateID = WireUtilities.GetMateID(oDictWires[sShapeID].sWirePairID, oDictWires[sShapeID].sWireRole);
+                                    string sMatePageID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("PageID", sMateID);
+                                    string sMatePageIndex = PageUtilities.GetColumnInfoInPagesTableFromDatabase("PageIndex", sMatePageID);
+                                    int iMatePageIndex = Convert.ToInt32(sMatePageIndex);
 
-                        WireUtilities.UpdateWireInDatabase(ovShape, false);
-                        WireUtilities.UpdateWireInDatabase(ovMateShape, false);
+                                    Visio.Page ovMatePage = ovDocument.Pages[iMatePageIndex];
+                                    foreach (Visio.Shape ovMateShape in ovMatePage.Shapes)
+                                    {
+                                        if (ovMateShape.CellExists["User.Class", 0] == -1 && ovMateShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                                        {
+                                            if (ovMateShape.Cells["User.ShapeID"].get_ResultStr(0) == sMateID)
+                                            {
+                                                //this is the mate shape
+                                                ovMateShape.Application.EventsEnabled = 0;
+                                                ovMateShape.Cells["User.WireColor"].Formula = VisioUtilities.Application.FormatStringForVisio(sRGBFormula);
+                                                ovMateShape.Application.EventsEnabled = -1;
 
 
-                        string sMateKey = ovMateShape.Name + "|" + ovMateShape.ContainingPage.Name;
-                        oDictWiresProcessed.Add(sKey, ovShape);
-                        oDictWiresProcessed.Add(sMateKey, ovShape);
+                                                WireUtilities.UpdateWireInDatabase(ovMateShape, false);
 
-                        //we will also need to increase the wire color in the db and for the next wire pair...
-                        //set sColor to be the next color in the colormap based on what it is right now...
-                        sColor = GetNextColor(sColor);
+                                                olstWiresProcessed.Add(sMateID);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    sColor = GetNextColor(sColor);
+                                    break;
+
+                                }
+                            }
+                        }
                     }
+
                 }
 
-                sColor = GetNextColor(sColor);
                 //now set the nextwirecolor in the db...
                 SetNextWireColor(sFileID, sColor);
 

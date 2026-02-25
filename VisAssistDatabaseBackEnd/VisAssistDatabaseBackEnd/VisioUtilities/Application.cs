@@ -1497,14 +1497,16 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
         public Visio.Shape ovShape { get; set; }
         public Visio.Shape ovMateShape { get; set; }
         public string sWirePairID { get; set; }
+        public string sWireRole { get; set; }
 
-        public MateSelection(string sMateID, string sShapeID, Visio.Shape ovShape, Visio.Shape ovMateShape, string sWirePairID)
+        public MateSelection(string sMateID, string sShapeID, Visio.Shape ovShape, Visio.Shape ovMateShape, string sWirePairID, string sWireRole)
         {
             this.sMateID = sMateID;
             this.sShapeID = sShapeID;
             this.ovShape = ovShape;
             this.ovMateShape = ovMateShape;
             this.sWirePairID = sWirePairID;
+            this.sWireRole = sWireRole; 
         }
     }
 

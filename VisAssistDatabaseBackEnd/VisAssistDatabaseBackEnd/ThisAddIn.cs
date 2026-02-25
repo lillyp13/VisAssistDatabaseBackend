@@ -77,6 +77,7 @@ namespace VisAssistDatabaseBackEnd
         private Visio.UIObject myCustomCutCommand;
         private static void CustomizeDrawingMenu(Visio.UIObject visioUIObject, Visio.VisUIObjSets visUIObjSetDrawing)
         {
+            //I'm leaving this here so that if we do want to ever add something to the rma this is already built in...
             if (visioUIObject == null)
             {
                 return;
@@ -111,7 +112,7 @@ namespace VisAssistDatabaseBackEnd
 
                 CustomizeAccelSet(visioAppMenusUI, Visio.VisUIObjSets.visUIObjSetDrawing);
 
-                CustomizeDrawingMenu(visioAppMenusUI, Visio.VisUIObjSets.visUIObjSetDrawing);
+                //CustomizeDrawingMenu(visioAppMenusUI, Visio.VisUIObjSets.visUIObjSetDrawing);
                 Application.SetCustomMenus(visioAppMenusUI);
                 // Ensure a single sink instance
                 if (m_appSink == null)
