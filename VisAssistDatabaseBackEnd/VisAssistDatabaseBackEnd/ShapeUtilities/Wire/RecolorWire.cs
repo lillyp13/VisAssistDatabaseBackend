@@ -1,11 +1,6 @@
-﻿using Microsoft.Office.Interop.Visio;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using VisAssistDatabaseBackEnd.Forms;
@@ -16,9 +11,6 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
 {
     internal class RecolorWire
     {
-
-
-
         internal static string GetNextColor(string currentColor)
         {
             try
@@ -50,15 +42,15 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
                 string sRange = reColororRenumberWiresForm.cboRange.Text;
                 string sOrder = reColororRenumberWiresForm.cboDirection.Text;
 
-                Dictionary<string, MateSelection> oDictWires = new Dictionary<string, MateSelection>();
+                Dictionary<string, MateSelection> odictWires = new Dictionary<string, MateSelection>();
 
 
                 string sColor = reColororRenumberWiresForm.cboColor.Text;
 
-                oDictWires = WireUtilities.GatherWires(sRange);
+                odictWires = WireUtilities.GatherWires(sRange);
 
 
-                RecolorWires(oDictWires, sOrder, sColor);
+                RecolorWires(odictWires, sOrder, sColor);
 
 
             }
@@ -121,50 +113,47 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
            
         }
 
-        internal static void RecolorWires(Dictionary<string, MateSelection> oDictWires, string sOrder, string sColor)
+        internal static void RecolorWires(Dictionary<string, MateSelection> odictWires, string sOrder, string sColor)
         {
             try
             {
 
 
                 int iUndoScope = Globals.ThisAddIn.Application.BeginUndoScope("Recolor Wires");
-                //Dictionary<string, Visio.Shape> oDictWiresProcessed = new Dictionary<string, Shape>();
                 List<string> olstWiresProcessed = new List<string>();
+                List<string> olstSortedWireIDs = new List<string>();
                 Visio.Document ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
                 string sFileID = ovDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-                //Dictionary<string, Visio.Shape> oDictSortedShapes = new Dictionary<string, Shape>();
-                List<string> lstSortedWireIDs = new List<string>();
+              
+
+
                 switch (sOrder)
                 {
                     case "Top-Bottom":
                         {
-                            // oDictSortedShapes = oDictWires.OrderByDescending(pair => pair.Value.Cells["PinY"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
-                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "YLocation", "DESC");
+                            olstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(odictWires, sFileID, "YLocation", "DESC");
                             break;
                         }
                     case "Bottom-Top":
                         {
-                            //oDictSortedShapes = oDictWires.OrderBy(pair => pair.Value.Cells["PinY"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
-                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "YLocation", "ASC");
+                            olstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(odictWires, sFileID, "YLocation", "ASC");
                             break;
                         }
                     case "Left-Right":
                         {
-                            //oDictSortedShapes = oDictWires.OrderBy(pair => pair.Value.Cells["PinX"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
-                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "XLocation", "ASC");
+                            olstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(odictWires, sFileID, "XLocation", "ASC");
                             break;
                         }
                     case "Right-Left":
                         {
-                            //oDictSortedShapes = oDictWires.OrderByDescending(pair => pair.Value.Cells["PinX"].ResultIU).ToDictionary(pair => pair.Key, pair => pair.Value);
-                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "XLocation", "DESC");
+                            olstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(odictWires, sFileID, "XLocation", "DESC");
                             break;
                         }
                 }
 
 
 
-                foreach (string sShapeID in lstSortedWireIDs)
+                foreach (string sShapeID in olstSortedWireIDs)
                 {
                     
                     if (!olstWiresProcessed.Contains(sShapeID))
@@ -192,7 +181,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
 
                                     olstWiresProcessed.Add(sShapeID);
                                     //now we need to update the mate shape now...
-                                    string sMateID = WireUtilities.GetMateID(oDictWires[sShapeID].sWirePairID, oDictWires[sShapeID].sWireRole);
+                                    string sMateID = WireMateUtilities.GetMateID(odictWires[sShapeID].sWirePairID, odictWires[sShapeID].sWireRole);
                                     string sMatePageID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("PageID", sMateID);
                                     string sMatePageIndex = PageUtilities.GetColumnInfoInPagesTableFromDatabase("PageIndex", sMatePageID);
                                     int iMatePageIndex = Convert.ToInt32(sMatePageIndex);

@@ -106,8 +106,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     //get the project id from the document 
 
 
-
-
                     PageUtilities.AddUserCellsToPage(ovPage);
                     //The page contains the necessary info to move forward with AddPageToDatabase
                     PageUtilities.AddPageToDatabase(ovPage, "", "Visio");
@@ -150,85 +148,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             return oFileRecord;
         }
 
-        internal static void UpdateFile(FilePropertiesForm filePropertiesForm)
-        {
-            //will be ever be changing multiple files? 
-            //only if we give them the space --otherwise there is no spot for them to change something on two different files...  
-
-            //where would we need to call update file?
-            //--when the file name or file path is changed, when the user changes the drawing type, wire prefix, ignroewirecolor, allow duplicate tags, show point data (some from the settings, another from the project properties form)
-            //modified date? when do i update this
-            //project_id will only change once we give the user the ability to associte and disassociate files with a project...
-            try
-
-            {
-
-                if (m_mruRecordsToCompare.ruRecords != null)
-                {
-                    m_mruRecordsToCompare.ruRecords.Clear();
-                }
-
-
-
-                //this will be done a little bit differently because the wire prefix, ignore wirecolor, allow duplicate tags, and show point data is from the visassist settings,
-                //but the file name, file path and drawing type are from somewhere else..also revision id i think...so therefore when we update the file we will often only be looking to update one column...
-
-                List<RecordUpdate> lstRecordUpdate = new List<RecordUpdate>();
-                foreach (DataGridViewRow dgvRow in filePropertiesForm.dgvFileData.Rows)
-                {
-                    Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
-
-                    string sPrimaryKeyValue = "";
-
-                    for (int i = 0; i < filePropertiesForm.dgvFileData.Columns.Count; i++)
-                    {
-                        DataGridViewColumn dgvColumn = filePropertiesForm.dgvFileData.Columns[i];
-                        string sColumnName = dgvColumn.Name;
-                        string sValue = dgvRow.Cells[i].Value.ToString();
-                        string sKey = dgvColumn.Name;
-
-                        if (sColumnName != DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK)
-                        {
-                            oDictColumnValues.Add(sColumnName, sValue);
-                        }
-                        else
-                        {
-                            //this is the PK
-                            sPrimaryKeyValue = sValue;
-                        }
-
-                    }
-
-                    //create a recordupdate for this row
-                    RecordUpdate ruRecordUpdate = new RecordUpdate();
-                    ruRecordUpdate.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
-                    ruRecordUpdate.sId = sPrimaryKeyValue;
-                    ruRecordUpdate.odictColumnValues = oDictColumnValues;
-
-                    lstRecordUpdate.Add(ruRecordUpdate);
-                }
-
-                //wrap all the records into a multiple recorsupdates object
-                m_mruRecordsToCompare = new MultipleRecordUpdates(lstRecordUpdate);
-
-                //compare the two record sets and build a new record set based on only the changes
-                m_mruRecordsToUpdate = DatabaseUtilities.CompareDataForMultipleRecords(m_mruRecordsBase, m_mruRecordsToCompare);
-
-
-                if (m_mruRecordsToUpdate.ruRecords.Count > 0)
-                {
-                    //there is a change
-                    //build the update sql for the files_table
-                    DatabaseUtilities.BuildUpdateSqlForMultipleRecords(DatabaseUtilities.SqlTables.FilesTable.sFilesTable, m_mruRecordsToUpdate);
-                    //reset the base record set
-                    FileUtilities.GetFileDataFromDatabase(filePropertiesForm);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in UpdateFile " + ex.Message, "VisAssist");
-            }
-        }
+       
         internal static void DeleteFile(FilePropertiesForm filePropertiesForm)
         {
             //get the selected row in the filePropertiesForm.dgvFileData to determine which file to delete
@@ -314,49 +234,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             return bDisasociatedFile;
         }
-        internal static void DeleteAllFiles()
-        {
-            //delete all the records in the files_table
-            using (SQLiteConnection sqliteConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-            {
-                sqliteConnection.Open();
-
-                //enable foreign key enforcemnt for this connection
-                using (SQLiteCommand sqlitcmdPragma = new SQLiteCommand("PRAGMA foreign_keys = ON;", sqliteConnection))
-                {
-                    sqlitcmdPragma.ExecuteNonQuery();
-                }
-
-                // string sDelete = "DELETE FROM files_table;";
-                string sDelete = "DELETE FROM " + DatabaseUtilities.SqlTables.FilesTable.sFilesTable + ";";
-
-                using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sDelete, sqliteConnection))
-                {
-                    //logging here 
-                    sqlitecmdCommand.ExecuteNonQuery();
-
-                }
-
-
-
-            }
-
-            //need to also clear the filecount in the project properites 
-            //set the FileCount to be 0 in the project_table where the id = 1
-            using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-            {
-                sqliteconConnection.Open();
-
-                string sSqlUpdate = "UPDATE " + DatabaseUtilities.SqlTables.ProjectTable.sProjectTable + " SET FileCount = 0 WHERE Id = @ProjectID";
-
-                using (SQLiteCommand cmd = new SQLiteCommand(sSqlUpdate, sqliteconConnection))
-                {
-                    cmd.Parameters.AddWithValue("@ProjectID", 1); // set project id as 1...
-                    cmd.ExecuteNonQuery();
-                }
-            }
-
-        }
+        
         internal static void UpdateFileName(string sFileName)
         {
             try
@@ -413,10 +291,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
        
         internal static MultipleRecordUpdates BuildFileInformation(Visio.Document ovDoc, string sFilePath, string sProjectGuid)
         {
-            //this should build a multiple record update of the file...
-            //we have the projectID from the project we just added, file name is in the file path, we have the filepath, created date and last modified date should be todays date, version should be 1, class should be VisAssistDocument, and the reset we can leave empty...
-            //get the active document 
-
+           
             //we are passing in the filepath because the docuemnt could be a temp doc if it is open in a different visio instance...
             RecordUpdate ruFileRecord = new RecordUpdate();
             MultipleRecordUpdates mruRecord = new MultipleRecordUpdates();
@@ -427,14 +302,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-                Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
-                //oDictFileValues.Add("ProjectID", "1");
-                oDictFileValues.Add("FileName", sFileName);
-                oDictFileValues.Add("FilePath", sFilePath);
-                //oDictFileValues.Add("CreatedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                oDictFileValues.Add("LastModifiedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                oDictFileValues.Add("Version", "1.0.0");
-                oDictFileValues.Add("Class", "VisAssistDocument");
+                Dictionary<string, string> odictFileValues = new Dictionary<string, string>();
+                odictFileValues.Add("FileName", sFileName);
+                odictFileValues.Add("FilePath", sFilePath);
+                odictFileValues.Add("LastModifiedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                odictFileValues.Add("Version", "1.0.0");
+                odictFileValues.Add("Class", "VisAssistDocument");
                 
 
 
@@ -444,12 +317,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
 
                     sProjectID = sProjectGuid;
-                    oDictFileValues.Add("ProjectID", sProjectID);
+                    odictFileValues.Add("ProjectID", sProjectID);
                 }
                 else
                 {
                     sProjectID = sProjectGuid; //we are creating the file and project right now and we haven't added the user cerlls yet
-                    oDictFileValues.Add("ProjectID", sProjectID);
+                    odictFileValues.Add("ProjectID", sProjectID);
                 }
 
                 //check to see if the document has a User.FileID guid... and take that if it does...
@@ -457,20 +330,20 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 if (ovDoc.DocumentSheet.CellExists["User.FileID", 0] == -1)
                 {
                     sID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-                    oDictFileValues["CreatedDate"] = ovDoc.DocumentSheet.Cells["User.CreatedDate"].get_ResultStr(0);
+                    odictFileValues["CreatedDate"] = ovDoc.DocumentSheet.Cells["User.CreatedDate"].get_ResultStr(0);
                 }
                 else
                 {
                     sID = GenerateFileID(sProjectID, sFilePath, DateTime.Now);
-                    oDictFileValues["CreatedDate"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); //we are creating this for the first time
+                    odictFileValues["CreatedDate"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); //we are creating this for the first time
                 }
 
                 //add the NextWireColor and the NextWireenumber (get rid of Wire Prefix..)
-                oDictFileValues.Add("NextWireNumber", "1");
+                odictFileValues.Add("NextWireNumber", "1");
 
 
                 ruFileRecord.sId = sID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
+                ruFileRecord.odictColumnValues = odictFileValues;
 
                 mruRecord = new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
                 return mruRecord;
@@ -798,18 +671,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                         //close the launchfile doc
                                         //may also just be ovCurrentDoc...
                                         ovCurrentDoc.Close();
-                                        //foreach (Visio.Document ovDocToCheck in ovApp.Documents)
-                                        //{
-                                        //    string sDocToCheckPath = FileUtilities.ReturnFileStructurePath(ovDocToCheck.Path);
-                                        //    sDocToCheckPath = Path.Combine(sDocToCheckPath, ovDocToCheck.Name);
-
-                                        //    if (sDocToCheckPath == sLaunchFilePath)
-                                        //    {
-                                        //        //this is the file we want to close
-                                        //        ovDocToCheck.Save();
-                                        //        ovDocToCheck.Close();
-                                        //    }
-                                        //}
+                                       
                                     }
                                 }
 
@@ -919,10 +781,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 ovDoc.DocumentSheet.Cells["User.ProjectID"].Formula = VisioUtilities.Application.FormatStringForVisio(sProjectID);
 
 
-                Dictionary<string, string> oDictWirePairIDs = new Dictionary<string, string>();
+                Dictionary<string, string> odictWirePairIDs = new Dictionary<string, string>();
                 foreach (Visio.Page ovPage in ovDoc.Pages)
                 {
-                    UpdatePageAndShapeIDs(ovPage, sProjectID, sNewFileID, ref oDictWirePairIDs);
+                    UpdatePageAndShapeIDs(ovPage, sProjectID, sNewFileID, ref odictWirePairIDs);
                 }
 
 
@@ -937,7 +799,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void UpdatePageAndShapeIDs(Visio.Page ovPage, string sProjectID, string sNewFileID, ref  Dictionary<string, string> oDictWirePairIDs)
+        internal static void UpdatePageAndShapeIDs(Visio.Page ovPage, string sProjectID, string sNewFileID, ref  Dictionary<string, string> odictWirePairIDs)
         {
             //Page Level
             try
@@ -964,16 +826,16 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         string sCurrentWirePairID = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
                         string sNewWirePairID = "";
                         //check to see if we have already update the wirepairid for this mate/pair...
-                        if(oDictWirePairIDs.ContainsKey(sCurrentWirePairID))
+                        if(odictWirePairIDs.ContainsKey(sCurrentWirePairID))
                         {
-                            sNewWirePairID = oDictWirePairIDs[sCurrentWirePairID];
+                            sNewWirePairID = odictWirePairIDs[sCurrentWirePairID];
 
                         }
                         else
                         {
                             //we haven't update this mate/pair yet
                             sNewWirePairID = WireUtilities.GenerateNewWirePairID(sProjectID, sNewFileID, sNewPageID, sNewShapeID, DateTime.Now);
-                            oDictWirePairIDs.Add(sCurrentWirePairID, sNewWirePairID);
+                            odictWirePairIDs.Add(sCurrentWirePairID, sNewWirePairID);
                         }
                         
                         ovShape.Cells["User.WirePairID"].FormulaForceU = VisioUtilities.Application.FormatStringForVisio(sNewWirePairID);
@@ -1432,7 +1294,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static void PopulateFilesForm(FilesForm filesForm)
         {
             filesForm.dgvFiles.Rows.Clear();
-            //populate the dgvFiles with the file names in the oDictFiles 
+            //populate the dgvFiles with the file names in the odictFiles 
             foreach (string sFileName in m_dictProjectFiles.Keys)
             {
                 filesForm.dgvFiles.Rows.Add(sFileName);
@@ -1464,23 +1326,23 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 DataGridViewSelectedRowCollection colSelectedRows = filePropertiesForm.dgvFileData.SelectedRows;
                 // Build a list of RecordUpdate objects for each selected row
-                List<RecordUpdate> lstRecordsToDelete = new List<RecordUpdate>();
-                Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
+                List<RecordUpdate> olstRecordsToDelete = new List<RecordUpdate>();
+                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
                 foreach (DataGridViewRow dgvRow in colSelectedRows)
                 {
                     string sFileID = dgvRow.Cells["FileID"].Value.ToString();
                     string sFilePath = dgvRow.Cells["FilePath"].Value.ToString();
-                    oDictColumnValues.Add("FilePath", sFilePath);
+                    odictColumnValues.Add("FilePath", sFilePath);
 
                     RecordUpdate ruRecord = new RecordUpdate();
                     ruRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.FilesTable.sFilesTablePK;
                     ruRecord.sId = sFileID;
-                    ruRecord.odictColumnValues = oDictColumnValues;
+                    ruRecord.odictColumnValues = odictColumnValues;
 
-                    lstRecordsToDelete.Add(ruRecord);
+                    olstRecordsToDelete.Add(ruRecord);
                 }
 
-                mruRecords = new MultipleRecordUpdates(lstRecordsToDelete);
+                mruRecords = new MultipleRecordUpdates(olstRecordsToDelete);
 
                 return mruRecords;
 
@@ -1508,7 +1370,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
 
 
-                List<RecordUpdate> lstFilesToDelete = new List<RecordUpdate>();
+                List<RecordUpdate> olstFilesToDelete = new List<RecordUpdate>();
                 foreach (RecordUpdate ruRecord in m_mruRecordsBase.ruRecords)
                 {
                     string sFilePath = ruRecord.odictColumnValues["FilePath"].ToString();
@@ -1521,10 +1383,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         ruRecordToDelete.odictColumnValues = ruRecord.odictColumnValues;
 
 
-                        lstFilesToDelete.Add(ruRecordToDelete);
+                        olstFilesToDelete.Add(ruRecordToDelete);
                     }
                 }
-                MultipleRecordUpdates mruRecordsToDeleted = new MultipleRecordUpdates(lstFilesToDelete);
+                MultipleRecordUpdates mruRecordsToDeleted = new MultipleRecordUpdates(olstFilesToDelete);
 
                 if (mruRecordsToDeleted.ruRecords.Count > 0)
                 {
@@ -1536,7 +1398,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
                     FileUtilities.AdjustFileCountInDB(ovDoc);
 
-                    string sMessage = "The following files could not be found:\n\n" + string.Join("\n", lstFilesToDelete.Select(r => r.odictColumnValues["FilePath"])) + "\n\nThese files will be dissociated from the database";
+                    string sMessage = "The following files could not be found:\n\n" + string.Join("\n", olstFilesToDelete.Select(r => r.odictColumnValues["FilePath"])) + "\n\nThese files will be dissociated from the database";
 
 
                     MessageBox.Show(sMessage, "VisAssist");
@@ -1575,10 +1437,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     {
                         sqliteconConnection.Open();
 
-                        string sSql = @"SELECT 1
-                    FROM files_table
-                    WHERE FileName = @FileName COLLATE NOCASE
-                    LIMIT 1";
+                        string sSql = @"SELECT 1 FROM files_table WHERE FileName = @FileName COLLATE NOCASE LIMIT 1";
 
                         using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
                         {
@@ -1655,7 +1514,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 if (bOkToDeleteLaunchFiles)
                                 {
                                     //we successfully have none of the launch files open now, so let's delete them all
-                                    FileUtilities.DeleteAllLaunchFiles(); //go ahead and delete all the launch files in the oDictLaunchFiles
+                                    FileUtilities.DeleteAllLaunchFiles(); //go ahead and delete all the launch files in the odictLaunchFiles
                                                                           //now add the correct launch file
                                     FileUtilities.AddLaunchFile(ovCurrentDocument, sProjectID, sFolderPath);
                                 }
@@ -1713,10 +1572,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 {
                     sqliteconConnection.Open();
 
-                    string sSql = @"SELECT 1 
-                    FROM files_table 
-                    WHERE FileName = @FileName COLLATE NOCASE
-                    LIMIT 1";
+                    string sSql = @"SELECT 1 FROM files_table WHERE FileName = @FileName COLLATE NOCASE LIMIT 1";
 
                     using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
                     {
@@ -1809,11 +1665,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-                //Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-                // if (ovDoc != null)
-                //{
-                // string sFolderPath = ReturnFileStructurePath(ovDoc.Path);
-
                 string sDBPath = Path.Combine(sFolderPath, "DB", "VisAssistProject.db");
 
                 if (System.IO.File.Exists(sDBPath))
@@ -1862,7 +1713,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
         internal static List<string> GetFileNamesInProject()
         {
-            List<string> lstFileNames = new List<string>();
+            List<string> olstFileNames = new List<string>();
             try
             {
 
@@ -1879,7 +1730,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                             while (reader.Read())
                             {
                                 // Assuming FileName is a TEXT column
-                                lstFileNames.Add(reader.GetString(0));
+                                olstFileNames.Add(reader.GetString(0));
                                 // or: reader["FileName"].ToString()
                             }
                         }
@@ -1890,7 +1741,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 MessageBox.Show("Error in GetFileNamesInProject " + ex.Message, "VisAssist");
             }
-            return lstFileNames;
+            return olstFileNames;
         }
 
 
@@ -1999,7 +1850,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //select all the files from the files_table
                 //string sSQl = @"SELECT * FROM files_table";
                 string sSQl = @"SELECT * FROM " + DatabaseUtilities.SqlTables.FilesTable.sFilesTable;
-                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
+                List<RecordUpdate> olstRecords = new List<RecordUpdate>();
 
                 //logging statement placeholder
                 using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
@@ -2040,7 +1891,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 ruRecordUpdate.sId = sID;
                                 ruRecordUpdate.odictColumnValues = odictColumnValues;
 
-                                lstRecords.Add(ruRecordUpdate);
+                                olstRecords.Add(ruRecordUpdate);
 
 
                             }
@@ -2051,7 +1902,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 }
 
                 //warp everything in a multiple record updates struct
-                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+                m_mruRecordsBase = new MultipleRecordUpdates(olstRecords);
             }
             catch (Exception ex)
             {
@@ -2147,7 +1998,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         //LAUNCH FILE HELPER FUNCTIONS
         private static void DeleteAllLaunchFiles()
         {
-            //loop through the oDictLaunchFiles and delete each file in their based on their path 
+            //loop through the odictLaunchFiles and delete each file in their based on their path 
             foreach (KeyValuePair<string, string> kvp in m_dictFilesOutsideProjectFolder)
             {
                 string fileName = kvp.Key;
@@ -2175,7 +2026,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
 
 
-                //need to make sure that each file in oDictLaunch Files is either open in our instance or closed (not locked/open in another application)
+                //need to make sure that each file in odictLaunch Files is either open in our instance or closed (not locked/open in another application)
                 //if the file is open in our instance of visio save and close it...
                 //if all the files pass this test return true
                 Visio.Application ovApp = Globals.ThisAddIn.Application;

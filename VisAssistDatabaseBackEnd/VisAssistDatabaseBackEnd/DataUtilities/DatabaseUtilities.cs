@@ -2,24 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Data.SQLite;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Runtime.Remoting.Lifetime;
-using System.Security.Cryptography;
-using System.Security.Policy;
 using System.Text;
-using System.Web;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using VisAssistDatabaseBackEnd.VisioUtilities;
 using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Net.WebRequestMethods;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
@@ -150,6 +140,8 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         }
 
+
+        //Color Map
         public static readonly Dictionary<string, string> ColorMap =
      new Dictionary<string, string>
  {
@@ -635,12 +627,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sqliteconConnection))
                     {
                         // Build parameterized IN clause using RecordUpdate.iId
-                        List<string> lstParameterNames = new List<string>();
+                        List<string> olstParameterNames = new List<string>();
 
                         for (int i = 0; i < mruRecords.ruRecords.Count; i++)
                         {
                             string sParameterName = $"@id{i}";
-                            lstParameterNames.Add(sParameterName);
+                            olstParameterNames.Add(sParameterName);
 
                             sqlitecmdCommand.Parameters.AddWithValue(
                                 sParameterName,
@@ -650,7 +642,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                         string sSqlDelete =
                             $"DELETE FROM {sTableName} " +
-                            $"WHERE {sWhereColumn} IN ({string.Join(",", lstParameterNames)})";
+                            $"WHERE {sWhereColumn} IN ({string.Join(",", olstParameterNames)})";
 
                         sqlitecmdCommand.CommandText = sSqlDelete;
                         sqlitecmdCommand.ExecuteNonQuery();
@@ -704,12 +696,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         // Build parameterized INSERT statement
                         string sSqlInsert = $"INSERT INTO {sTableName} ({string.Join(", ", hsAllColumns)}) VALUES ";
 
-                        List<string> lstValues = new List<string>();
+                        List<string> olstValues = new List<string>();
                         int iRecordIndex = 0;
 
                         foreach (RecordUpdate ruRecord in mruRecords.ruRecords)
                         {
-                            List<string> lstParameterNames = new List<string>();
+                            List<string> olstParameterNames = new List<string>();
 
                             foreach (string sColumn in hsAllColumns)
                             {
@@ -725,14 +717,14 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     sqlitecmdCommand.Parameters.Add(new SQLiteParameter(sParameterName, DBNull.Value));
                                 }
 
-                                lstParameterNames.Add(sParameterName);
+                                olstParameterNames.Add(sParameterName);
                             }
 
-                            lstValues.Add("(" + string.Join(", ", lstParameterNames) + ")");
+                            olstValues.Add("(" + string.Join(", ", olstParameterNames) + ")");
                             iRecordIndex++;
                         }
 
-                        sSqlInsert += string.Join(", ", lstValues);
+                        sSqlInsert += string.Join(", ", olstValues);
 
                         sqlitecmdCommand.CommandText = sSqlInsert;
                         sqlitecmdCommand.ExecuteNonQuery();
@@ -954,7 +946,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         {
                             if (!sqlitereadReader.Read())
                                 throw new Exception("Record not found");
-                            Dictionary<string, string> oDictColumnValues = new Dictionary<string, string>();
+                            Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
 
                             for (int i = 0; i < sqlitereadReader.FieldCount; i++)
                             {
@@ -965,13 +957,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     continue; // PK not included in update dictionary
                                 }
 
-                                oDictColumnValues[sColumnName] = sqlitereadReader.IsDBNull(i) ? null : sqlitereadReader.GetValue(i).ToString();
+                                odictColumnValues[sColumnName] = sqlitereadReader.IsDBNull(i) ? null : sqlitereadReader.GetValue(i).ToString();
                             }
 
                             RecordUpdate ru = new RecordUpdate();
                             ru.sPrimaryKeyColumn = sPK;
                             ru.sId = sRecordID;
-                            ru.odictColumnValues = oDictColumnValues;
+                            ru.odictColumnValues = odictColumnValues;
 
                             mruRecordToReturn.ruRecords = new List<RecordUpdate>
                             {
@@ -1095,7 +1087,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
 
 
-                Globals.ThisAddIn.m_SyncedDB = true;
+                Globals.ThisAddIn.m_bSyncedDB = true;
                 //make sure the db is pointing towards correct location 
                 DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
 
@@ -1126,11 +1118,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //first part checks to see if all the shape in the visio file exist in the db and that their information is up to date...
                 string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
                 //create a new list for each shape that has its own table...
-                List<string> lstTerminals = new List<string>();
-                List<string> lstWires = new List<string>();
-                List<string> lstEndDevices = new List<string>();
-                Dictionary<string, Visio.Shape> oDictPrimaryWiresNotInDB = new Dictionary<string, Visio.Shape>();
-                Dictionary<string, Visio.Shape> oDictSecondaryWiresNotInDB = new Dictionary<string, Visio.Shape>();
+                List<string> olstTerminals = new List<string>();
+                List<string> olstWires = new List<string>();
+                List<string> olstEndDevices = new List<string>();
+                Dictionary<string, Visio.Shape> odictPrimaryWiresNotInDB = new Dictionary<string, Visio.Shape>();
+                Dictionary<string, Visio.Shape> odictSecondaryWiresNotInDB = new Dictionary<string, Visio.Shape>();
                 foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
                     foreach (Visio.Shape ovShape in ovPage.Shapes)
@@ -1151,7 +1143,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     case "TerminalBlock":
                                         {
                                             //this checks that all the visio termianl blocks have a db record entry and makes sure the information is up to date..
-                                            CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape, sShapeID, ref lstTerminals, ref oDictPrimaryWiresNotInDB, ref oDictSecondaryWiresNotInDB);
+                                            CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovShape, sShapeID, ref olstTerminals, ref odictPrimaryWiresNotInDB, ref odictSecondaryWiresNotInDB);
 
 
 
@@ -1159,7 +1151,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                         }
                                     case "SmartWire":
                                         {
-                                            CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovShape, sShapeID, ref lstWires, ref oDictPrimaryWiresNotInDB, ref oDictSecondaryWiresNotInDB);
+                                            CheckShapeExistenceInDB(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, ovShape, sShapeID, ref olstWires, ref odictPrimaryWiresNotInDB, ref odictSecondaryWiresNotInDB);
 
 
 
@@ -1168,7 +1160,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                         }
                                     case "ADC End Device":
                                         {
-                                            CheckShapeExistenceInDB(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape, sShapeID, ref lstEndDevices, ref oDictPrimaryWiresNotInDB, ref oDictSecondaryWiresNotInDB);
+                                            CheckShapeExistenceInDB(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovShape, sShapeID, ref olstEndDevices, ref odictPrimaryWiresNotInDB, ref odictSecondaryWiresNotInDB);
                                             break;
                                         }
                                 }
@@ -1183,46 +1175,40 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
                 //clean up wires not in db...
-                if (oDictPrimaryWiresNotInDB.Count > 0)
+                if (odictPrimaryWiresNotInDB.Count > 0)
                 {
-                    //now we need to drop secondary wires for each of the primary wires in oDictPrimaryWiresNotInDB and add them to the db...
-                    //foreach (Visio.Shape ovPrimaryWire in oDictPrimaryWiresNotInDB.Values)
-                    //{
-                    //    WireUtilities.AddWire(ovPrimaryWire, ref lstWires, true);
-                    //}
-
                     //we are going to match the primary to its secodnary...
-                    foreach (Visio.Shape ovPrimaryWire in oDictPrimaryWiresNotInDB.Values)
+                    foreach (Visio.Shape ovPrimaryWire in odictPrimaryWiresNotInDB.Values)
                     {
                         string sWirePairID = ovPrimaryWire.Cells["User.WirePairID"].get_ResultStr(0);
                         MultipleRecordUpdates mruPrimaryRecord = WireUtilities.BuildWireShapeInfo(ovPrimaryWire, sWirePairID, false);
-                        //get the secondary wire in the oDictSecondaryWires based on its shapeid...
+                        //get the secondary wire in the odictSecondaryWires based on its shapeid...
                         string sMateID = "";
-                        //loop through the oDictSecondaryWiresNotInDB for the matching wirepairid...
-                        foreach (Visio.Shape ovMateShape in oDictSecondaryWiresNotInDB.Values)
+                        //loop through the odictSecondaryWiresNotInDB for the matching wirepairid...
+                        foreach (Visio.Shape ovMateShape in odictSecondaryWiresNotInDB.Values)
                         {
                             if (ovMateShape.Cells["User.WirePairID"].get_ResultStr(0) == sWirePairID)
                             {
                                 sMateID = ovMateShape.Cells["User.ShapeID"].get_ResultStr(0);
                             }
                         }
-                        Visio.Shape ovSecondaryWire = oDictSecondaryWiresNotInDB[sMateID];
+                        Visio.Shape ovSecondaryWire = odictSecondaryWiresNotInDB[sMateID];
                         MultipleRecordUpdates mruSecondaryRecord = WireUtilities.BuildWireShapeInfo(ovSecondaryWire, sWirePairID, false);
 
                         WireUtilities.AddWireToDatabase(mruPrimaryRecord, mruSecondaryRecord);
 
                         //add to lstWires so we don't delete them...
-                        lstWires.Add(mruPrimaryRecord.ruRecords[0].sId);
-                        lstWires.Add(mruSecondaryRecord.ruRecords[0].sId);
+                        olstWires.Add(mruPrimaryRecord.ruRecords[0].sId);
+                        olstWires.Add(mruSecondaryRecord.ruRecords[0].sId);
                     }
 
                 }
 
 
                 //now we need to check to make sure everything in the db exists in visio
-                CheckShapeExistenceInVisio(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument, ref lstTerminals);
-                CheckShapeExistenceInVisio(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovDocument, ref lstEndDevices);
-                CheckShapeExistenceInVisio(SqlTables.WireShapesTable.sWireShapeTable, ovDocument, ref lstWires);
+                CheckShapeExistenceInVisio(SqlTables.TerminalBlocksTable.sTerminalBlockTable, ovDocument, ref olstTerminals);
+                CheckShapeExistenceInVisio(SqlTables.WiringEndDevice.sWiringEndDeviceTable, ovDocument, ref olstEndDevices);
+                CheckShapeExistenceInVisio(SqlTables.WireShapesTable.sWireShapeTable, ovDocument, ref olstWires);
 
 
 
@@ -1269,9 +1255,9 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static List<string> CheckShapeExistenceInVisio(string sTableName, Visio.Document ovDocument, ref List<string> lstShapes)
+        internal static List<string> CheckShapeExistenceInVisio(string sTableName, Visio.Document ovDocument, ref List<string> olstShapes)
         {
-            List<string> lstShapesToRemove = new List<string>();
+            List<string> olstShapesToRemove = new List<string>();
             try
             {
 
@@ -1281,24 +1267,24 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 foreach (RecordUpdate ru in ShapesUtilities.m_mruRecordsBase.ruRecords)
                 {
                     string sShapeID = ru.sId;
-                    if (lstShapes.Contains(sShapeID))
+                    if (olstShapes.Contains(sShapeID))
                     {
                         //the shape exists in visio and in the db...
                     }
                     else
                     {
                         //the shape exists in the db and not in visio, we want to delete it from the db
-                        lstShapesToRemove.Add(sShapeID);
+                        olstShapesToRemove.Add(sShapeID);
                         //get the pagename from the pageid...
 
                     }
                 }
-                if (lstShapesToRemove.Count > 0)
+                if (olstShapesToRemove.Count > 0)
                 {
                     //we have records in our pages table that don't actually exist-go delete them from db...
                     //build a delete sql for each record...
                     List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                    foreach (string sShapeID in lstShapesToRemove)
+                    foreach (string sShapeID in olstShapesToRemove)
                     {
                         RecordUpdate ru = new RecordUpdate();
                         ru.sId = sShapeID;
@@ -1321,12 +1307,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 MessageBox.Show("Error in CheckShapeExistenceInVisio " + ex.Message, "VisAssist");
             }
 
-            return lstShapesToRemove;
+            return olstShapesToRemove;
         }
 
       
 
-        internal static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> lstShapes, ref Dictionary<string, Shape> oDictPrimaryWiresNotInDB, ref Dictionary<string, Visio.Shape> oDictSecondaryWiresNotInDB)
+        internal static void CheckShapeExistenceInDB(string sTableName, Visio.Shape ovShape, string sShapeID, ref List<string> olstShapes, ref Dictionary<string, Shape> odictPrimaryWiresNotInDB, ref Dictionary<string, Visio.Shape> odictSecondaryWiresNotInDB)
         {
             try
             {
@@ -1363,16 +1349,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 {
                                     case "P":
                                         {
-                                            oDictPrimaryWiresNotInDB.Add(sShapeID, ovShape);
+                                            odictPrimaryWiresNotInDB.Add(sShapeID, ovShape);
                                             break;
                                         }
                                     case "S":
                                         {
-                                            oDictSecondaryWiresNotInDB.Add(sShapeID, ovShape);
-                                            ////delete the secondary wire..
-                                            //ovShape.Application.EventsEnabled = 0;
-                                            //ovShape.Delete();
-                                            //ovShape.Application.EventsEnabled = -1;
+                                            odictSecondaryWiresNotInDB.Add(sShapeID, ovShape);
+                                            
 
                                             break;
                                         }
@@ -1422,7 +1405,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                 if (!bDontAddTolstShapes)
                 {
-                    lstShapes.Add(sShapeID);
+                    olstShapes.Add(sShapeID);
                 }
             }
             catch(Exception ex)
@@ -1438,7 +1421,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //this first part checks to see if the all the pages in the visio file exist in the db and if their information is correct...
 
                 string sProjectID = ovDocument.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                List<string> lstPages = new List<string>();
+                List<string> olstPages = new List<string>();
                 //we are given the root project folderpath sVisAssistFolderPath
                 //and the document ovDocument
                 //create a collection of the pages and the shapes to confirm they exist in the db...
@@ -1451,7 +1434,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
                         CheckPageExistenceInDB(ovPage, sProjectID, sPageID);
                         //add it to a collection of pages that should be in db to compare later to what is in db and clear and records that don't exist in the collection
-                        lstPages.Add(sPageID);
+                        olstPages.Add(sPageID);
                     }
 
                 }
@@ -1459,7 +1442,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-                CheckPageExistenceInVisio(ovDocument, ref lstPages);
+                CheckPageExistenceInVisio(ovDocument, ref olstPages);
 
             }
             catch (Exception ex)
@@ -1468,36 +1451,34 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void CheckPageExistenceInVisio(Document ovDocument, ref List<string> lstPages)
+        internal static void CheckPageExistenceInVisio(Document ovDocument, ref List<string> olstPages)
         {
             try
             {
-
-
                 //This checks to see if we need to delete any records from the DB
                 //now check if any records exist in db that don't in lstPages then delete them from the db...
                 PageUtilities.GetPagesForCurrentFile(ovDocument); //populate PageUtilities.m_mruRecordsBase
-                List<string> lstPagesToRemove = new List<string>();
+                List<string> olstPagesToRemove = new List<string>();
                 foreach (RecordUpdate ru in PageUtilities.m_mruRecordsBase.ruRecords)
                 {
                     string sPageID = ru.sId;
-                    if (lstPages.Contains(sPageID))
+                    if (olstPages.Contains(sPageID))
                     {
                         //the page exists in visio and in the db...
                     }
                     else
                     {
                         //the page exists in the db and not in visio, we want to delete it from the db
-                        lstPagesToRemove.Add(sPageID);
+                        olstPagesToRemove.Add(sPageID);
                     }
                 }
 
-                if (lstPagesToRemove.Count > 0)
+                if (olstPagesToRemove.Count > 0)
                 {
                     //we have records in our pages table that don't actually exist-go delete them from db...
                     //build a delete sql for each record...
                     List<RecordUpdate> ruRecords = new List<RecordUpdate>();
-                    foreach (string sPageID in lstPagesToRemove)
+                    foreach (string sPageID in olstPagesToRemove)
                     {
                         RecordUpdate ru = new RecordUpdate();
                         ru.sId = sPageID;
@@ -1513,7 +1494,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             catch(Exception ex)
             {
-                MessageBox.Show("Error in CheckPagegExistenceInVisio " + ex.Message, "VisAssist");
+                MessageBox.Show("Error in CheckPageExistenceInVisio " + ex.Message, "VisAssist");
             }
         }
 

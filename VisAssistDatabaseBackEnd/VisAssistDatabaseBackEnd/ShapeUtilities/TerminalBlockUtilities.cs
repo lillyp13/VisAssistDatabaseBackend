@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
@@ -109,7 +106,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
                 string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
-                Dictionary<string, string> oDictFileValues = GatherTerminalBlockInformation(ovShape, sPageID);
+                Dictionary<string, string> odictFileValues = GatherTerminalBlockInformation(ovShape, sPageID);
 
 
                 string sID = "";
@@ -133,7 +130,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 RecordUpdate ruFileRecord = new RecordUpdate();
                 ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
                 ruFileRecord.sId = sID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
+                ruFileRecord.odictColumnValues = odictFileValues;
 
                 return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
             }
@@ -149,65 +146,11 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
 
         }
-        internal static MultipleRecordUpdates AddTerminalBlockInfo(Visio.Shape ovShape, string sPageID)
-        {
-            //this is when we are adding a new terminal block, could be adding it new or adding a new one from a copy 
-            Visio.Document ovDoc = ovShape.ContainingPage.Document;
-            try
-            {
-                string sProjectID = ovDoc.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-                string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-
-
-
-                if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                {
-                    //turn off events befroe updating the shapes pageid
-                    //ovDoc.Application.EventsEnabled = 0;
-                    //ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sPageID);
-                    //ovDoc.Application.EventsEnabled = -1;
-
-                }
-
-
-                Dictionary<string, string> oDictFileValues = GatherTerminalBlockInformation(ovShape, sPageID);
-
-
-                string sID = "";
-                if (ovShape.CellExists["User.ShapeID", 0] == -1)
-                {
-
-                    sID = ShapesUtilities.GenerateShapeID(sProjectID, sFileID, sPageID, ovShape.Name, DateTime.Now);
-                    //turn off events before adding to the shape
-                    ovDoc.Application.EventsEnabled = 0;
-                    ovShape.Cells["User.ShapeID"].Formula = "\"" + sID + "\"";
-                    ovDoc.Application.EventsEnabled = -1;
-
-                }
-
-
-
-                RecordUpdate ruFileRecord = new RecordUpdate();
-                ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
-                ruFileRecord.sId = sID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
-
-                return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in BuildTerminalBlockInfo " + ex.Message, "VisAssist");
-            }
-            finally
-            {
-                ovDoc.Application.EventsEnabled = -1;
-            }
-            return new MultipleRecordUpdates();
-        }
+       
 
         internal static Dictionary<string, string> GatherTerminalBlockInformation(Visio.Shape ovShape, string sPageID)
         {
-            Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
+            Dictionary<string, string> odictFileValues = new Dictionary<string, string>();
             try
             {
                 Visio.Document ovDoc = ovShape.Document;
@@ -227,11 +170,11 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
 
 
-                oDictFileValues.Add("PageID", sPageID);
-                oDictFileValues.Add("Color", sColor);
-                oDictFileValues.Add("ShapeText", sShapeText);
-                oDictFileValues.Add("XLocation", iPageX.ToString());
-                oDictFileValues.Add("YLocation", iPageY.ToString());
+                odictFileValues.Add("PageID", sPageID);
+                odictFileValues.Add("Color", sColor);
+                odictFileValues.Add("ShapeText", sShapeText);
+                odictFileValues.Add("XLocation", iPageX.ToString());
+                odictFileValues.Add("YLocation", iPageY.ToString());
 
 
                 int iPageIndex = ovShape.ContainingPage.Index;
@@ -276,7 +219,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             {
                 MessageBox.Show("Error in GatherTerminalBlockInformation " + ex.Message, "VisAssist");
             }
-            return oDictFileValues;
+            return odictFileValues;
 
         }
 

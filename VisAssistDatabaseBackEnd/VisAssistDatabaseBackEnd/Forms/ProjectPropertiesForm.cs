@@ -1,14 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.IO.Ports;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
@@ -35,9 +26,7 @@ namespace VisAssistDatabaseBackEnd.Forms
             m_sFilePath = sFilePath;
             if(sAction == "Add")
             {
-                //the database doesn't exist yet open the form 
-                //ConnectionsUtilities.InitializeDatabase();
-                //ProjectUtilities.AddProjectInfo(this);
+                
                 txtProjectName.Text = sProjectName;
                 ShowDialog();
                 

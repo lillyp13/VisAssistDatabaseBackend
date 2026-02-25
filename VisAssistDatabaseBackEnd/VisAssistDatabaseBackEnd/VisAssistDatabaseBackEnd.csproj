@@ -224,12 +224,6 @@
     <Compile Include="Forms\PagesForm.Designer.cs">
       <DependentUpon>PagesForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\PagesInformationForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Forms\PagesInformationForm.Designer.cs">
-      <DependentUpon>PagesInformationForm.cs</DependentUpon>
-    </Compile>
     <Compile Include="Forms\NameForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -249,6 +243,7 @@
     <Compile Include="Ribbonxml.cs" />
     <Compile Include="ShapeUtilities\EndDeviceUtilities.cs" />
     <Compile Include="ShapeUtilities\TerminalBlockUtilities.cs" />
+    <Compile Include="ShapeUtilities\Wire\WireMateUtilities.cs" />
     <Compile Include="ShapeUtilities\Wire\WireUtilities.cs" />
     <Compile Include="VisioUtilities\Application.cs" />
     <Compile Include="VisioUtilities\DelayedEvent.cs" />
@@ -261,9 +256,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\PagesForm.resx">
       <DependentUpon>PagesForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Forms\PagesInformationForm.resx">
-      <DependentUpon>PagesInformationForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\NameForm.resx">
       <DependentUpon>NameForm.cs</DependentUpon>

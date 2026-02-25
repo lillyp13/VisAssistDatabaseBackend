@@ -97,8 +97,8 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
                     if (bManifestFileExists)
                     {
                         //we can only read manifestfile if the file exts....using the file to check if it is a visassist project but if they don't exist we need to abort earleir....
-                        Dictionary<string, string> oDictManifestData = ReadManifestFile(sProjectPath);
-                        bool bIsValidVisAssistProject = IsVisAssistProject(oDictManifestData);
+                        Dictionary<string, string> odictManifestData = ReadManifestFile(sProjectPath);
+                        bool bIsValidVisAssistProject = IsVisAssistProject(odictManifestData);
 
                         if (bIsValidVisAssistProject)
                         {
@@ -147,19 +147,19 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
             return File.Exists(sManifestFilePath);
         }
 
-        public static bool IsVisAssistProject(Dictionary<string, string> oDictManifestData)
+        public static bool IsVisAssistProject(Dictionary<string, string> odictManifestData)
         {
             //Logging added here
 
             try
             {
-                if (oDictManifestData == null || oDictManifestData.Count == 0) return false;
-                if (oDictManifestData.ContainsKey("ApplicationName") && oDictManifestData["ApplicationName"] == sApplicationName)
+                if (odictManifestData == null || odictManifestData.Count == 0) return false;
+                if (odictManifestData.ContainsKey("ApplicationName") && odictManifestData["ApplicationName"] == sApplicationName)
                 {
-                    if (oDictManifestData.ContainsKey("ProjectID") && !string.IsNullOrEmpty(oDictManifestData["ProjectID"]))
+                    if (odictManifestData.ContainsKey("ProjectID") && !string.IsNullOrEmpty(odictManifestData["ProjectID"]))
                     {
                         string sDbProjectId = ProjectUtilities.GetColumnInfoInProjectTableFromDatabase("ProjectID");
-                        string sManifestProjectId = oDictManifestData["ProjectID"].ToString();
+                        string sManifestProjectId = odictManifestData["ProjectID"].ToString();
                         if (sDbProjectId == sManifestProjectId)
                         {
                             //Logging: Manifest ProjectId matches the Database ProjectId
@@ -200,22 +200,22 @@ namespace VisAssistDatabaseBackEnd.Project_Manifest
                 var data = JsonConvert.DeserializeObject<dynamic>(jsonString);
 
                 //return a ProjectManifest dictionary populated with the data from the JSON file
-                Dictionary<string, string> oDictManifestData = new Dictionary<string, string>();
+                Dictionary<string, string> odictManifestData = new Dictionary<string, string>();
 
                 if (data == null)
                 {
                     //Logging: Manifest file is empty or invalid
-                    return oDictManifestData;
+                    return odictManifestData;
                 }
 
                 foreach (var item in data)
                 {
-                    oDictManifestData.Add(item.Name, item.Value.ToString());
+                    odictManifestData.Add(item.Name, item.Value.ToString());
                 }
 
                 //Logging: Manifest file read successfully
 
-                return oDictManifestData;
+                return odictManifestData;
             }
             catch (Exception ex)
             {

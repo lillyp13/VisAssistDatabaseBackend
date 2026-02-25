@@ -1,23 +1,11 @@
-﻿using Microsoft.Office.Core;
-using Microsoft.Office.Interop.Visio;
-using Microsoft.VisualStudio.Tools.Applications.Runtime;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data.Odbc;
 using System.Data.SQLite;
-using System.Drawing;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using VisAssistDatabaseBackEnd.Forms;
-using VisAssistDatabaseBackEnd.ShapeUtilities;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Visio = Microsoft.Office.Interop.Visio;
 using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 
@@ -40,7 +28,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             {
                 //gets called when we are adding a page that already has shapes on it and need to add the shapes to the db...
                 //this gets called when the user is bringing back a page from an undo event...
-                Dictionary<string, Visio.Shape> oDictWires = new Dictionary<string, Visio.Shape>();
+                Dictionary<string, Visio.Shape> odictWires = new Dictionary<string, Visio.Shape>();
                 foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
                     if (oListVisioPages.Contains(ovPage.Name))
@@ -68,7 +56,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                                             //gather a list of the wires to add...
                                             string sKey = ovShape.Cells["User.WirePairID"].get_ResultStr(0) + "|" + ovShape.ID + "|" + ovShape.ContainingPage.Name;
 
-                                            oDictWires.Add(sKey, ovShape);
+                                            odictWires.Add(sKey, ovShape);
                                             break;
                                         }
                                 }
@@ -86,7 +74,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 // Group shapes by WirePairID
                 Dictionary<string, List<Visio.Shape>> odictWirePairs = new Dictionary<string, List<Visio.Shape>>();
 
-                foreach (KeyValuePair<string, Visio.Shape> BaseItem in oDictWires)
+                foreach (KeyValuePair<string, Visio.Shape> BaseItem in odictWires)
                 {
                     string sKey = BaseItem.Key;
                     Visio.Shape shape = BaseItem.Value;
@@ -208,7 +196,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
         internal static List<string> PopulateShapesInDocument(Visio.Document ovDocument, string sClassToGather)
         {
             //this populates a list of the shapes (given a class) on a given page
-            List<string> lstShapesToReturn = new List<string>();
+            List<string> olstShapesToReturn = new List<string>();
             try
             {
 
@@ -233,7 +221,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                                             {
                                                 sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
 
-                                                lstShapesToReturn.Add(sID);
+                                                olstShapesToReturn.Add(sID);
                                             }
 
                                             break;
@@ -244,17 +232,17 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                                             {
                                                 sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
 
-                                                lstShapesToReturn.Add(sID);
+                                                olstShapesToReturn.Add(sID);
                                             }
                                             break;
                                         }
-                                    case "ADC End Device":
+                                    case "End Device":
                                         {
-                                            if (sClass == "ADC End Device")
+                                            if (sClass == "End Device")
                                             {
                                                 sID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
 
-                                                lstShapesToReturn.Add(sID);
+                                                olstShapesToReturn.Add(sID);
                                             }
                                             break;
                                         }
@@ -263,13 +251,13 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                         }
                     }
                 }
-                return lstShapesToReturn;
+                return olstShapesToReturn;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error in PopulateShapesOnPage " + ex.Message, "VisAssist");
             }
-            return lstShapesToReturn;
+            return olstShapesToReturn;
         }
         internal static string GenerateShapeID(string sProjectID, string sFileID, string sPageID, string sShapeName, DateTime now)
         {
@@ -299,7 +287,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                     m_mruRecordsBase.ruRecords.Clear();
                 }
 
-                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
+                List<RecordUpdate> olstRecords = new List<RecordUpdate>();
 
                 string sSql = $@"SELECT tb.* FROM {sTableName} tb INNER JOIN pages_table p ON tb.PageID = p.PageID WHERE p.FileID = @FileID;";
 
@@ -319,24 +307,24 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                                 ru.sPrimaryKeyColumn = "ShapeID";
 
                                 // Create dictionary for all columns except ShapeID, values as string
-                                Dictionary<string, string> oDictColumns = new Dictionary<string, string>();
+                                Dictionary<string, string> odictColumns = new Dictionary<string, string>();
                                 for (int i = 0; i < sqlitereadReader.FieldCount; i++)
                                 {
                                     string columnName = sqlitereadReader.GetName(i);
                                     if (columnName == "ShapeID") continue; // skip ShapeID
 
                                     object value = sqlitereadReader.GetValue(i);
-                                    oDictColumns[columnName] = value == DBNull.Value ? "" : value.ToString();
+                                    odictColumns[columnName] = value == DBNull.Value ? "" : value.ToString();
                                 }
 
-                                ru.odictColumnValues = oDictColumns;
-                                lstRecords.Add(ru);
+                                ru.odictColumnValues = odictColumns;
+                                olstRecords.Add(ru);
                             }
                         }
                     }
                 }
 
-                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+                m_mruRecordsBase = new MultipleRecordUpdates(olstRecords);
             }
             catch (Exception ex)
             {

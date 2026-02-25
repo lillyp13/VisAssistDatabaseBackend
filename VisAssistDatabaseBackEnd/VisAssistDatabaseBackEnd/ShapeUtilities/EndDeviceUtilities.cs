@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
@@ -27,6 +24,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 }
                 else
                 {
+                    //this might need some work but end devices in general need a bit of work i think...
                     //    //the record already exists this is a copy of a shape..
                     //    oWiringEndDeviceRecord = AddWiringEndDeviceInfo(ovShape);
                     //    DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.WiringEndDevice.sWiringEndDeviceTable, oWiringEndDeviceRecord);
@@ -103,7 +101,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 string sPageIDFromShape = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
 
-                Dictionary<string, string> oDictFileValues = GatherEndDeviceInformation(ovShape, sPageIDFromShape);
+                Dictionary<string, string> odictFileValues = GatherEndDeviceInformation(ovShape, sPageIDFromShape);
 
 
                 string sID = "";
@@ -126,7 +124,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
                 ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.WiringEndDevice.sWiringEndDeviceTablePK;
                 ruFileRecord.sId = sID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
+                ruFileRecord.odictColumnValues = odictFileValues;
 
 
             }
@@ -147,20 +145,8 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
 
 
-                ////check to see if the sPageID and the sPageIDOnPage are the same...
-                //string sPageID = ovShape.ContainingPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
 
-
-                //turn off events befroe updating the shapes pageid
-                if (!Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                {
-                    //ovDoc.Application.EventsEnabled = 0;
-                    //ovShape.Cells["User.PageID"].Formula = VisioUtilities.Application.FormatStringForVisio(sPageID);
-                    //ovDoc.Application.EventsEnabled = -1;
-
-                }
-
-                Dictionary<string, string> oDictFileValues = GatherEndDeviceInformation(ovShape, sPageID);
+                Dictionary<string, string> odictFileValues = GatherEndDeviceInformation(ovShape, sPageID);
 
 
                 string sID = "";
@@ -178,7 +164,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 RecordUpdate ruFileRecord = new RecordUpdate();
                 ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.TerminalBlocksTable.sTerminalBlockTablePK;
                 ruFileRecord.sId = sID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
+                ruFileRecord.odictColumnValues = odictFileValues;
 
                 return new MultipleRecordUpdates(new List<RecordUpdate> { ruFileRecord });
             }
@@ -194,7 +180,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
         }
         private static Dictionary<string, string> GatherEndDeviceInformation(Visio.Shape ovShape, string sPageID)
         {
-            Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
+            Dictionary<string, string> odictFileValues = new Dictionary<string, string>();
             try
             {
                 Visio.Document ovDoc = ovShape.Document;
@@ -224,21 +210,21 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 int iPageY = (int)dPageY;
 
 
-                oDictFileValues.Add("PageID", sPageID);
-                oDictFileValues.Add("TermCount", iTermCount.ToString());
-                oDictFileValues.Add("Term1", sTerm1);
-                oDictFileValues.Add("Term2", sTerm2);
-                oDictFileValues.Add("Term3", sTerm3);
-                oDictFileValues.Add("Term4", sTerm4);
-                oDictFileValues.Add("Term5", sTerm5);
-                oDictFileValues.Add("Term6", sTerm6);
-                oDictFileValues.Add("Term7", sTerm7);
-                oDictFileValues.Add("Term8", sTerm8);
-                oDictFileValues.Add("Term9", sTerm9);
-                oDictFileValues.Add("Term10", sTerm10);
-                oDictFileValues.Add("Tag", sTag);
-                oDictFileValues.Add("XLocation", iPageX.ToString());
-                oDictFileValues.Add("YLocation", iPageY.ToString());
+                odictFileValues.Add("PageID", sPageID);
+                odictFileValues.Add("TermCount", iTermCount.ToString());
+                odictFileValues.Add("Term1", sTerm1);
+                odictFileValues.Add("Term2", sTerm2);
+                odictFileValues.Add("Term3", sTerm3);
+                odictFileValues.Add("Term4", sTerm4);
+                odictFileValues.Add("Term5", sTerm5);
+                odictFileValues.Add("Term6", sTerm6);
+                odictFileValues.Add("Term7", sTerm7);
+                odictFileValues.Add("Term8", sTerm8);
+                odictFileValues.Add("Term9", sTerm9);
+                odictFileValues.Add("Term10", sTerm10);
+                odictFileValues.Add("Tag", sTag);
+                odictFileValues.Add("XLocation", iPageX.ToString());
+                odictFileValues.Add("YLocation", iPageY.ToString());
 
 
                 int iPageIndex = ovShape.ContainingPage.Index;
@@ -283,7 +269,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             {
                 MessageBox.Show("Error in GatherEndDeviceInformation " + ex.Message, "VisAssist");
             }
-            return oDictFileValues;
+            return odictFileValues;
         }
 
     }

@@ -1,39 +1,16 @@
-﻿using Microsoft.Office.Core;
-using Microsoft.Office.Tools.Ribbon;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
 using VisAssistDatabaseBackEnd.Forms;
-using VisAssistDatabaseBackEnd.ShapeUtilities;
 using Office = Microsoft.Office.Core;
 using Visio = Microsoft.Office.Interop.Visio;
 using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
-using System.Net;
 
-// TODO:  Follow these steps to enable the Ribbon (XML) item:
-
-// 1: Copy the following code block into the ThisAddin, ThisWorkbook, or ThisDocument class.
-
-//  protected override Microsoft.Office.Core.IRibbonExtensibility CreateRibbonExtensibilityObject()
-//  {
-//      return new Ribbonxml();
-//  }
-
-// 2. Create callback methods in the "Ribbon Callbacks" region of this class to handle user
-//    actions, such as clicking a button. Note: if you have exported this Ribbon from the Ribbon designer,
-//    move your code from the event handlers to the callback methods and modify the code to work with the
-//    Ribbon extensibility (RibbonX) programming model.
-
-// 3. Assign attributes to the control tags in the Ribbon XML file to identify the appropriate callback methods in your code.  
-
-// For more information, see the Ribbon XML documentation in the Visual Studio Tools for Office Help.
 
 
 namespace VisAssistDatabaseBackEnd
@@ -96,25 +73,10 @@ namespace VisAssistDatabaseBackEnd
 
         }
 
-        public void btnDeletePageInfo_Click(Office.IRibbonControl control)
-        {
-            //PageUtilities.DeleteAllPages();
-        }
-
-        public bool GetDuplicatePageEnabled(Office.IRibbonControl control)
-        {
-            return false;
-        }
-
-        public void OnCustomDuplicateSinglePage(Office.IRibbonControl control)
-        {
-            //MessageBox.Show("The " + control.Id + " control has been clicked.");
-        }
-
+       
+     
         public void OnCustomDuplicateMultiplePages(Office.IRibbonControl control)
         {
-            //MessageBox.Show("The " + control.Id + " control has been clicked.");
-
             PageUtilities.WhatPagesToDuplicate();
         }
 
@@ -123,63 +85,10 @@ namespace VisAssistDatabaseBackEnd
 
             ProjectUtilities.DeleteProject();
 
-
-            //this just clears the project record from the table-user would never do this and we aren't giving them a place to do it 
-            //ProjectUtilities.DeleteProjectInfo();
         }
 
 
-        public void btnAddWireInfo_Click(Office.IRibbonControl control)
-        {
-            // ConnectionsUtilities.AddWireInfo();
-        }
 
-
-        public void btnGetPageName_Click(Office.IRibbonControl control)
-        {
-            //grab all the pages and put them in a datagridview 
-            //for now let's build a datagridview of all the pages in just one file...
-            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
-            if (ovDoc != null)
-            {
-
-                string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
-                if (sVisAssistFolderPath != "")
-                {
-                    DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
-
-                    bool bDoesDBExist = FileUtilities.DoesDBFileExist(sVisAssistFolderPath);
-                    if (bDoesDBExist)
-                    {
-                        bool bDoesTableExist = DatabaseUtilities.DoesTableHaveAnyRecords(DatabaseUtilities.SqlTables.PagesTable.sPagesTable);
-                        if (bDoesTableExist)
-                        {
-
-                            bool bIsFileAssignedToProject = FileUtilities.IsFileAssignedToProject(ovDoc);
-                            if (bIsFileAssignedToProject)
-                            {
-                                PageUtilities.OpenPagesForm();
-                            }
-                            else
-                            {
-                                MessageBox.Show("This file is not assigned to a project.", "VisAssist");
-                            }
-
-                        }
-                    }
-                    else
-                    { //the db doesn't exist. orphan the file...
-                        MessageBox.Show("The db file doesn't exist.", "VisAssist");
-                    }
-                }
-                else
-                {
-                    MessageBox.Show("Couldn't find the correct folder path.", "VisAssist");
-                }
-
-            }
-
-        }
 
         public void btnDeleteDatabase_Click(Office.IRibbonControl control)
         {
@@ -473,8 +382,8 @@ namespace VisAssistDatabaseBackEnd
                                     sFileName = FileUtilities.FormatFileName(sFileName);
 
                                     //get all the file names in this proejct 
-                                    List<string> lstFileNames = FileUtilities.GetFileNamesInProject();
-                                    if (!lstFileNames.Contains(sFileName, StringComparer.OrdinalIgnoreCase))
+                                    List<string> olstFileNames = FileUtilities.GetFileNamesInProject();
+                                    if (!olstFileNames.Contains(sFileName, StringComparer.OrdinalIgnoreCase))
                                     {
                                         FileUtilities.UpdateFileName(sFileName);
                                     }
@@ -559,10 +468,6 @@ namespace VisAssistDatabaseBackEnd
 
         public void btnResetWireColorandNumber_Click(Office.IRibbonControl control)
         {
-            //RenumberAndRecolorWire.ResetWireColorAndNumber();
-
-
-
             Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
             if(ovDoc != null)
             {

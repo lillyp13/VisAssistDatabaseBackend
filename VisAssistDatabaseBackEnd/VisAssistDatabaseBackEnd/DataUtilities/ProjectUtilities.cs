@@ -1,16 +1,13 @@
-﻿using Microsoft.Office.Interop.Visio;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.Project_Manifest;
 using WindowsAPICodePack.Dialogs;
-using static VisAssistDatabaseBackEnd.DataUtilities.DatabaseUtilities;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
@@ -42,7 +39,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         string sDesignedBy;
         string sReviewedBy;
         int iFileCount;
-        //static SQLiteConnection Connection = ConnectionsUtilities.Connection;
 
         string sFileNumberFormat;
         string sPageNumberFormat;
@@ -74,7 +70,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         //CRUD Actions
         internal static void AddProjectInfo(ProjectPropertiesForm projectPropertiesForm, Visio.Document ovDoc)
         {
-            //string sProjectTableName = "project_table";
             try
             {
 
@@ -103,7 +98,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                 {
 
                                     DatabaseUtilities.BuildInsertSqlForMultipleRecords(DatabaseUtilities.SqlTables.ProjectTable.sProjectTable, m_mruRecordsToCompare);
-                                    //DataProcessingUtilities.BuildInsertSqlForRecordDictionary(sTable, m_dictProjectInfoToUpdate);
+                                   
 
                                     ProjectUtilities.GetProjectInfoFromDatabase(); //go and grab the data from the database to populate the m_dictProjectInfoBase
 
@@ -312,8 +307,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         {
             try
             {
-
-
                 // i want to delete the project entireley so i will see if i can delete the folder (if everything in it is closed...)
                 //open a folder dialog box and have the user point to the folder they want to delete
                 //try to delete it-if we can't catch the exception and tell the user hey you need to close all the files in that project before i delete the project...
@@ -424,7 +417,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             {
                 //logging statement placeholder
                 //RECORDS USING MUTLIPLE RECORD UPDATES
-                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
+                List<RecordUpdate> olstRecords = new List<RecordUpdate>();
 
 
                 string sId = ""; // default for "new project"
@@ -481,10 +474,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 ru.sId = sId;
                 ru.odictColumnValues = odictColumnValues;
 
-                lstRecords.Add(ru);
+                olstRecords.Add(ru);
 
                 // Store in MultipleRecordUpdates
-                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+                m_mruRecordsBase = new MultipleRecordUpdates(olstRecords);
 
 
 
@@ -531,9 +524,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         internal static string GenerateProjectID(string sVisAssistFolderPath, DateTime createdDate, string sProjectName)
         {
             //generates a unique ID for the Project
-            //project: sDirectoryPath + "Dwg - Cover Pages" + project name and created date
-            //file: projectID + filepath + created date
-            //page: ProjectID + FileID + page name + created date
+            
 
             string sProjectFolderPath = System.IO.Path.Combine(sVisAssistFolderPath, "Project Files");
             string sInput = sProjectFolderPath + "Dwg - Cover Pages.vsdx" + sProjectName + createdDate.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
@@ -602,8 +593,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     folderdialog.Dispose();
                 }
 
-                //open the fileForm and populate it with the files in the project for the user to open 
-
 
             }
             catch (Exception ex)
@@ -628,12 +617,12 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             return null;
         }
-        //this just goes through each text box on the form and builds up a dictionary based on the values on the form currently (so that we can compare with the values in the db)
+        
         private static void GatherProjectPropertiesInfoFromForm(ProjectPropertiesForm projectPropertiesForm, Visio.Document ovDoc)
         {
             try
             {
-
+                //this just goes through each text box on the form and builds up a dictionary based on the values on the form currently (so that we can compare with the values in the db)
 
                 //this just creates the dictionary to compare...
                 string sID = projectPropertiesForm.txtID.Text.TrimEnd();
@@ -715,13 +704,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 string sPrimarykey = "Id";
 
                 // Build column dictionary (exclude Id)
-                Dictionary<string, string> oDictToUpdate = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, string> odictToUpdate = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (KeyValuePair<string, string> sBaseItem in m_dictProjectInfoToCompare)
                 {
                     if (!sBaseItem.Key.Equals(sPrimarykey, StringComparison.OrdinalIgnoreCase))
                     {
-                        oDictToUpdate[sBaseItem.Key] = sBaseItem.Value;
+                        odictToUpdate[sBaseItem.Key] = sBaseItem.Value;
                     }
 
                 }
@@ -742,7 +731,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     string sVisAssistFolderPath = System.IO.Path.GetDirectoryName(sProjectFolderPath);
                     //the created date doesn't exist yet...
                     DateTime dtCreatedDate = DateTime.Now;
-                    oDictToUpdate["CreatedDate"] = dtCreatedDate.ToString("yyyy-MM-dd HH:mm:ss");
+                    odictToUpdate["CreatedDate"] = dtCreatedDate.ToString("yyyy-MM-dd HH:mm:ss");
                     sProjectID = ProjectUtilities.GenerateProjectID(sVisAssistFolderPath, dtCreatedDate, m_dictProjectInfoToCompare["ProjectName"]);
                 }
 
@@ -750,7 +739,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 RecordUpdate record = new RecordUpdate();
                 record.sPrimaryKeyColumn = sPrimarykey;
                 record.sId = sProjectID;
-                record.odictColumnValues = oDictToUpdate;
+                record.odictColumnValues = odictToUpdate;
 
                 m_mruRecordsToCompare = new MultipleRecordUpdates(new List<RecordUpdate> { record });
 

@@ -1,32 +1,16 @@
-﻿using Microsoft.Office.Interop.Visio;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
-using VisAssistDatabaseBackEnd.ShapeUtilities;
 using VisAssistDatabaseBackEnd.Forms;
 using Visio = Microsoft.Office.Interop.Visio;
-using System.Drawing;
 using VisAssistDatabaseBackEnd.VisioUtilities;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static VisAssistDatabaseBackEnd.DataUtilities.DatabaseUtilities.SqlTables;
-using System.Reflection;
-using System.Runtime.Remoting.Metadata.W3cXsd2001;
-using System.Runtime.Remoting.Messaging;
 
 namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
 {
     internal class RenumberWire
     {
-
-
-
-
-
 
         internal static void GatherRenumberInfo(ReColororRenumberWiresForm reColororRenumberWiresForm)
         {
@@ -36,7 +20,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
                 string sRange = reColororRenumberWiresForm.cboRange.Text;
                 string sOrder = reColororRenumberWiresForm.cboDirection.Text;
 
-                Dictionary<string, MateSelection> oDictWires = new Dictionary<string, MateSelection>();
+                Dictionary<string, MateSelection> odictWires = new Dictionary<string, MateSelection>();
 
 
                 string sPrefix = reColororRenumberWiresForm.txtPrefix.Text;
@@ -55,10 +39,10 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
                     MessageBox.Show("Please enter a valid integer number.", "VisAssist");
                 }
                
-                oDictWires = WireUtilities.GatherWires(sRange);
+                odictWires = WireUtilities.GatherWires(sRange);
                
 
-                RenumberWires(oDictWires, sOrder, sPrefix, iNumber);
+                RenumberWires(odictWires, sOrder, sPrefix, iNumber);
 
 
 
@@ -77,19 +61,19 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
 
        
 
-        internal static void RenumberWires(Dictionary<string, MateSelection> oDictWires, string sOrder, string sPrefix, int iNumber)
+        internal static void RenumberWires(Dictionary<string, MateSelection> odictWires, string sOrder, string sPrefix, int iNumber)
         {
             try
             {
 
                 int iUndoScope = Globals.ThisAddIn.Application.BeginUndoScope("Renumber Wires");
-                //Dictionary<string, Visio.Shape> oDictWiresProcessed = new Dictionary<string, Shape>();
+                //Dictionary<string, Visio.Shape> odictWiresProcessed = new Dictionary<string, Shape>();
                 List<string> olstWiresProcessed = new List<string>();
                 Visio.Document ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
                 string sFileID = ovDocument.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
-               // Dictionary<string, Visio.Shape> oDictSortedShapes = new Dictionary<string, Shape>();
-               List<string> lstSortedWireIDs = new List<string>();
-                //we have oDictWires and we want to sort them based on the sOrder 
+               // Dictionary<string, Visio.Shape> odictSortedShapes = new Dictionary<string, Shape>();
+               List<string> olstSortedWireIDs = new List<string>();
+                //we have odictWires and we want to sort them based on the sOrder 
 
 
                 switch (sOrder)
@@ -99,31 +83,31 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
                            
                             //we have a dictionary with all the shapeids we want to order
                             //sql statement to order them IDs by OrderByDescending based on the column YLocation...
-                           lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "YLocation", "DESC");
+                           olstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(odictWires, sFileID, "YLocation", "DESC");
                             break;
                         }
                     case "Bottom-Top":
                         {
                            
-                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "YLocation", "ASC");
+                            olstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(odictWires, sFileID, "YLocation", "ASC");
                             break;
                         }
                     case "Left-Right":
                         {
                            
-                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "XLocation", "ASC");
+                            olstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(odictWires, sFileID, "XLocation", "ASC");
                             break;
                         }
                     case "Right-Left":
                         {
                            
-                            lstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(oDictWires, sFileID, "XLocation", "DESC");
+                            olstSortedWireIDs = WireUtilities.GetOrderedShapeIDsByYLocation(odictWires, sFileID, "XLocation", "DESC");
                             break;
                         }
                 }
 
 
-                foreach(string sShapeID in lstSortedWireIDs)
+                foreach(string sShapeID in olstSortedWireIDs)
                 {
                     string sWireLabel = "";
                     if(sPrefix == "")
@@ -160,7 +144,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
 
                                     olstWiresProcessed.Add(sShapeID);
                                     //now we need to update the mate shape now...
-                                    string sMateID = WireUtilities.GetMateID(oDictWires[sShapeID].sWirePairID, oDictWires[sShapeID].sWireRole);
+                                    string sMateID = WireMateUtilities.GetMateID(odictWires[sShapeID].sWirePairID, odictWires[sShapeID].sWireRole);
                                     string sMatePageID = WireUtilities.GetColumnInfoInWireShapesTableFromDatabase("PageID", sMateID);
                                     string sMatePageIndex = PageUtilities.GetColumnInfoInPagesTableFromDatabase("PageIndex", sMatePageID);
                                     int iMatePageIndex = Convert.ToInt32(sMatePageIndex);
@@ -270,10 +254,6 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities.Wire
                 MessageBox.Show("Error in ResetWireNumber " + ex.Message, "VisAssist");
             }
         }
-
-        
-
-
 
 
     }

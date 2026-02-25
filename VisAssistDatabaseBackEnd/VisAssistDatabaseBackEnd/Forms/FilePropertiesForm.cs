@@ -1,15 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.DataUtilities;
-using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.Forms
 {
@@ -46,22 +38,10 @@ namespace VisAssistDatabaseBackEnd.Forms
             FileUtilities.PopulateFilePropertiesForm(this);
         }
 
-        private void btnAddFile_Click(object sender, EventArgs e)
-        {
-            //this just adds a practice add new file
-            //FileUtilities.AddFile(this);
-
-        }
-
-        private void btnUpdateFile_Click(object sender, EventArgs e)
-        {
-            FileUtilities.UpdateFile(this);
-        }
-
         private void btnDeleteFile_Click(object sender, EventArgs e)
         {
+            //call delete file for the specified file in the datagridivew...
             FileUtilities.DeleteFile(this);
         }
-
     }
 }

@@ -43,8 +43,6 @@
             this.IgnoreWireColor = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.AllowDuplicateTags = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ShowPointData = new System.Windows.Forms.DataGridViewTextBoxColumn();
-            this.btnAddFile = new System.Windows.Forms.Button();
-            this.btnUpdateFile = new System.Windows.Forms.Button();
             this.btnDeleteFile = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dgvFileData)).BeginInit();
             this.SuspendLayout();
@@ -149,32 +147,12 @@
             this.ShowPointData.HeaderText = "Show Point Data";
             this.ShowPointData.Name = "ShowPointData";
             // 
-            // btnAddFile
-            // 
-            this.btnAddFile.Location = new System.Drawing.Point(1461, 61);
-            this.btnAddFile.Name = "btnAddFile";
-            this.btnAddFile.Size = new System.Drawing.Size(75, 23);
-            this.btnAddFile.TabIndex = 1;
-            this.btnAddFile.Text = "Add File";
-            this.btnAddFile.UseVisualStyleBackColor = true;
-            this.btnAddFile.Click += new System.EventHandler(this.btnAddFile_Click);
-            // 
-            // btnUpdateFile
-            // 
-            this.btnUpdateFile.Location = new System.Drawing.Point(1461, 115);
-            this.btnUpdateFile.Name = "btnUpdateFile";
-            this.btnUpdateFile.Size = new System.Drawing.Size(75, 23);
-            this.btnUpdateFile.TabIndex = 2;
-            this.btnUpdateFile.Text = "Update File";
-            this.btnUpdateFile.UseVisualStyleBackColor = true;
-            this.btnUpdateFile.Click += new System.EventHandler(this.btnUpdateFile_Click);
-            // 
             // btnDeleteFile
             // 
-            this.btnDeleteFile.Location = new System.Drawing.Point(1461, 155);
+            this.btnDeleteFile.Location = new System.Drawing.Point(1476, 59);
             this.btnDeleteFile.Name = "btnDeleteFile";
             this.btnDeleteFile.Size = new System.Drawing.Size(75, 23);
-            this.btnDeleteFile.TabIndex = 3;
+            this.btnDeleteFile.TabIndex = 1;
             this.btnDeleteFile.Text = "Delete File";
             this.btnDeleteFile.UseVisualStyleBackColor = true;
             this.btnDeleteFile.Click += new System.EventHandler(this.btnDeleteFile_Click);
@@ -185,8 +163,6 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1669, 390);
             this.Controls.Add(this.btnDeleteFile);
-            this.Controls.Add(this.btnUpdateFile);
-            this.Controls.Add(this.btnAddFile);
             this.Controls.Add(this.dgvFileData);
             this.Name = "FilePropertiesForm";
             this.Text = "FilePropertiesForm";
@@ -199,8 +175,6 @@
         #endregion
 
         public System.Windows.Forms.DataGridView dgvFileData;
-        public System.Windows.Forms.Button btnAddFile;
-        public System.Windows.Forms.Button btnUpdateFile;
         private System.Windows.Forms.DataGridViewTextBoxColumn FileID;
         private System.Windows.Forms.DataGridViewTextBoxColumn ProjectID;
         private System.Windows.Forms.DataGridViewTextBoxColumn RevisionID;
@@ -215,6 +189,6 @@
         private System.Windows.Forms.DataGridViewTextBoxColumn IgnoreWireColor;
         private System.Windows.Forms.DataGridViewTextBoxColumn AllowDuplicateTags;
         private System.Windows.Forms.DataGridViewTextBoxColumn ShowPointData;
-        public System.Windows.Forms.Button btnDeleteFile;
+        private System.Windows.Forms.Button btnDeleteFile;
     }
 }

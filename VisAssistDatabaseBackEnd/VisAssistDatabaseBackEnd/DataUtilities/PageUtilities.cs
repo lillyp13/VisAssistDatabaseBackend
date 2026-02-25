@@ -1,22 +1,14 @@
-﻿using Accessibility;
-using Microsoft.Office.Interop.Visio;
-using MS.WindowsAPICodePack.Internal;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
-using System.Diagnostics;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
-using System.Xml.Linq;
 using VisAssistDatabaseBackEnd.Forms;
-using VisAssistDatabaseBackEnd.ShapeUtilities;
 using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 using VisAssistDatabaseBackEnd.VisioUtilities;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Visio = Microsoft.Office.Interop.Visio;
 
 namespace VisAssistDatabaseBackEnd.DataUtilities
@@ -189,30 +181,29 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-                Dictionary<string, string> oDictFileValues = new Dictionary<string, string>();
-                oDictFileValues.Add("PageName", sPageName);
-                oDictFileValues.Add("ProjectID", sProjectID);
-                oDictFileValues.Add("FileID", sFileID);
-                oDictFileValues.Add("PageIndex", iPageIndex.ToString());
-                // oDictFileValues.Add("CreatedDate", dtCreatedDate.ToString());
+                Dictionary<string, string> odictFileValues = new Dictionary<string, string>();
+                odictFileValues.Add("PageName", sPageName);
+                odictFileValues.Add("ProjectID", sProjectID);
+                odictFileValues.Add("FileID", sFileID);
+                odictFileValues.Add("PageIndex", iPageIndex.ToString());
 
-                oDictFileValues.Add("LastModifiedDate", sLastModifiedDate);
-                oDictFileValues.Add("Version", sVersion);
-                oDictFileValues.Add("Class", sClass);
-                oDictFileValues.Add("Orientation", sOrientation);
-                oDictFileValues.Add("Scale", sScale);
+                odictFileValues.Add("LastModifiedDate", sLastModifiedDate);
+                odictFileValues.Add("Version", sVersion);
+                odictFileValues.Add("Class", sClass);
+                odictFileValues.Add("Orientation", sOrientation);
+                odictFileValues.Add("Scale", sScale);
 
                 string sPageID = "";
                 if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                 {
-                    oDictFileValues["CreatedDate"] = ovPage.Document.DocumentSheet.Cells["User.CreatedDate"].get_ResultStr(0);
+                    odictFileValues["CreatedDate"] = ovPage.Document.DocumentSheet.Cells["User.CreatedDate"].get_ResultStr(0);
                     sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
                 }
 
                 if (sPageID == "")
                 {
                     //this is us adding a page there isn't a page id yet...
-                    oDictFileValues["CreatedDate"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    odictFileValues["CreatedDate"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     sPageID = PageUtilities.GeneratePageID(sProjectID, sFileID, sPageName, DateTime.Now);
                     ovPage.PageSheet.AddNamedRow((short)Visio.VisSectionIndices.visSectionUser, "PageID", 0);
                     ovPage.PageSheet.Cells["User.PageID"].Formula = "\"" + sPageID + "\"";
@@ -226,7 +217,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 
                 ruFileRecord.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.PagesTable.sPagesTablePK;
                 ruFileRecord.sId = sPageID;
-                ruFileRecord.odictColumnValues = oDictFileValues;
+                ruFileRecord.odictColumnValues = odictFileValues;
                 
             }
             catch(Exception ex)
@@ -239,10 +230,6 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
         internal static string GeneratePageID(string sProjectID, string sFileID, string sPageName, DateTime now)
         {
-            //project: sDirectoryPath + "Dwg - Cover Pages" + project name and created date
-            //file: projectID + filepath + created date
-            //page: ProjectID + FileID + page name + created date
-
             string input = sProjectID + sFileID + sPageName + now.ToString("yyyy-MM-dd HH:mm:ss"); // formatted
             using (SHA256 sha = SHA256.Create())
             {
@@ -293,7 +280,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
         }
         internal static List<string> PopulateVisioPageList(Visio.Document ovDocument)
         {
-            List<string> lstPages = new List<string>();
+            List<string> olstPages = new List<string>();
             try
             {
                 foreach (Visio.Page ovPage in ovDocument.Pages)
@@ -301,79 +288,22 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
                     {
                         string sPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                        lstPages.Add(sPageID);
+                        olstPages.Add(sPageID);
                     }
                 }
-                return lstPages;
+                return olstPages;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Error in PopulateVisioPageList " + ex.Message, "VisAssist");
             }
-            return lstPages;
+            return olstPages;
         }
 
 
         //FORMS
-        internal static void OpenPagesForm()
-        {
-            try
-            {
-                PagesInformationForm oNewForm = new PagesInformationForm();
-                oNewForm.Display();
-                oNewForm.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in OpenPagesForm " + ex.Message, "VisAssist");
-            }
-        }
-        internal static void PopulatePagesInformationForm(PagesInformationForm pagesForm)
-        {
-            //we have m_mruRecordsBase that contains each page go through it and populate the datagridview...
-            try
-            {
-                // Clear existing rows first
-                pagesForm.dgvPages.Rows.Clear();
-
-                if (m_mruRecordsBase.ruRecords == null || m_mruRecordsBase.ruRecords.Count == 0)
-                {
-                    MessageBox.Show("There are no pages for this file.");
-                    return; //nothing to populate
-                }
-
-
-                // Loop through each record
-                foreach (RecordUpdate ruRecord in m_mruRecordsBase.ruRecords)
-                {
-                    // Create a new row
-                    DataGridViewRow dgvRow = new DataGridViewRow();
-                    dgvRow.CreateCells(pagesForm.dgvPages);
-
-                    // Populate each cell by matching column names
-                    foreach (DataGridViewColumn dgvCol in pagesForm.dgvPages.Columns)
-                    {
-                        string sColName = dgvCol.Name;
-
-                        if (ruRecord.odictColumnValues.ContainsKey(sColName))
-                        {
-                            dgvRow.Cells[dgvCol.Index].Value = ruRecord.odictColumnValues[sColName];
-                        }
-                        else
-                        {
-                            dgvRow.Cells[dgvCol.Index].Value = null; // or string.Empty if preferred
-                        }
-                    }
-
-                    // Add the row to the DataGridView
-                    pagesForm.dgvPages.Rows.Add(dgvRow);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in PopulatePagesForm: " + ex.Message, "VisAssist");
-            }
-        }
+       
+        
         internal static void PopulatePagesForm(PagesForm pagesForm)
         {
             try
@@ -396,86 +326,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void PopulatePagesFormForOnePage(PagesInformationForm pagesForm)
-        {
-            //clear all the rows first 
-            pagesForm.dgvPages.Rows.Clear();
-
-            Visio.Page ovPage = Globals.ThisAddIn.Application.ActivePage;
-            if (ovPage != null)
-            {
-                //get the page information from visio 
-                string sProjectID = ovPage.Document.DocumentSheet.Cells["User.ProjectID"].get_ResultStr(0);
-
-                m_mruRecordsToUpdate = BuildPageInfoBasedOnVisioPage(ovPage, sProjectID);
-
-
-                foreach (RecordUpdate ruRecord in m_mruRecordsToUpdate.ruRecords)
-                {
-                    // Create a new row
-                    DataGridViewRow dgvRow = new DataGridViewRow();
-                    dgvRow.CreateCells(pagesForm.dgvPages);
-
-                    // Populate each cell by matching column names
-                    foreach (DataGridViewColumn dgvCol in pagesForm.dgvPages.Columns)
-                    {
-                        string sColName = dgvCol.Name;
-
-                        if (ruRecord.odictColumnValues.ContainsKey(sColName))
-                        {
-                            dgvRow.Cells[dgvCol.Index].Value = ruRecord.odictColumnValues[sColName];
-                        }
-                        else
-                        {
-                            if (sColName == "PageID")
-                            {
-                                dgvRow.Cells[dgvCol.Index].Value = ruRecord.sId;
-                            }
-                            else
-                            {
-                                dgvRow.Cells[dgvCol.Index].Value = null; // or string.Empty if preferred
-                            }
-
-                        }
-                    }
-
-                    // Add the row to the DataGridView
-                    pagesForm.dgvPages.Rows.Add(dgvRow);
-                }
-
-            }
-        }
-
-        internal static void PasteShapesOnPageUserSpecified(PagesForm pagesForm)
-        {
-            string sPageNameToMoveTo = "";
-            foreach (DataGridViewRow dgvRow in pagesForm.dgvPages.SelectedRows)
-            {
-                if (!dgvRow.IsNewRow)
-                {
-                    sPageNameToMoveTo = dgvRow.Cells["PageName"].Value?.ToString();
-
-                }
-            }
-
-            //ok now paste what we have in our clipboard on the visio page sPageNameToMoveTo
-            Visio.Application ovApp = Globals.ThisAddIn.Application;
-            Visio.Document ovDocument = ovApp.ActiveDocument;
-            foreach (Visio.Page ovPage in ovDocument.Pages)
-            {
-                if (ovPage.Name == sPageNameToMoveTo)
-                {
-                    string sNewPageID = ovPage.PageSheet.Cells["User.PageID"].get_ResultStr(0);
-                    //this is the page we want to paste what is in our clipboard...
-                    int iUndoScope = ovApp.BeginUndoScope("Cut and Paste Action");
-                    Globals.ThisAddIn.m_sLastUndoScope = "Cut and Paste Action";
-                    ovPage.Paste();
-                    ovApp.EndUndoScope(iUndoScope, true);
-
-
-                }
-            }
-        }
+        
 
         //GATHERING INFORMATION
         internal static void GetPagesForCurrentFile(Visio.Document ovDoc)
@@ -492,7 +343,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         m_mruRecordsBase.ruRecords.Clear();
                     }
 
-                    List<RecordUpdate> lstRecords = new List<RecordUpdate>();
+                    List<RecordUpdate> olstRecords = new List<RecordUpdate>();
 
                     // string sSql = @"SELECT * FROM pages_table WHERE FileID = @FileID";
                     string sSql = @"SELECt * FROM " + DatabaseUtilities.SqlTables.PagesTable.sPagesTable + " WHERE FileID = @FileID";
@@ -530,13 +381,13 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                                     ruRecordUpdate.odictColumnValues = odictColumnValues;
 
 
-                                    lstRecords.Add(ruRecordUpdate);
+                                    olstRecords.Add(ruRecordUpdate);
                                 }
                             }
                         }
                     }
 
-                    m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
+                    m_mruRecordsBase = new MultipleRecordUpdates(olstRecords);
                 }
 
             }
@@ -581,68 +432,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
             return "";
         }
-        internal static void GetAllPages()
-        {
-            //get all the pages in the pages_table
-            try
-            {
-
-                List<RecordUpdate> lstRecords = new List<RecordUpdate>();
-
-                // Fetch all pages, no WHERE clause
-                //string sSql = @"SELECT * FROM pages_table";
-                string sSql = @"SELECT * FROM " + DatabaseUtilities.SqlTables.PagesTable.sPagesTable;
-
-                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
-                {
-                    sqliteconConnection.Open();
-                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
-                    {
-                        // No parameter needed anymore
-
-                        using (SQLiteDataReader sqlitereadReader = sqlitecmdCommand.ExecuteReader())
-                        {
-                            while (sqlitereadReader.Read())
-                            {
-                                Dictionary<string, string> odictColumnValues = new Dictionary<string, string>();
-                                string sPageID = "";
-
-                                for (int i = 0; i < sqlitereadReader.FieldCount; i++)
-                                {
-                                    string sColumnName = sqlitereadReader.GetName(i);
-                                    string sValue = sqlitereadReader.IsDBNull(i) ? string.Empty : sqlitereadReader.GetValue(i).ToString();
-                                    odictColumnValues.Add(sColumnName, sValue);
-
-                                    if (sColumnName == DatabaseUtilities.SqlTables.PagesTable.sPagesTablePK)
-                                    {
-                                        sPageID = sqlitereadReader.GetValue(i).ToString();
-                                    }
-
-                                }
-
-                                RecordUpdate ruRecordUpdate = new RecordUpdate();
-                                ruRecordUpdate.sPrimaryKeyColumn = DatabaseUtilities.SqlTables.PagesTable.sPagesTablePK;
-                                ruRecordUpdate.sId = sPageID;
-                                ruRecordUpdate.odictColumnValues = odictColumnValues;
-
-                                lstRecords.Add(ruRecordUpdate);
-                            }
-                        }
-                    }
-                }
-
-                m_mruRecordsBase = new MultipleRecordUpdates(lstRecords);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error in GetPagesForFile: " + ex.Message, "VisAssist");
-            }
-
-        }
-
        
-
-
 
 
         //COPYING PAGES
@@ -676,36 +466,36 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 string sCurrentPageName = Globals.ThisAddIn.Application.ActivePage.Name;
                 olstPagesToDuplicate.Add(sCurrentPageName);
 
-                Dictionary<string, Visio.Page> oDictPagesToDuplicate = new Dictionary<string, Visio.Page>();
+                Dictionary<string, Visio.Page> odictPagesToDuplicate = new Dictionary<string, Visio.Page>();
                 Visio.Document ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
                 foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
                     if (olstPagesToDuplicate.Contains(ovPage.Name))
                     {
-                        oDictPagesToDuplicate.Add(ovPage.Name, ovPage);
+                        odictPagesToDuplicate.Add(ovPage.Name, ovPage);
                     }
                 }
 
 
                 //before calling DuplicateMultiplePages we need to check the dictionary of pages they chose for any wires on a page they didn't pick...
                
-                Dictionary<string, Visio.Page> oDictPagesToAskUser = new Dictionary<string, Visio.Page>();
-                foreach(Visio.Page ovPage in oDictPagesToDuplicate.Values)
+                Dictionary<string, Visio.Page> odictPagesToAskUser = new Dictionary<string, Visio.Page>();
+                foreach(Visio.Page ovPage in odictPagesToDuplicate.Values)
                 {
-                    Dictionary<string, Visio.Page> oDictOtherPages = WireUtilities.DoesPageContainWireMates(ovPage);
-                    //check if there are any pages in oDictOtherPages that doesn't exist in oDictPagesToDuplicate
-                    foreach (KeyValuePair<string, Visio.Page> kvPage in oDictOtherPages)
+                    Dictionary<string, Visio.Page> odictOtherPages = WireMateUtilities.DoesPageContainWireMates(ovPage);
+                    //check if there are any pages in odictOtherPages that doesn't exist in odictPagesToDuplicate
+                    foreach (KeyValuePair<string, Visio.Page> kvPage in odictOtherPages)
                     {
-                        if (!oDictPagesToDuplicate.ContainsKey(kvPage.Key))
+                        if (!odictPagesToDuplicate.ContainsKey(kvPage.Key))
                         {
-                            if (!oDictPagesToAskUser.ContainsKey(kvPage.Key))
+                            if (!odictPagesToAskUser.ContainsKey(kvPage.Key))
                             {
-                                oDictPagesToAskUser.Add(kvPage.Key, kvPage.Value);
+                                odictPagesToAskUser.Add(kvPage.Key, kvPage.Value);
                             }
                         }
                     }
                 }
-                if(oDictPagesToAskUser.Count > 0)
+                if(odictPagesToAskUser.Count > 0)
                 {
                     //ask the user if they want to include these pages or not
                     DialogResult result = MessageBox.Show("There are additional related pages that contain wire mates.\n\n" + "Do you want to include these pages in the duplication?", "VisAssist",
@@ -715,18 +505,18 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     if(result == DialogResult.Yes)
                     {
                         //add these pages to the dictionary to duplicate
-                        foreach (KeyValuePair<string, Visio.Page> kvPage in oDictPagesToAskUser)
+                        foreach (KeyValuePair<string, Visio.Page> kvPage in odictPagesToAskUser)
                         {
-                            if (!oDictPagesToDuplicate.ContainsKey(kvPage.Key))
+                            if (!odictPagesToDuplicate.ContainsKey(kvPage.Key))
                             {
-                                oDictPagesToDuplicate.Add(kvPage.Key, kvPage.Value);
+                                odictPagesToDuplicate.Add(kvPage.Key, kvPage.Value);
                             }
                         }
                     }
                 }
 
                 int iUndoScope = ovDocument.Application.BeginUndoScope("Duplicate");
-                PageUtilities.DuplicateMultiplePages(oDictPagesToDuplicate);
+                PageUtilities.DuplicateMultiplePages(odictPagesToDuplicate);
                 ovDocument.Application.EndUndoScope(iUndoScope, true);
             }
             catch (Exception ex)
@@ -735,7 +525,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void DuplicateMultiplePages(Dictionary<string, Visio.Page> oDictPages)
+        internal static void DuplicateMultiplePages(Dictionary<string, Visio.Page> odictPages)
         {
             Visio.Document ovDocument = Globals.ThisAddIn.Application.ActiveDocument;
            // int iUndoScope = ovDocument.Application.BeginUndoScope("Duplicate Pages");
@@ -755,10 +545,10 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
              
 
 
-                Dictionary<string, Visio.Page> oDictPagesToDuplicate = new Dictionary<string, Visio.Page>();
+                Dictionary<string, Visio.Page> odictPagesToDuplicate = new Dictionary<string, Visio.Page>();
                 ovDocument.Application.EventsEnabled = 0;
                 //// 1️⃣ Find highest numeric page name
-                foreach (Visio.Page ovPageToAdd in oDictPages.Values.OrderBy(p => p.Index))
+                foreach (Visio.Page ovPageToAdd in odictPages.Values.OrderBy(p => p.Index))
                 {
                     Visio.Page ovNewPage = ovPageToAdd.Duplicate();
 
@@ -768,11 +558,11 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
                     //    ovNewPage.Name = sNewName;
 
-                    oDictPagesToDuplicate.Add(ovNewPage.Name, ovNewPage);
+                    odictPagesToDuplicate.Add(ovNewPage.Name, ovNewPage);
                 }
                 ovDocument.Application.EventsEnabled = -1;
 
-                VisioUtilities.Application.OnPageDuplicated(oDictPagesToDuplicate);
+                VisioUtilities.Application.OnPageDuplicated(odictPagesToDuplicate);
 
             }
             catch(Exception ex)
@@ -1078,27 +868,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             }
         }
 
-        internal static void OtherPagesToDuplicate(Visio.Page ovPageToDuplicate)
-        {
-            //gather all the pages to duplicate (if there is a wire on ovPageToDuplicate and its mate is on a different page add the mates page..)
-            try
-            {
-                foreach(Visio.Shape ovShape in ovPageToDuplicate.Shapes)
-                {
-                    if (ovShape.CellExists["User.Class",0] == -1)
-                    {
-                        if (ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
-                        {
-
-                        }
-                    }
-                }
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Error in OtherpagesToDuplicate " + ex.Message, "VisAssist");
-            }
-        }
+      
 
         internal static void UpdatePageIndexInDB(string sPageID, int iPageIndex)
         {
