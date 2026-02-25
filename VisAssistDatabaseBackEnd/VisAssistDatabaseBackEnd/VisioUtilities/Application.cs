@@ -10,6 +10,7 @@ using VisAssistDatabaseBackEnd.DataUtilities;
 using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
+using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 using System.Xml.Linq;
 using System.Configuration;
 using VisAssistDatabaseBackEnd.Forms;
@@ -52,7 +53,34 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                             List<string> oListPages = new List<string>();
                             oListPages.Add(ovVisioPage.Name);
                             //will need to also add all the shapes on the page back to the db...check if this gets called when copying a file...
-                            ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID, ovVisioPage.Document);
+                            //add this as a delayed event becuase if this si coming from an undo the shapes may not be on the page yet...
+
+                            //ShapesUtilities.AddShapesToDatabase(oListPages, sProjectID, ovVisioPage.Document);
+                            DelayedEvent existingEvent = Globals.ThisAddIn.m_delayedEvents.FirstOrDefault(e => e.sOperationType == "AddShapesToDatabase" && e.ovDocument == ovVisioPage.Document);
+
+                            if (existingEvent != null)
+                            {
+                                // Only add page if not already in list
+                                if (!existingEvent.oListPages.Contains(ovVisioPage.Name))
+                                {
+                                    existingEvent.oListPages.Add(ovVisioPage.Name);
+                                }
+
+                            }
+                            else
+                            {
+                                DelayedEvent oDelayedEvent = new DelayedEvent();
+                                oDelayedEvent.ovDocument = ovVisioPage.Document;
+                                oDelayedEvent.sOperationType = "AddShapesToDatabase";
+                                if (oDelayedEvent.oListPages == null)
+                                {
+                                    oDelayedEvent.oListPages = new List<string>();
+                                }
+                                oDelayedEvent.oListPages.Add(ovVisioPage.Name);
+
+                                Globals.ThisAddIn.m_delayedEvents.Add(oDelayedEvent);
+                            }
+
                         }
                         else
                         {
@@ -192,6 +220,8 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
 
                     VisAssistDatabaseBackEnd.VisioUtilities.Application.OnPageAdded(ovPageToDuplicate);
+
+                    //add a delayed event for ondocumentchanged so that the page index are all correct...
                 }
 
             }
@@ -387,13 +417,10 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                                     }
                                     string sShapeID = ovShape.Cells["User.ShapeID"].get_ResultStr(0);
                                     bool bNewWire = true;
-                                    if (sShapeID == "")
+                                    if(ovShape.Application.CurrentScope == 1024)
                                     {
-                                        bNewWire = true;
-                                    }
-                                    else
-                                    {
-                                        bNewWire = false; //this is probably a copy...
+                                        //this is a duplicate... we don't want to increase the color or number...
+                                        bNewWire = false;
                                     }
                                     WireUtilities.AddWire(ovShape, ref lstWires, bNewWire); //lstWires here should be empty we utiltize this when we use addwiretodatabase during the sync...
                                 }
@@ -467,7 +494,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                                 if (sWirePairID != "")
                                 {
                                     //if the wirepairid is empty we alrady deleted it...
-
+                                   
                                     switch (sWireRole)
                                     {
                                         case "P":
@@ -666,7 +693,7 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
 
                     PageUtilities.UpdatePageIDInDatabase(sPageID, sCurrentPageID, ovPage);
 
-
+                    PageUtilities.UpdatePageIndexInDB(sCurrentPageID, ovPage.Index);
                 }
 
                 if (oThisDelayedEvent.sOperationType == "TurnOffDuplicateBool")

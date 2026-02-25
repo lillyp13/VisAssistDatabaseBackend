@@ -291,7 +291,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                         File.SetAttributes(sDbFolderPath, File.GetAttributes(sDbFolderPath) | FileAttributes.Hidden);
 
                         // Bind to the database inside the hidden folder
-                        DatabaseConfig.DatabasePath = System.IO.Path.Combine(sDbFolderPath, "VisAssistBackEnd.db");
+                        DatabaseConfig.DatabasePath = System.IO.Path.Combine(sDbFolderPath, "VisAssistProject.db");
 
                         folderdialog.Dispose();
                         return sClassAFilePath;
@@ -351,7 +351,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
 
 
 
-                                //if this files name is VisAssistBackEnd.db delete this last if we were succesfully in deleting the other projects
+                                //if this files name is VisAssistProject.db delete this last if we were succesfully in deleting the other projects
                                 // Attempt to delete entire project folder
                                 if (bAllFilesUnlocked)
                                 {

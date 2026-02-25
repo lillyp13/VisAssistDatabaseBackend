@@ -19,19 +19,20 @@ using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Visio = Microsoft.Office.Interop.Visio;
+using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 
 namespace VisAssistDatabaseBackEnd.ShapeUtilities
 {
     internal class ShapesUtilities
-    { 
+    {
 
 
         public static MultipleRecordUpdates m_mruRecordsBase = new MultipleRecordUpdates();
         public static MultipleRecordUpdates m_mruRecordsToCompare = new MultipleRecordUpdates();
         public static MultipleRecordUpdates m_mruRecordsToUpdate = new MultipleRecordUpdates();
         private static PagesForm m_PagesForm;
-        
-      
+
+
 
         internal static void AddShapesToDatabase(List<string> oListVisioPages, string sProjectID, Visio.Document ovDocument)
         {
@@ -40,9 +41,9 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                 //gets called when we are adding a page that already has shapes on it and need to add the shapes to the db...
                 //this gets called when the user is bringing back a page from an undo event...
                 Dictionary<string, Visio.Shape> oDictWires = new Dictionary<string, Visio.Shape>();
-                foreach(Visio.Page ovPage in ovDocument.Pages)
+                foreach (Visio.Page ovPage in ovDocument.Pages)
                 {
-                    if(oListVisioPages.Contains(ovPage.Name))
+                    if (oListVisioPages.Contains(ovPage.Name))
                     {
                         foreach (Visio.Shape ovShape in ovPage.Shapes)
                         {
@@ -77,7 +78,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                     }
                 }
 
-                    
+
 
                 //now we have a full list of wires and we need to pair them based on their wirepairids..
                 //the wire pair id is the the first part of the key in the dictionary (before the first pipe |)
@@ -97,7 +98,7 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
                     {
                         odictWirePairs[sWirePairID] = new List<Visio.Shape>();
                     }
-                        
+
 
                     odictWirePairs[sWirePairID].Add(shape);
                 }
@@ -131,13 +132,69 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
 
                         //only add them to the db if they don't exist yet..
                         bool bDoesWireRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oPrimaryRecord.ruRecords[0].sId);
-                        if(!bDoesWireRecordExist)
+                        if (!bDoesWireRecordExist)
                         {
                             WireUtilities.AddWireToDatabase(oPrimaryRecord, oSecondaryRecord);
                         }
-                        
+
                     }
-                    
+                    else
+                    {
+                        //the mates shape is coming back on a different page...
+                        //use the sWirePairID to find the wire elsewhere in the document 
+                        foreach (Visio.Page ovPage in ovDocument.Pages)
+                        {
+                            if (ovPage.PageSheet.CellExists["User.PageID", 0] == -1)
+                            {
+                                foreach (Visio.Shape ovShape in ovPage.Shapes)
+                                {
+                                    if (ovShape.CellExists["User.Class", 0] == -1 && ovShape.Cells["User.Class"].get_ResultStr(0) == "SmartWire")
+                                    {
+                                        string sWirePairIDToCheck = ovShape.Cells["User.WirePairID"].get_ResultStr(0);
+                                        if (sWirePairIDToCheck == wirePairID)
+                                        {
+                                            //make sure we didn't find the shape we already have...
+
+                                            Visio.Shape wireA = pairShapes[0];
+                                            string sKey = wireA.Name + "|" + wireA.ContainingPage.Name;
+                                            string sKeyToCheck = ovShape.Name + "|" + ovShape.ContainingPage.Name;
+                                            if (sKey != sKeyToCheck)
+                                            {
+                                                Visio.Shape wireB = ovShape;
+                                                //this is the wire's mate...
+                                                MultipleRecordUpdates oPrimaryRecord = new MultipleRecordUpdates();
+                                                MultipleRecordUpdates oSecondaryRecord = new MultipleRecordUpdates();
+                                                //determine which is the primary...
+                                                if (wireA.Cells["User.WireRole"].get_ResultStr(0) == "P")
+                                                {
+                                                    //wireA is the priamry
+                                                    oPrimaryRecord = WireUtilities.BuildWireShapeInfo(wireA, wirePairID, false);
+                                                    oSecondaryRecord = WireUtilities.BuildWireShapeInfo(wireB, wirePairID, false);
+
+                                                }
+                                                else
+                                                {
+                                                    //wireA is the secondary
+                                                    oPrimaryRecord = WireUtilities.BuildWireShapeInfo(wireB, wirePairID, false);
+                                                    oSecondaryRecord = WireUtilities.BuildWireShapeInfo(wireA, wirePairID, false);
+                                                }
+
+                                                //only add them to the db if they don't exist yet..
+                                                bool bDoesWireRecordExist = DatabaseUtilities.DoesRecordExist(DatabaseUtilities.SqlTables.WireShapesTable.sWireShapeTable, oPrimaryRecord.ruRecords[0].sId);
+                                                if (!bDoesWireRecordExist)
+                                                {
+                                                    WireUtilities.AddWireToDatabase(oPrimaryRecord, oSecondaryRecord);
+                                                }
+                                                break;
+                                            }
+                                           
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                 }
 
 
@@ -329,8 +386,8 @@ namespace VisAssistDatabaseBackEnd.ShapeUtilities
             return $"({iPageIndex}, {sXMarker}{sYMarker})";
         }
 
-       
 
-       
+
+
     }
 }

@@ -14,6 +14,8 @@ using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using Office = Microsoft.Office.Core;
 using Visio = Microsoft.Office.Interop.Visio;
+using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
+using System.Net;
 
 // TODO:  Follow these steps to enable the Ribbon (XML) item:
 
@@ -106,12 +108,12 @@ namespace VisAssistDatabaseBackEnd
 
         public void OnCustomDuplicateSinglePage(Office.IRibbonControl control)
         {
-            MessageBox.Show("The " + control.Id + " control has been clicked.");
+            //MessageBox.Show("The " + control.Id + " control has been clicked.");
         }
 
         public void OnCustomDuplicateMultiplePages(Office.IRibbonControl control)
         {
-            MessageBox.Show("The " + control.Id + " control has been clicked.");
+            //MessageBox.Show("The " + control.Id + " control has been clicked.");
 
             PageUtilities.WhatPagesToDuplicate();
         }
@@ -557,7 +559,38 @@ namespace VisAssistDatabaseBackEnd
 
         public void btnResetWireColorandNumber_Click(Office.IRibbonControl control)
         {
-            WireUtilities.ResetWireColorAndNumber();
+            //RenumberAndRecolorWire.ResetWireColorAndNumber();
+
+
+
+            Visio.Document ovDoc = Globals.ThisAddIn.Application.ActiveDocument;
+            if(ovDoc != null)
+            {
+                string sVisAssistFolderPath = FileUtilities.GetFolderPath(ovDoc);
+                DatabaseConfig.BindToActiveDocument(sVisAssistFolderPath);
+
+                string sFileID = ovDoc.DocumentSheet.Cells["User.FileID"].get_ResultStr(0);
+                RenumberWire.ResetWireNumber(sFileID);
+                RecolorWire.ResetWireColor(sFileID);
+            }
+           
+
+        }
+
+        public void btnRecolorWires_Click(Office.IRibbonControl control)
+        {
+            string sAction = "Recolor";
+            ReColororRenumberWiresForm oNewForm = new ReColororRenumberWiresForm();
+            oNewForm.Display(sAction);
+            oNewForm.Show();
+        }
+
+        public void btnRenumberWires_Click(Office.IRibbonControl control)
+        {
+            string sAction = "Renumber";
+            ReColororRenumberWiresForm oNewForm = new ReColororRenumberWiresForm();
+            oNewForm.Display(sAction);
+            oNewForm.Show();
         }
 
         public void btnFirstStep_Click(Office.IRibbonControl control)

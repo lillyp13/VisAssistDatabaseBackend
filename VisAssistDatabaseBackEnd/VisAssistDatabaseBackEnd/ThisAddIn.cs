@@ -20,6 +20,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using System.Reflection;
 using System.Net;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
+using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 using System.Globalization;
 using WindowsAPICodePack.Dialogs.Controls;
 using Microsoft.Office.Tools;
@@ -968,10 +969,10 @@ namespace VisAssistDatabaseBackEnd
                                         break;
                                     }
 
-                                    if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
-                                    {
-                                        break;
-                                    }
+                                    //if (Globals.ThisAddIn.Application.IsUndoingOrRedoing)
+                                    //{
+                                    //    break;
+                                    //}
                                     //we are not in the middle of adding a shape..
                                     VisAssistDatabaseBackEnd.VisioUtilities.Application.CellChanged((Visio.Cell)subject);
                                     m_pendingShapeIds.Add(sKey);

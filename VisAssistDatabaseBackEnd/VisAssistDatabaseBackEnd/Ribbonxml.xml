@@ -70,6 +70,12 @@
           <button id="btnResetWireColorAndNumber"
 						 label="Reset Wire Color and Number"
 						 onAction="btnResetWireColorandNumber_Click"/>
+          <button id="btnRecolorWires"
+           label="Recolor Wires"
+           onAction="btnRecolorWires_Click"/>
+          <button id="btnRenumberWires"
+          label="Renumber Wires"
+          onAction="btnRenumberWires_Click"/>
 
         </group>
 			</tab>
@@ -82,9 +88,9 @@
    
 			<!--Custom VisAssist duplicate buttons-->
 			<menuSeparator id="sepCustom1"/>
-			<button id="VisAssistDuplicateSinglePage"
+			<!--<button id="VisAssistDuplicateSinglePage"
 					label="VisAssist - Duplicate Single Page"
-					onAction="OnCustomDuplicateSinglePage"/>
+					onAction="OnCustomDuplicateSinglePage"/>-->
 			
 			<button id="VisAssistDuplicateMultiplePages"
 					label="VisAssist - Duplicate Multiple Pages"

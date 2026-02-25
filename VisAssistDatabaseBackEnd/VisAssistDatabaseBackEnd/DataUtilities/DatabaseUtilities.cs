@@ -15,6 +15,7 @@ using System.Web;
 using System.Windows.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using VisAssistDatabaseBackEnd.VisioUtilities;
+using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
@@ -1669,7 +1670,7 @@ internal static class DatabaseConfig
 
         //sFolderPath = Path.GetDirectoryName(sFolderPath);
 
-        DatabasePath = System.IO.Path.Combine(sFolderPath, "DB", "VisAssistBackEnd.db");
+        DatabasePath = System.IO.Path.Combine(sFolderPath, "DB", "VisAssistProject.db");
         return true;
     }
 }

@@ -12,6 +12,7 @@ using VisAssistDatabaseBackEnd.Project_Manifest;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
 using WindowsAPICodePack.Dialogs;
 using Visio = Microsoft.Office.Interop.Visio;
+using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 
 
 
@@ -678,7 +679,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //get the file name and set that to the database path...
                 string sDirectoryPath = Path.GetDirectoryName(sFilePath); //get the path before the the file name
                 sDirectoryPath = Path.GetDirectoryName(sDirectoryPath); //get the path before the hidden Project Files folder
-                DatabaseConfig.DatabasePath = Path.Combine(sDirectoryPath, "DB", "VisAssistBackEnd.db");
+                DatabaseConfig.DatabasePath = Path.Combine(sDirectoryPath, "DB", "VisAssistProject.db");
 
                 return ovDoc;
             }
@@ -1813,7 +1814,7 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                 //{
                 // string sFolderPath = ReturnFileStructurePath(ovDoc.Path);
 
-                string sDBPath = Path.Combine(sFolderPath, "DB", "VisAssistBackEnd.db");
+                string sDBPath = Path.Combine(sFolderPath, "DB", "VisAssistProject.db");
 
                 if (System.IO.File.Exists(sDBPath))
                 {

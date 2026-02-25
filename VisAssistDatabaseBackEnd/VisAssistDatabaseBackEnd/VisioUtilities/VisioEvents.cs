@@ -13,6 +13,7 @@ using VisAssistDatabaseBackEnd.DataUtilities;
 using System.Runtime.CompilerServices;
 using static VisAssistDatabaseBackEnd.ThisAddIn;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
+using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 
 namespace VisAssistDatabaseBackEnd.VisioUtilities
 {
@@ -397,15 +398,15 @@ namespace VisAssistDatabaseBackEnd.VisioUtilities
                         string sNextWireNumber = ovThisVisioDocument.DocumentSheet.Cells["User.NextWireNumber"].get_ResultStr(0);
                         string sNextWireColor = ovThisVisioDocument.DocumentSheet.Cells["User.NextWireColor"].get_ResultStr(0);
                         //update the fileId nextwirenuber...
-                        WireUtilities.SetNextWireNumber(sFileID, sNextWireNumber);
-                        WireUtilities.SetNextWireColor(sFileID, sNextWireColor);
+                        RenumberWire.SetNextWireNumber(sFileID, sNextWireNumber);
+                        RecolorWire.SetNextWireColor(sFileID, sNextWireColor);
 
                     }
                     else
                     {
                         //this doesn't exist, so go and reset the nextwirenumber in the database....
-                        WireUtilities.SetNextWireNumber(sFileID, 1.ToString());
-                        WireUtilities.SetNextWireColor(sFileID, DatabaseUtilities.ColorMap["Yellow"]); //the first color...
+                        RenumberWire.SetNextWireNumber(sFileID, 1.ToString());
+                        RecolorWire.SetNextWireColor(sFileID, DatabaseUtilities.ColorMap["Yellow"]); //the first color...
                     }
 
 

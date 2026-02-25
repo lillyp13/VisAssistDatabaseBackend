@@ -14,6 +14,7 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using VisAssistDatabaseBackEnd.Forms;
 using VisAssistDatabaseBackEnd.ShapeUtilities;
+using VisAssistDatabaseBackEnd.ShapeUtilities.Wire;
 using VisAssistDatabaseBackEnd.VisioUtilities;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using Visio = Microsoft.Office.Interop.Visio;
@@ -685,7 +686,48 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
                     }
                 }
 
+
+                //before calling DuplicateMultiplePages we need to check the dictionary of pages they chose for any wires on a page they didn't pick...
+               
+                Dictionary<string, Visio.Page> oDictPagesToAskUser = new Dictionary<string, Visio.Page>();
+                foreach(Visio.Page ovPage in oDictPagesToDuplicate.Values)
+                {
+                    Dictionary<string, Visio.Page> oDictOtherPages = WireUtilities.DoesPageContainWireMates(ovPage);
+                    //check if there are any pages in oDictOtherPages that doesn't exist in oDictPagesToDuplicate
+                    foreach (KeyValuePair<string, Visio.Page> kvPage in oDictOtherPages)
+                    {
+                        if (!oDictPagesToDuplicate.ContainsKey(kvPage.Key))
+                        {
+                            if (!oDictPagesToAskUser.ContainsKey(kvPage.Key))
+                            {
+                                oDictPagesToAskUser.Add(kvPage.Key, kvPage.Value);
+                            }
+                        }
+                    }
+                }
+                if(oDictPagesToAskUser.Count > 0)
+                {
+                    //ask the user if they want to include these pages or not
+                    DialogResult result = MessageBox.Show("There are additional related pages that contain wire mates.\n\n" + "Do you want to include these pages in the duplication?", "VisAssist",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                    if(result == DialogResult.Yes)
+                    {
+                        //add these pages to the dictionary to duplicate
+                        foreach (KeyValuePair<string, Visio.Page> kvPage in oDictPagesToAskUser)
+                        {
+                            if (!oDictPagesToDuplicate.ContainsKey(kvPage.Key))
+                            {
+                                oDictPagesToDuplicate.Add(kvPage.Key, kvPage.Value);
+                            }
+                        }
+                    }
+                }
+
+                int iUndoScope = ovDocument.Application.BeginUndoScope("Duplicate");
                 PageUtilities.DuplicateMultiplePages(oDictPagesToDuplicate);
+                ovDocument.Application.EndUndoScope(iUndoScope, true);
             }
             catch (Exception ex)
             {
@@ -1055,6 +1097,35 @@ namespace VisAssistDatabaseBackEnd.DataUtilities
             catch(Exception ex)
             {
                 MessageBox.Show("Error in OtherpagesToDuplicate " + ex.Message, "VisAssist");
+            }
+        }
+
+        internal static void UpdatePageIndexInDB(string sPageID, int iPageIndex)
+        {
+            try
+            {
+
+                //update the entry record in pages_table where sPageID and update the pageID to sCurrentPageID
+
+                using (SQLiteConnection sqliteconConnection = new SQLiteConnection(DatabaseConfig.ConnectionString))
+                {
+                    sqliteconConnection.Open();
+
+                    string sSql = @"UPDATE pages_table SET PageIndex = @NewPageIndex WHERE PageID = @PageID";
+
+
+                    using (SQLiteCommand sqlitecmdCommand = new SQLiteCommand(sSql, sqliteconConnection))
+                    {
+                        sqlitecmdCommand.Parameters.AddWithValue("@NewPageIndex", iPageIndex);
+                        sqlitecmdCommand.Parameters.AddWithValue("@PageID", sPageID);
+
+                        sqlitecmdCommand.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error in UpdatePageIndexInDB " + ex.Message, "VisAssist");
             }
         }
     }

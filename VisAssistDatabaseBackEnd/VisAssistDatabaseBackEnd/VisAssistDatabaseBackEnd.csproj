@@ -197,6 +197,14 @@
     <Compile Include="DataUtilities\FileUtilities.cs" />
     <Compile Include="DataUtilities\PageUtilities.cs" />
     <Compile Include="DataUtilities\ProjectUtilities.cs" />
+    <Compile Include="Forms\ReColororRenumberWiresForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\ReColororRenumberWiresForm.Designer.cs">
+      <DependentUpon>ReColororRenumberWiresForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ShapeUtilities\Wire\RecolorWire.cs" />
+    <Compile Include="ShapeUtilities\Wire\RenumberWire.cs" />
     <Compile Include="ShapeUtilities\ShapesUtilities.cs" />
     <Compile Include="Forms\FilePropertiesForm.cs">
       <SubType>Form</SubType>
@@ -241,7 +249,7 @@
     <Compile Include="Ribbonxml.cs" />
     <Compile Include="ShapeUtilities\EndDeviceUtilities.cs" />
     <Compile Include="ShapeUtilities\TerminalBlockUtilities.cs" />
-    <Compile Include="ShapeUtilities\WireUtilities.cs" />
+    <Compile Include="ShapeUtilities\Wire\WireUtilities.cs" />
     <Compile Include="VisioUtilities\Application.cs" />
     <Compile Include="VisioUtilities\DelayedEvent.cs" />
     <Compile Include="VisioUtilities\VisioEvents.cs" />
@@ -262,6 +270,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Forms\ProjectPropertiesForm.resx">
       <DependentUpon>ProjectPropertiesForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\ReColororRenumberWiresForm.resx">
+      <DependentUpon>ReColororRenumberWiresForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
